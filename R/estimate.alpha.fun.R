@@ -1,91 +1,103 @@
-### estimate.alpha.fun.R --- 
+### estimate.alpha.fun.R ---
 #----------------------------------------------------------------------
 ## Author: Helene
-## Created: May 13 2026 (19:38) 
-## Version: 
-## Last-Updated: Jul  2 2026 (17:58) 
+## Created: May 13 2026 (19:38)
+## Version:
+## Last-Updated: Jul  2 2026 (17:58)
 ##           By: Helene
 ##     Update #: 52
 #----------------------------------------------------------------------
-## 
-### Commentary: 
-## 
+##
+### Commentary:
+##
 ### Change Log:
 #----------------------------------------------------------------------
-## 
+##
 ### Code:
 
-estimate.alpha.fun <- function(theta,
-                               fun,
-                               c_n,
-                               alpha_init = 1,
-                               expand_up = 2,#1.25,
-                               expand_down = 0.25,#0.5,#0.8,
-                               max_iter = 100,
-                               alpha_min = 1e-3,
-                               alpha_max = 100,
-                               use.cores = 50,
-                               verbose = FALSE,
-                               trace_every = 1L) {
-
+estimate.alpha.fun <- function(
+  theta,
+  fun,
+  c_n,
+  alpha_init = 1,
+  expand_up = 2, #1.25,
+  expand_down = 0.25, #0.5,#0.8,
+  max_iter = 100,
+  alpha_min = 1e-3,
+  alpha_max = 100,
+  use.cores = 50,
+  verbose = FALSE,
+  trace_every = 1L
+) {
   if (missing(c_n) || is.null(c_n) || !is.finite(c_n)) {
     stop("Please supply a finite c_n explicitly.")
   }
 
-  if (!is.finite(alpha_min) || !is.finite(alpha_max) || alpha_min <= 0 || alpha_max <= alpha_min) {
+  if (
+    !is.finite(alpha_min) ||
+      !is.finite(alpha_max) ||
+      alpha_min <= 0 ||
+      alpha_max <= alpha_min
+  ) {
     stop("Require 0 < alpha_min < alpha_max.")
   }
 
-    if (!is.finite(alpha_init)) stop("alpha_init must be finite.")
+  if (!is.finite(alpha_init)) {
+    stop("alpha_init must be finite.")
+  }
 
-    # A little extra room for expansion + bracketing
-    max_evals <- 2L * max_iter + 5L
+  # A little extra room for expansion + bracketing
+  max_evals <- 2L * max_iter + 5L
 
-    alpha_hist <- numeric(max_evals)
-    psi_hist   <- numeric(max_evals)
-    se_hist    <- numeric(max_evals)
-    eic_hist   <- vector("list", max_evals)
+  alpha_hist <- numeric(max_evals)
+  psi_hist <- numeric(max_evals)
+  se_hist <- numeric(max_evals)
+  eic_hist <- vector("list", max_evals)
 
-    n_eval <- 0L
-    best_idx <- NA_integer_
-    best_dist <- Inf
+  n_eval <- 0L
+  best_idx <- NA_integer_
+  best_dist <- Inf
 
-    cache <- new.env(parent = emptyenv())
+  cache <- new.env(parent = emptyenv())
 
-    record_eval <- function(rec) {
-        n_eval <<- n_eval + 1L
-        alpha_hist[n_eval] <<- rec$alpha
-        psi_hist[n_eval]   <<- rec$psi
-        se_hist[n_eval]    <<- rec$se
-        eic_hist[[n_eval]]  <<- rec$eic
+  record_eval <- function(rec) {
+    n_eval <<- n_eval + 1L
+    alpha_hist[n_eval] <<- rec$alpha
+    psi_hist[n_eval] <<- rec$psi
+    se_hist[n_eval] <<- rec$se
+    eic_hist[[n_eval]] <<- rec$eic
 
-        d <- abs(rec$psi - theta)
-        if (d < best_dist) {
-            best_dist <<- d
-            best_idx <<- n_eval
-        }
-        invisible(NULL)
+    d <- abs(rec$psi - theta)
+    if (d < best_dist) {
+      best_dist <<- d
+      best_idx <<- n_eval
+    }
+    invisible(NULL)
+  }
+
+  eval_psi <- function(alpha) {
+    alpha <- max(min(alpha, alpha_max), alpha_min)
+    key <- sprintf("%.15g", alpha)
+
+    if (exists(key, envir = cache, inherits = FALSE)) {
+      out <- get(key, envir = cache, inherits = FALSE)
+      out$cached <- TRUE
+      return(out)
     }
 
-    eval_psi <- function(alpha) {
-        alpha <- max(min(alpha, alpha_max), alpha_min)
-        key <- sprintf("%.15g", alpha)
-
-        if (exists(key, envir = cache, inherits = FALSE)) {
-            out <- get(key, envir = cache, inherits = FALSE)
-            out$cached <- TRUE
-            return(out)
-        }
-    
-        psi <- fun(
-            alpha = alpha
-        )
+    psi <- fun(
+      alpha = alpha
+    )
 
     out <- list(
       alpha = alpha,
-      psi   = as.numeric(psi[["estimate"]][[grep("tmle.est|one.step.est", names(psi[["estimate"]]), value = TRUE)]]), #[["tmle.est"]]
-      se    = as.numeric(psi[["estimate"]][["se"]]),
-      eic   = psi[["eic"]],
+      psi = as.numeric(psi[["estimate"]][[grep(
+        "tmle.est|one.step.est",
+        names(psi[["estimate"]]),
+        value = TRUE
+      )]]), #[["tmle.est"]]
+      se = as.numeric(psi[["estimate"]][["se"]]),
+      eic = psi[["eic"]],
       cached = FALSE
     )
 
@@ -93,16 +105,33 @@ estimate.alpha.fun <- function(theta,
     out
   }
 
-  progress <- function(stage, iter, alpha, psi, lo = NA_real_, hi = NA_real_, cached = FALSE) {
-    if (!verbose) return(invisible(NULL))
+  progress <- function(
+    stage,
+    iter,
+    alpha,
+    psi,
+    lo = NA_real_,
+    hi = NA_real_,
+    cached = FALSE
+  ) {
+    if (!verbose) {
+      return(invisible(NULL))
+    }
 
     msg <- sprintf(
       "%s iter=%03d alpha=%.8g psi=%.8g |psi-theta|=%.3g",
-      stage, iter, alpha, psi, abs(psi - theta)
+      stage,
+      iter,
+      alpha,
+      psi,
+      abs(psi - theta)
     )
 
     if (is.finite(lo) && is.finite(hi)) {
-      msg <- paste0(msg, sprintf(" bracket=[%.8g, %.8g] width=%.3g", lo, hi, hi - lo))
+      msg <- paste0(
+        msg,
+        sprintf(" bracket=[%.8g, %.8g] width=%.3g", lo, hi, hi - lo)
+      )
     }
 
     if (cached) {
@@ -110,7 +139,9 @@ estimate.alpha.fun <- function(theta,
     }
 
     cat(msg, "\n")
-    if (interactive()) flush.console()
+    if (interactive()) {
+      flush.console()
+    }
     invisible(NULL)
   }
 
@@ -128,8 +159,8 @@ estimate.alpha.fun <- function(theta,
       c.n = c_n,
       grid = data.frame(
         alpha = alpha_hist[seq_len(n_eval)][ord],
-        psi   = psi_hist[seq_len(n_eval)][ord],
-        se    = se_hist[seq_len(n_eval)][ord]
+        psi = psi_hist[seq_len(n_eval)][ord],
+        se = se_hist[seq_len(n_eval)][ord]
       ),
       eic = eic_hist[[best_idx]]
     ))
@@ -147,28 +178,29 @@ estimate.alpha.fun <- function(theta,
     alpha <- rec0$alpha
     for (iter in seq_len(max_iter)) {
       alpha_new <- min(alpha_max, max(alpha_min, alpha * expand_up))
-      if (alpha_new <= alpha * (1 + 1e-15)) break
+      if (alpha_new <= alpha * (1 + 1e-15)) {
+        break
+      }
 
       rec <- try(eval_psi(alpha_new))
 
       if (inherits(rec, "try-error")) {
-
-          expand_up <- expand_up*0.9
-          
+        expand_up <- expand_up * 0.9
       } else {
-      
-          if (!isTRUE(rec$cached)) record_eval(rec)
-          progress("expand↑", iter, rec$alpha, rec$psi, cached = rec$cached)
+        if (!isTRUE(rec$cached)) {
+          record_eval(rec)
+        }
+        progress("expand↑", iter, rec$alpha, rec$psi, cached = rec$cached)
 
-          if (rec$psi >= theta) {
-              hi <- rec$alpha
-              f_hi <- rec$psi
-              break
-          }
-          
-          lo <- rec$alpha
-          f_lo <- rec$psi
-          alpha <- rec$alpha
+        if (rec$psi >= theta) {
+          hi <- rec$alpha
+          f_hi <- rec$psi
+          break
+        }
+
+        lo <- rec$alpha
+        f_lo <- rec$psi
+        alpha <- rec$alpha
       }
     }
   } else {
@@ -181,10 +213,14 @@ estimate.alpha.fun <- function(theta,
     alpha <- rec0$alpha
     for (iter in seq_len(max_iter)) {
       alpha_new <- max(alpha_min, min(alpha_max, alpha * expand_down))
-      if (alpha_new >= alpha * (1 - 1e-15)) break
+      if (alpha_new >= alpha * (1 - 1e-15)) {
+        break
+      }
 
       rec <- eval_psi(alpha_new)
-      if (!isTRUE(rec$cached)) record_eval(rec)
+      if (!isTRUE(rec$cached)) {
+        record_eval(rec)
+      }
       progress("expand↓", iter, rec$alpha, rec$psi, cached = rec$cached)
 
       if (rec$psi <= theta) {
@@ -199,13 +235,19 @@ estimate.alpha.fun <- function(theta,
     }
   }
 
-  bracketed <- is.finite(lo) && is.finite(hi) && lo < hi &&
-               is.finite(f_lo) && is.finite(f_hi) &&
-               f_lo <= theta && theta <= f_hi
+  bracketed <- is.finite(lo) &&
+    is.finite(hi) &&
+    lo < hi &&
+    is.finite(f_lo) &&
+    is.finite(f_hi) &&
+    f_lo <= theta &&
+    theta <= f_hi
 
   if (bracketed) {
     for (iter in seq_len(max_iter)) {
-      if (abs(f_hi - f_lo) < .Machine$double.eps) break
+      if (abs(f_hi - f_lo) < .Machine$double.eps) {
+        break
+      }
 
       # Secant step, clipped to the bracket; fallback to midpoint if needed
       alpha_new <- lo + (theta - f_lo) * (hi - lo) / (f_hi - f_lo)
@@ -213,14 +255,22 @@ estimate.alpha.fun <- function(theta,
         alpha_new <- 0.5 * (lo + hi)
       }
 
-      if (alpha_new <= alpha_min) alpha_new <- alpha_min
-      if (alpha_new >= alpha_max) alpha_new <- alpha_max
+      if (alpha_new <= alpha_min) {
+        alpha_new <- alpha_min
+      }
+      if (alpha_new >= alpha_max) {
+        alpha_new <- alpha_max
+      }
 
       rec <- eval_psi(alpha_new)
-      if (!isTRUE(rec$cached)) record_eval(rec)
+      if (!isTRUE(rec$cached)) {
+        record_eval(rec)
+      }
       progress("search", iter, rec$alpha, rec$psi, lo, hi, cached = rec$cached)
 
-      if (abs(rec$psi - theta) <= c_n) break
+      if (abs(rec$psi - theta) <= c_n) {
+        break
+      }
 
       if (rec$psi < theta) {
         lo <- rec$alpha
@@ -243,109 +293,129 @@ estimate.alpha.fun <- function(theta,
 
   ord <- order(alpha_hist[seq_len(n_eval)])
 
-    list(
-        alpha.hat = alpha_best,
-        converged = converged,
-        dist = best_dist,
-        c.n = c_n,
-        grid = data.frame(
-            alpha = alpha_hist[seq_len(n_eval)][ord],
-            psi   = psi_hist[seq_len(n_eval)][ord],
-            se    = se_hist[seq_len(n_eval)][ord]
-        ),
-        eic = eic_hist[[best_idx]]
-    )
+  list(
+    alpha.hat = alpha_best,
+    converged = converged,
+    dist = best_dist,
+    c.n = c_n,
+    grid = data.frame(
+      alpha = alpha_hist[seq_len(n_eval)][ord],
+      psi = psi_hist[seq_len(n_eval)][ord],
+      se = se_hist[seq_len(n_eval)][ord]
+    ),
+    eic = eic_hist[[best_idx]]
+  )
 }
 
 
 if (FALSE) {
-estimate.alpha.fun <- function(theta,
-                               fun,
-                               parameter = "z",
-                               tau = 3,
-                               c_n = n^{-1/2}/log(n),
-                               alpha_init = 1,
-                               expand_up = 1.25,
-                               expand_down = 0.8,
-                               max_iter = 100,
-                               alpha_min = 1e-3,
-                               alpha_max = 100,
-                               use.cores = 50,
-                               ...) {
-
-
-
+  estimate.alpha.fun <- function(
+    theta,
+    fun,
+    parameter = "z",
+    tau = 3,
+    c_n = n^{
+      -1 / 2
+    } /
+      log(n),
+    alpha_init = 1,
+    expand_up = 1.25,
+    expand_down = 0.8,
+    max_iter = 100,
+    alpha_min = 1e-3,
+    alpha_max = 100,
+    use.cores = 50,
+    ...
+  ) {
     # storage
-    alpha_hist   <- numeric()
-    psi_hist     <- numeric()
-    se_hist      <- numeric()
-    eic          <- numeric()
+    alpha_hist <- numeric()
+    psi_hist <- numeric()
+    se_hist <- numeric()
+    eic <- numeric()
 
     # helper with caching
     eval_psi <- function(alpha) {
-        idx <- which(abs(alpha_hist - alpha) < 1e-12)
-        if (length(idx) > 0) return(psi_hist[idx[1]])
-        psi <- fun(tau = tau, alpha = alpha, parameter = parameter,
-                   use.cores = use.cores, output.eic = TRUE, ...)
-        alpha_hist <<- c(alpha_hist, alpha)
-        psi_hist   <<- c(psi_hist, psi[["estimate"]][grep("tmle.est|one.step.est", names(psi[["estimate"]]), value = TRUE)])
-        se_hist    <<- c(se_hist, psi[["estimate"]]["se"])
-        eic        <<- psi[["eic"]]
-        psi[["estimate"]]["est"]
+      idx <- which(abs(alpha_hist - alpha) < 1e-12)
+      if (length(idx) > 0) {
+        return(psi_hist[idx[1]])
+      }
+      psi <- fun(
+        tau = tau,
+        alpha = alpha,
+        parameter = parameter,
+        use.cores = use.cores,
+        output.eic = TRUE,
+        ...
+      )
+      alpha_hist <<- c(alpha_hist, alpha)
+      psi_hist <<- c(
+        psi_hist,
+        psi[["estimate"]][grep(
+          "tmle.est|one.step.est",
+          names(psi[["estimate"]]),
+          value = TRUE
+        )]
+      )
+      se_hist <<- c(se_hist, psi[["estimate"]]["se"])
+      eic <<- psi[["eic"]]
+      psi[["estimate"]]["est"]
     }
 
     # step 0
     alpha_prev <- NA
     alpha_curr <- alpha_init
-    psi_curr   <- eval_psi(alpha_curr)
+    psi_curr <- eval_psi(alpha_curr)
 
     if (abs(psi_curr - theta) <= c_n) {
-        return(list(
-            alpha.hat = alpha_curr,
-            converged = 1,
-            dist = abs(psi_curr - theta),
-            c.n = c_n,
-            grid = data.frame(alpha = alpha_hist,
-                              psi   = psi_hist,
-                              se    = se_hist),
-            eic = eic
-        ))
+      return(list(
+        alpha.hat = alpha_curr,
+        converged = 1,
+        dist = abs(psi_curr - theta),
+        c.n = c_n,
+        grid = data.frame(alpha = alpha_hist, psi = psi_hist, se = se_hist),
+        eic = eic
+      ))
     }
 
     # step 1
     if (psi_curr < theta - c_n) {
-        alpha_next <- max(0, expand_up * alpha_curr)
+      alpha_next <- max(0, expand_up * alpha_curr)
     } else {
-        alpha_next <- max(0, expand_down * alpha_curr)
+      alpha_next <- max(0, expand_down * alpha_curr)
     }
 
     # main loop
     for (m in 1:max_iter) {
+      alpha_next <- max(min(alpha_next, alpha_max), alpha_min)
 
-        alpha_next <- max(min(alpha_next, alpha_max), alpha_min)
+      psi_next <- eval_psi(alpha_next)
 
-        psi_next   <- eval_psi(alpha_next)
+      if (abs(psi_next - theta) <= c_n) {
+        break
+      }
 
-        if (abs(psi_next - theta) <= c_n) break
-
-        # update rule
-        if (psi_next < theta - c_n) {
-            alpha_new <- if (!is.na(alpha_prev) && alpha_next < alpha_curr)
-                             (alpha_next + alpha_curr) / 2
-                         else
-                             expand_up * alpha_next
+      # update rule
+      if (psi_next < theta - c_n) {
+        alpha_new <- if (!is.na(alpha_prev) && alpha_next < alpha_curr) {
+          (alpha_next + alpha_curr) / 2
         } else {
-            alpha_new <- if (!is.na(alpha_prev) && alpha_next > alpha_curr)
-                             (alpha_next + alpha_curr) / 2
-                         else
-                             expand_down * alpha_next
+          expand_up * alpha_next
         }
+      } else {
+        alpha_new <- if (!is.na(alpha_prev) && alpha_next > alpha_curr) {
+          (alpha_next + alpha_curr) / 2
+        } else {
+          expand_down * alpha_next
+        }
+      }
 
-        if (alpha_new < 0) alpha_new <- 0
+      if (alpha_new < 0) {
+        alpha_new <- 0
+      }
 
-        alpha_prev <- alpha_curr
-        alpha_curr <- alpha_next
-        alpha_next <- alpha_new
+      alpha_prev <- alpha_curr
+      alpha_curr <- alpha_next
+      alpha_next <- alpha_new
     }
 
     # ordered grid
@@ -356,22 +426,20 @@ estimate.alpha.fun <- function(theta,
     alpha_best <- alpha_hist[best_idx]
 
     if (min(dist) <= c_n) {
-        converged <- TRUE
+      converged <- TRUE
     } else {
-        converged <- FALSE
-        eval_psi(alpha_best)
+      converged <- FALSE
+      eval_psi(alpha_best)
     }
-   
-    list(
-        alpha.hat = alpha_best,
-        converged = converged,
-        dist = min(dist),
-        c.n = c_n,
-        grid = data.frame(alpha = alpha_hist[ord],
-                          psi   = psi_hist[ord])
-    )
-}
 
+    list(
+      alpha.hat = alpha_best,
+      converged = converged,
+      dist = min(dist),
+      c.n = c_n,
+      grid = data.frame(alpha = alpha_hist[ord], psi = psi_hist[ord])
+    )
+  }
 }
 
 ######################################################################
