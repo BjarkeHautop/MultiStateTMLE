@@ -219,7 +219,15 @@ tmle.alpha.fun <- function(
   }
 
   if (length(a) > 0) {
-    tmp.long[, clever.weight := tmp.long[[paste0("clever.weight.a", a)]]]
+    a.weight.col <- paste0("clever.weight.a", a)
+    if (!(a.weight.col %in% names(tmp.long))) {
+      stop(
+        "Column '",
+        a.weight.col,
+        "' not found in tmp.long; 'a' must match the intervention used when computing initial.fit."
+      )
+    }
+    tmp.long[, clever.weight := tmp.long[[a.weight.col]]]
   }
 
   if (length(output.weights) > 0) {
@@ -267,11 +275,13 @@ tmle.alpha.fun <- function(
         value = TRUE
       )) {
         if (varname != paste0(P.prefix, names(alpha.list)[alpha.kk])) {
-          tmp.long[[varname]] <- tmp.long[[paste0(
-            "alpha.",
-            names(alpha.list)[alpha.kk]
-          )]] *
-            tmp.long[[varname]]
+          tmp.long[,
+            (varname) := get(paste0(
+              "alpha.",
+              names(alpha.list)[alpha.kk]
+            )) *
+              get(varname)
+          ]
         }
       }
     }
@@ -282,7 +292,7 @@ tmle.alpha.fun <- function(
       value = TRUE
     )) {
       if (varname != paste0(P.prefix, z.name)) {
-        tmp.long[[varname]] <- alpha * tmp.long[[varname]]
+        tmp.long[, (varname) := alpha * get(varname)]
       }
     }
   }
@@ -568,46 +578,61 @@ tmle.alpha.fun <- function(
         ## if (verbose) print(paste0("eps.", process.names[process.jj], " = ", eps.jj))
       }
       if (target.by.state) {
-        tmp.long[[(paste0(P.prefix, name.jj))]] <-
-          tmp.long[[(paste0(P.prefix, name.jj))]] *
-          exp(
-            eps.jj *
-              tmp.long[[paste0(clever.Q.label, process.names[process.jj])]]
-          )
+        tmp.long[,
+          (paste0(P.prefix, name.jj)) := get(paste0(P.prefix, name.jj)) *
+            exp(
+              eps.jj *
+                get(paste0(clever.Q.label, process.names[process.jj]))
+            )
+        ]
       } else {
-        tmp.long[[(paste0(P.prefix, name.jj))]] <-
-          tmp.long[[(paste0(P.prefix, name.jj))]] * exp(eps.jj)
+        tmp.long[,
+          (paste0(P.prefix, name.jj)) := get(paste0(P.prefix, name.jj)) *
+            exp(eps.jj)
+        ]
       }
       if (P.prefix != "P.") {
         if (target.by.state) {
-          tmp.long[[paste0("P.", name.jj)]] <- tmp.long[[paste0(
-            "P.",
-            name.jj
-          )]] *
-            exp(eps.jj * tmp.long[[paste0(clever.Q.label, name.jj)]])
+          tmp.long[,
+            (paste0("P.", name.jj)) := get(paste0("P.", name.jj)) *
+              exp(eps.jj * get(paste0(clever.Q.label, name.jj)))
+          ]
         } else {
-          tmp.long[[(paste0("P.", name.jj))]] <- tmp.long[[
-            (paste0("P.", name.jj))
-          ]] *
-            exp(eps.jj)
+          tmp.long[,
+            (paste0("P.", name.jj)) := get(paste0("P.", name.jj)) *
+              exp(eps.jj)
+          ]
         }
       }
       for (state.jj in depend.matrix[, unique(state)]) {
         if (target.by.state) {
-          tmp.long[[(paste0(P.prefix, name.jj, ".", state.jj))]] <-
-            tmp.long[[(paste0(P.prefix, name.jj, ".", state.jj))]] *
-            exp(
-              eps.jj *
-                tmp.long[[paste0(
-                  clever.Q.label,
-                  process.names[process.jj],
-                  ".",
-                  state.jj
-                )]]
-            )
+          tmp.long[,
+            (paste0(P.prefix, name.jj, ".", state.jj)) := get(paste0(
+              P.prefix,
+              name.jj,
+              ".",
+              state.jj
+            )) *
+              exp(
+                eps.jj *
+                  get(paste0(
+                    clever.Q.label,
+                    process.names[process.jj],
+                    ".",
+                    state.jj
+                  ))
+              )
+          ]
         } else {
-          tmp.long[[(paste0(P.prefix, name.jj, ".", state.jj))]] <-
-            tmp.long[[(paste0(P.prefix, name.jj, ".", state.jj))]] * exp(eps.jj)
+          tmp.long[,
+            (paste0(P.prefix, name.jj, ".", state.jj)) := get(paste0(
+              P.prefix,
+              name.jj,
+              ".",
+              state.jj
+            )) *
+              exp(eps.jj)
+          ]
         }
       }
     }
