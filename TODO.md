@@ -8,6 +8,8 @@
 
 - Can't set number of cores > 1 by default.
 
+- Add examples and tests.
+
 # Performance:
 
 - R/prepare.initial.R: repeated `grep()`/`setdiff()`/`unique()` recomputation on
