@@ -15,6 +15,28 @@
 ##
 ### Code:
 
+#' Simulate event history data from parameters fitted to observed data
+#'
+#' Simulates new multistate event history data using process/baseline
+#' parameters previously estimated from observed data (e.g. via
+#' [simevent::simEventCox()]), via [simevent::simEventData()].
+#'
+#' @param n number of individuals to simulate.
+#' @param sim.parameters list of fitted simulation parameters, with one entry
+#'   per process (Weibull `weibull.parameters` and `cox.parameters`), a
+#'   `baseline.summary` entry describing baseline covariate distributions, and
+#'   a `model.structure` entry describing process names/types/order.
+#' @param cens numeric at-risk indicator scaling for the censoring process.
+#' @param alpha.intervention named list of multiplicative interventions on
+#'   process intensities (`eta`), keyed by process name.
+#' @param baseline.intervention named list of interventions that fix a
+#'   baseline covariate to a constant value.
+#' @param browse logical; if `TRUE`, drop into `browser()` before simulating.
+#' @param verbose logical; if `TRUE`, print the resolved `eta`/`nu`/`beta`
+#'   parameters.
+#' @return A `data.table` of simulated event history data with columns `id`,
+#'   `time`, `delta`, baseline covariates, and one column per process.
+#' @export
 sim.from.data <- function(
   n = 500,
   sim.parameters,

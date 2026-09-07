@@ -1,0 +1,44 @@
+url: https://github.com/BjarkeHautop/MultiStateTMLE
+template:
+  bootstrap: 5
+
+reference:
+- title: Package overview
+  desc: >
+    Overview of the MultiStateTMLE package.
+  contents:
+  - MultiStateTMLE-package
+
+- title: Simulating data
+  desc: >
+    Functions for simulating multistate event history data, either from a
+    user-specified process/effect specification, or from parameters
+    previously fitted to observed data.
+  contents:
+  - sim.generic
+  - sim.from.data
+
+- title: Initial fit
+  desc: >
+    Fitting the initial (nuisance) hazard models and building the discrete
+    product state space used internally.
+  contents:
+  - prepare.initial
+  - compute.Q.clever.per.id
+
+- title: Targeted estimation
+  desc: >
+    Targeting the initial fit under a stochastic intensity intervention.
+  contents:
+  - tmle.alpha.fun
+  - estimate.derivative
+
+- title: Calibration
+  desc: >
+    Calibrating a shape-parameter intervention to a target effect size, and
+    decomposing treatment effects into calibrated contrasts.
+  contents:
+  - estimate.alpha.fun
+  - calibration.fun
+  - calibration.curve.fun
+  - make.calibrated.contrasts

@@ -13,6 +13,11 @@
 #' @param parameter character: name of the target process/outcome. If "target" (default), the first discovered terminal/outcome name is used.
 #' @param process.deltas optional numeric vector (length = number of discovered processes). Not used internally for mapping, only validated if provided.
 #' @param compute.clever logical; whether to compute and append clever.Q.<name>0 / clever.Q.<name>1 (default TRUE).
+#' @param browse logical; if `TRUE`, drop into `browser()` at the start of the backward recursion.
+#' @param browse2 logical; if `TRUE`, drop into `browser()` at a secondary breakpoint inside the recursion.
+#' @param get.years.lost logical; whether to also compute a years-lost-type summary.
+#' @param years.lost.block.size block size used when computing the years-lost summary (when `get.years.lost = TRUE`).
+#' @param clever.by.state logical; whether to compute clever covariates by state rather than pooled.
 #' @return data.table: `dt_id` augmented with column `Q` and columns `clever.Q.<name>0` and `clever.Q.<name>1` for each discovered name.
 #' @examples
 #' # compute.Q.clever.per.id(dt_id = some_dt_for_one_id, states = depend.matrix, process.types = process.types)

@@ -15,6 +15,62 @@
 ##
 ### Code:
 
+#' Targeted maximum likelihood estimation under a shape-parameter intervention
+#'
+#' Estimates the effect of a stochastic intensity intervention (scaling the
+#' shape of the `z` process by `alpha`, optionally combined with an
+#' intervention `a` on baseline treatment) on `target`, via an iterative TMLE
+#' update of the initial fit produced by [prepare.initial()].
+#'
+#' @param target character; name of the target process/outcome.
+#' @param tau follow-up horizon (in time units) for `target`.
+#' @param alpha numeric; multiplicative shape-parameter intervention applied
+#'   to the `z` process (ignored if `alpha.list` is supplied).
+#' @param z.name character; name of the process on which `alpha` acts.
+#' @param alpha.list optional named list of intervention functions, one per
+#'   process, of the form `function(time, covariates)`; supersedes `alpha`.
+#' @param a optional intervention on the baseline treatment `A0` (must match
+#'   the `a` used to build `initial.fit`, if `initial.fit` is supplied).
+#' @param initial.fit initial fit object, as returned by [prepare.initial()];
+#'   computed from `dt`/`tau`/`a`/`...` if not supplied.
+#' @param dt data.table of observed event history data, passed to
+#'   [prepare.initial()] when `initial.fit` is not supplied.
+#' @param years.lost optional; if supplied, computes years-lost-type
+#'   estimands with this block size.
+#' @param only.first logical; if `TRUE`, restrict `target` to its first
+#'   occurrence (treat it as a one-jump process).
+#' @param target.only.in.state optional function of `states` identifying the
+#'   subset of states in which `target` events are counted.
+#' @param target.by.state logical; whether to compute clever covariates by
+#'   state rather than pooled.
+#' @param conv.const constant scaling the convergence criterion on the mean
+#'   efficient influence curve.
+#' @param one.step logical; if `TRUE`, return a one-step estimator instead of
+#'   iterating to TMLE convergence.
+#' @param verbose logical; if `TRUE`, print iteration progress.
+#' @param max.iter maximum number of TMLE update iterations.
+#' @param min.iter minimum number of TMLE update iterations before checking
+#'   convergence.
+#' @param use.cores number of cores to use for the per-id computations.
+#' @param truncate.weights numeric; if `> 0`, truncate clever weights above
+#'   this value.
+#' @param output.convergence logical; if `TRUE`, include convergence
+#'   diagnostics in the output.
+#' @param output.eic logical; if `TRUE`, include the efficient influence
+#'   curve in the output.
+#' @param output.weights optional numeric vector of quantiles at which to
+#'   summarize the clever/censoring weights.
+#' @param output.a.weights optional numeric vector of quantiles at which to
+#'   summarize the `a`-specific clever weights.
+#' @param browse logical; if `TRUE`, drop into `browser()`.
+#' @param verbose.exponential logical; if `TRUE`, print diagnostics from the
+#'   exponential TMLE update step.
+#' @param ... additional arguments passed on to [prepare.initial()] when
+#'   `initial.fit` is not supplied.
+#' @return A list with the TMLE `estimate`, standard error, and (depending on
+#'   the arguments above) the efficient influence curve, convergence
+#'   diagnostics, and weight summaries.
+#' @export
 tmle.alpha.fun <- function(
   target = "z",
   tau = 1.2,

@@ -15,6 +15,32 @@
 ##
 ### Code:
 
+#' Search for the alpha achieving a target estimand value
+#'
+#' Searches over the shape-parameter intervention `alpha` for the value at
+#' which `fun(alpha, ...)`'s estimate equals `theta`, via bracket expansion
+#' followed by root finding, caching evaluations of `fun` along the way.
+#'
+#' @param theta numeric; the target value of the estimand to solve for.
+#' @param fun function of `alpha` (plus `...`) returning a list with an
+#'   `estimate` element and an `eic` element, e.g. [tmle.alpha.fun()].
+#' @param c_n numeric; a finite tolerance/scale constant used to judge
+#'   convergence (required, no default).
+#' @param alpha_init numeric; initial value of `alpha` to evaluate.
+#' @param expand_up multiplicative factor used to expand the bracket upward.
+#' @param expand_down multiplicative factor used to expand the bracket
+#'   downward.
+#' @param max_iter maximum number of root-finding iterations.
+#' @param alpha_min lower bound for `alpha` (must be `> 0`).
+#' @param alpha_max upper bound for `alpha` (must be `> alpha_min`).
+#' @param use.cores number of cores to pass on to `fun`.
+#' @param verbose logical; if `TRUE`, print progress at every `trace_every`
+#'   evaluations.
+#' @param trace_every integer; frequency (in evaluations) of progress output
+#'   when `verbose = TRUE`.
+#' @return A list describing the solution, including the selected `alpha` and
+#'   the corresponding evaluation of `fun`.
+#' @export
 estimate.alpha.fun <- function(
   theta,
   fun,
@@ -190,7 +216,7 @@ estimate.alpha.fun <- function(
         if (!isTRUE(rec$cached)) {
           record_eval(rec)
         }
-        progress("expand↑", iter, rec$alpha, rec$psi, cached = rec$cached)
+        progress("expand\u2191", iter, rec$alpha, rec$psi, cached = rec$cached)
 
         if (rec$psi >= theta) {
           hi <- rec$alpha
@@ -221,7 +247,7 @@ estimate.alpha.fun <- function(
       if (!isTRUE(rec$cached)) {
         record_eval(rec)
       }
-      progress("expand↓", iter, rec$alpha, rec$psi, cached = rec$cached)
+      progress("expand\u2193", iter, rec$alpha, rec$psi, cached = rec$cached)
 
       if (rec$psi <= theta) {
         lo <- rec$alpha

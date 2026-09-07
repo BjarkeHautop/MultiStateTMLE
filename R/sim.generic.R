@@ -15,6 +15,30 @@
 ##
 ### Code:
 
+#' Simulate event history data from a generic process specification
+#'
+#' Simulates multistate event history data from a set of user-specified
+#' baseline covariates, event processes (with Weibull intensities and Cox-type
+#' effects), and their effects on one another, via [simevent::simEventData()].
+#'
+#' @param baseline named list of baseline covariate generators.
+#' @param processes named list of process specifications; each entry has at
+#'   least a `type` (one of `"censoring"`, `"terminal"`, `"one.jump"`, or
+#'   recurrent), and Weibull intensity parameters `eta`/`nu`.
+#' @param effects list of `c(from, to, coefficient)` triples specifying Cox
+#'   effects between baseline/process variables and process intensities.
+#' @param sim.object optional list with `baseline`/`processes`/`effects`
+#'   entries, used as a fallback when those arguments are not supplied.
+#' @param cens numeric at-risk indicator scaling for the censoring process.
+#' @param alpha.intervention named list of multiplicative interventions on
+#'   process intensities (`eta`), keyed by process name.
+#' @param baseline.intervention named list of interventions that fix a
+#'   baseline covariate to a constant value.
+#' @param n number of individuals to simulate.
+#' @param browse logical; if `TRUE`, drop into `browser()` before simulating.
+#' @return A `data.table` of simulated event history data with columns `id`,
+#'   `time`, `delta`, baseline covariates, and one column per process.
+#' @export
 sim.generic <- function(
   baseline = list(),
   processes = list(),

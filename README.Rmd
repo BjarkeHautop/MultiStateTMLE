@@ -1,0 +1,67 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "man/figures/README-",
+  out.width = "100%"
+)
+```
+
+# MultiStateTMLE
+
+<!-- badges: start -->
+[![R-CMD-check](https://github.com/BjarkeHautop/MultiStateTMLE/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/BjarkeHautop/MultiStateTMLE/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/BjarkeHautop/MultiStateTMLE/graph/badge.svg)](https://app.codecov.io/gh/BjarkeHautop/MultiStateTMLE)
+<!-- badges: end -->
+
+MultiStateTMLE is a framework for nonparametric causal inference with
+multistate event processes, built around stochastic intensity interventions,
+calibrated interventions, and composite estimands, and estimated using
+targeted maximum likelihood estimation (TMLE) allowing flexible nuisance
+learning.
+
+## Installation
+
+You can install the development version of MultiStateTMLE from
+[GitHub](https://github.com/) with:
+
+``` r
+# install.packages("pak")
+pak::pak("BjarkeHautop/MultiStateTMLE")
+```
+
+## Usage
+
+```{r example}
+library(MultiStateTMLE)
+```
+
+The pipeline has three main steps:
+
+- `prepare.initial()` fits the initial (nuisance) hazard models for each
+  process in the data (Cox, HAL, or exponential), and builds the discrete
+  product state space used internally.
+- `tmle.alpha.fun()` targets the initial fit under a stochastic intensity
+  intervention (scaling the shape of a process by `alpha`, optionally
+  combined with an intervention on baseline treatment), returning a TMLE
+  estimate, its standard error, and (optionally) the efficient influence
+  curve.
+- `calibration.fun()`/`calibration.curve.fun()` calibrate the shape
+  intervention to a target effect size, and `make.calibrated.contrasts()`
+  decomposes a total treatment effect into mediated and calibrated
+  contrasts.
+
+`sim.generic()` and `sim.from.data()` (built on top of
+[simevent](https://github.com/BjarkeHautop/simevent)) simulate multistate
+event history data, either from a user-specified process/effect
+specification, or from parameters previously fitted to observed data.
+
+## Contributing
+
+All contributions are welcome!

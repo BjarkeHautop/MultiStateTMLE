@@ -15,6 +15,25 @@
 ## 
 ### Code:
 
+#' Compute total, mediated, and calibrated treatment contrasts
+#'
+#' Given TMLE fits for a treatment arm, a placebo arm, and a calibrated
+#' (intermediate) intervention, computes the total treatment effect and its
+#' decomposition into a mediated and a calibrated contrast, with influence
+#' function-based confidence intervals.
+#'
+#' @param target optional character; name of a specific target within
+#'   `calibrated.fit` to use (when `calibrated.fit` contains estimates/EICs
+#'   for multiple targets).
+#' @param treatment.fit TMLE fit object for the treatment arm, as returned by
+#'   [tmle.alpha.fun()].
+#' @param placebo.fit TMLE fit object for the placebo/control arm.
+#' @param calibrated.fit TMLE fit object for the calibrated intervention.
+#' @param conf.level confidence level for the Wald-type confidence intervals.
+#' @return A `data.table` with one row per contrast (`total`, `mediated`,
+#'   `calibrated`) and columns `estimate`, `se`, `lower`, `upper`, with
+#'   `decomposition.error` and `eic.decomposition.error` attributes.
+#' @export
 make.calibrated.contrasts <- function(
                                       target = NULL,
                                       treatment.fit,

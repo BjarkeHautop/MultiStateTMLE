@@ -1,0 +1,34 @@
+Package: MultiStateTMLE
+Title: Causal Inference for Multistate Event Processes via TMLE
+Version: 0.0.0.9000
+Authors@R: c(
+    person(given = "Helene", family = "Charlotte Wiese Rytgaard", email = "hely@sund.ku.dk", role = "aut"),
+    person(given = "Bjarke", family = "Hautop Kristensen" , email = "bjarke.hautop@gmail.com", role = c("aut", "cre"))
+  )
+Description: Provides a framework for nonparametric causal inference with
+    multistate event processes, built around stochastic intensity
+    interventions, calibrated interventions, and composite estimands, and
+    estimated using targeted maximum likelihood estimation (TMLE) allowing
+    flexible nuisance parameter learning.
+License: MIT + file LICENSE
+URL: https://github.com/BjarkeHautop/MultiStateTMLE
+BugReports: https://github.com/BjarkeHautop/MultiStateTMLE/issues
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Imports: 
+    data.table,
+    digest,
+    Matrix,
+    nleqslv,
+    parallel,
+    simevent,
+    stats,
+    stringr,
+    survival,
+    zoo
+Suggests:
+    testthat (>= 3.0.0)
+Remotes:
+    BjarkeHautop/simevent
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.1.0

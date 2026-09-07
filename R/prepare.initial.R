@@ -15,6 +15,77 @@
 ##
 ### Code:
 
+#' Prepare the initial fit for multistate TMLE
+#'
+#' Fits initial (nuisance) hazard models for each process in `fit.types`
+#' (Cox, HAL, or exponential), builds the discrete product state space and
+#' its dependency structure, and computes the baseline clever
+#' weights/predictions needed by [tmle.alpha.fun()]. This is the
+#' initialization step of the multistate TMLE pipeline.
+#'
+#' @param dt data.table of observed event history data (long format, with
+#'   `id`, `time`, `delta`, and one column per process).
+#' @param tau follow-up horizon (in time units).
+#' @param fit.types named list describing, for each process, the hazard
+#'   `model` (a `Surv(...)` formula string), the `fit` method (`"cox"`,
+#'   `"hal"`, or `"glm"`), and an optional `at.risk` function.
+#' @param use.exponential logical; if `TRUE`, use exponential (rather than
+#'   Cox/HAL) hazard fits where applicable.
+#' @param verbose.exponential logical; if `TRUE`, print diagnostics for the
+#'   exponential fits.
+#' @param browse logical; if `TRUE`, drop into `browser()`.
+#' @param max.count maximum recurrent-event count tracked per process in the
+#'   product state space.
+#' @param a optional intervention on the baseline treatment `A0`; if
+#'   supplied, predictions are also computed under `A0` set to each value in
+#'   `a`.
+#' @param derived.vars list of functions deriving auxiliary state variables
+#'   from the discovered processes.
+#' @param depend.time list describing additional time-dependency structure
+#'   between processes, used when HAL is not fit.
+#' @param fit.treatment optional model specification (as for `fit.types`) for
+#'   the baseline treatment `A0` propensity model.
+#' @param prune.states logical; if `TRUE`, prune unreachable/zero-probability
+#'   states from the product state space.
+#' @param cut.time HAL basis cut count for the time variable.
+#' @param cut.one.way HAL basis cut count for one-way (main effect) terms.
+#' @param cut.Tk HAL basis cut count for history/time-since-event terms.
+#' @param cut.Tk.values optional explicit cut values for `cut.Tk`.
+#' @param max.Tk maximum history order for HAL history terms.
+#' @param two.way optional list of two-way HAL interaction term
+#'   specifications.
+#' @param reduce.NK numeric; quantile used to cap the recurrent-event count
+#'   `NK` when reducing HAL basis dimension.
+#' @param hal.sl list of HAL specifications, one per Super Learner library
+#'   candidate.
+#' @param screen.two.way logical; if `TRUE`, screen two-way HAL terms before
+#'   fitting.
+#' @param lambda.cvs numeric vector of lasso penalty values to cross-validate
+#'   over when fitting HAL.
+#' @param event.dependent.cv logical; if `TRUE`, stratify HAL cross-validation
+#'   folds by event status.
+#' @param npenalize.vars optional character vector of HAL basis terms to
+#'   exempt from lasso penalization.
+#' @param V number of cross-validation folds for HAL.
+#' @param seed.hal optional random seed for HAL cross-validation.
+#' @param reduce.seed.dependence logical; if `TRUE`, average over multiple
+#'   HAL cross-validation seeds.
+#' @param penalize.time logical; if `TRUE`, include the time variable itself
+#'   among the penalized HAL basis terms.
+#' @param use.cores number of cores to use for model fitting.
+#' @param use.cores.prediction number of cores to use for prediction steps.
+#' @param verbose.hal logical; if `TRUE`, print HAL fitting diagnostics.
+#' @param browse.hal logical; if `TRUE`, drop into `browser()` inside the HAL
+#'   fitting step.
+#' @param cv.glmnet logical; currently not supported.
+#' @param verbose logical; if `TRUE`, print overall progress.
+#' @param return.parameters.for.simulation logical; if `TRUE`, additionally
+#'   return fitted parameters formatted for [sim.from.data()].
+#' @return A list (the `initial.fit` object) containing, among others,
+#'   `tmp.long` (the long-format data with fitted hazards/weights),
+#'   `depend.matrix` (the product state space), `process.names`,
+#'   `process.types`, `process.deltas`, `cens.process.id`, and `at.risks`.
+#' @export
 prepare.initial <- function(
   dt,
   tau = 1.2,
@@ -2919,8 +2990,6 @@ prepare.initial <- function(
 
 ######################################################################
 ### faster version to get unique rows:
-
-library(digest)
 
 hash_sparse_rows_dgC <- function(M) {
   stopifnot(inherits(M, "dgCMatrix"))

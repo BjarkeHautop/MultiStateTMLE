@@ -15,6 +15,38 @@
 ##
 ### Code:
 
+#' Calibrate a shape-parameter intervention to a target effect size
+#'
+#' Finds the intensity-shape intervention `alpha` (via [estimate.alpha.fun()]
+#' and [tmle.alpha.fun()]) for the `z` process such that the resulting effect
+#' on `target` matches a prespecified fraction `rho` of the effect under
+#' `alpha = 1`, or a fixed `theta`/`delta`.
+#'
+#' @param initial.fit initial fit object, as returned by [prepare.initial()].
+#' @param a optional intervention on the baseline treatment `A0`, passed on to
+#'   [tmle.alpha.fun()].
+#' @param theta optional numeric; target value for the estimand to calibrate
+#'   to directly.
+#' @param rho optional numeric; target fraction of the `alpha = 1` effect on
+#'   `target` to calibrate to.
+#' @param delta optional numeric; target absolute difference from the
+#'   `alpha = 1` effect on `target` to calibrate to.
+#' @param rho.1a optional numeric; as `rho`, but relative to the effect under
+#'   `a` fixed to 1 rather than `alpha = 1`.
+#' @param browse logical; if `TRUE`, drop into `browser()`.
+#' @param verbose logical; if `TRUE`, print progress.
+#' @param output.eic logical; if `TRUE`, include influence-function values in
+#'   the output.
+#' @param tau follow-up horizon for the `target` process.
+#' @param tau.z follow-up horizon for the `z` process (defaults to `tau`).
+#' @param use.cores number of cores to use.
+#' @param target character; name of the outcome process being calibrated to.
+#' @param z.name character; name of the process on which the shape
+#'   intervention `alpha` acts.
+#' @param ... additional arguments passed on to [tmle.alpha.fun()].
+#' @return A list with the calibrated `alpha` (as found by
+#'   [estimate.alpha.fun()]) and the corresponding TMLE fit(s).
+#' @export
 calibration.fun <- function(
   initial.fit = NULL,
   a = NULL,

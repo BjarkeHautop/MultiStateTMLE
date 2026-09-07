@@ -15,6 +15,21 @@
 ##
 ### Code:
 
+#' Estimate the numerical derivative of an alpha-indexed estimand
+#'
+#' Approximates the derivative with respect to `alpha` of the TMLE/one-step
+#' estimate returned by `fun`, using a symmetric finite-difference at
+#' `alpha_hat`.
+#'
+#' @param alpha_hat numeric; the point at which to estimate the derivative.
+#' @param fun function taking `alpha`, `parameter`, and `...`, returning a
+#'   list with an `estimate` element containing `tmle.est`/`one.step.est`.
+#' @param parameter character; the target process/outcome passed to `fun`.
+#' @param h numeric step size for the finite difference; shrunk if it exceeds
+#'   `alpha_hat`.
+#' @param ... additional arguments passed on to `fun`.
+#' @return numeric; the estimated derivative.
+#' @export
 estimate.derivative <- function(
   alpha_hat,
   fun = alpha.est.fun,

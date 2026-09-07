@@ -15,6 +15,39 @@
 ## 
 ### Code:
 
+#' Compute a calibration curve over a grid of shape-parameter interventions
+#'
+#' Evaluates [tmle.alpha.fun()] on the `z` process across a grid of shape
+#' interventions `alpha.grid`, and the resulting effect on `target` for each,
+#' tracing out a calibration curve relating `alpha` to the target estimand.
+#'
+#' @param initial.fit initial fit object, as returned by [prepare.initial()].
+#' @param a optional intervention on the baseline treatment `A0`, passed on to
+#'   [tmle.alpha.fun()].
+#' @param alpha.grid numeric vector of shape-parameter interventions to
+#'   evaluate.
+#' @param browse logical; if `TRUE`, drop into `browser()`.
+#' @param verbose logical; if `TRUE`, print progress.
+#' @param output.eic logical; if `TRUE`, include influence-function values in
+#'   the output.
+#' @param tau follow-up horizon for the `target` process.
+#' @param tau.z follow-up horizon for the `z` process (defaults to `tau`).
+#' @param use.cores number of cores to use.
+#' @param target character; name of the outcome process the curve is
+#'   computed for.
+#' @param z.name character; name of the process on which the shape
+#'   intervention `alpha` acts.
+#' @param min.iter minimum number of TMLE update iterations.
+#' @param target.by.state logical; whether to compute clever covariates by
+#'   state, passed on to [tmle.alpha.fun()].
+#' @param block.size.z optional block size used when evaluating the `z`
+#'   process.
+#' @param block.size.target optional block size used when evaluating
+#'   `target`.
+#' @param ... additional arguments passed on to [tmle.alpha.fun()].
+#' @return A `data.table` with one row per value in `alpha.grid`, giving the
+#'   corresponding TMLE estimate of the effect on `target`.
+#' @export
 calibration.curve.fun <- function(initial.fit = NULL,
                                   a = NULL,
                                   alpha.grid = seq(0, 5, length = 10),
