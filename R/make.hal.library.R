@@ -15,6 +15,7 @@
 ##
 ### Code:
 
+############### NOT WORKING
 make.hal.library <- function(hal.jj) {
   if (
     sum(

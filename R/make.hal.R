@@ -15,6 +15,7 @@
 ##
 ### Code:
 
+############### NOT WORKING
 make.hal <- function(hal.jj) {
   if (
     sum(
