@@ -2694,13 +2694,17 @@ prepare.initial <- function(
           time.var2
         ]] <-
           time.values[1]
-        for (t2 in time.values[-1]) {
-          depend.matrix.t2 <- depend.matrix[
-            depend.matrix[[varname]] == count.value - 1 &
-              get(time.var2) == 0
-          ]
-          depend.matrix.t2[[time.var2]] <- t2
-          depend.matrix <- rbind(depend.matrix, depend.matrix.t2)[order(
+        depend.matrix.base <- depend.matrix[
+          depend.matrix[[varname]] == count.value - 1 &
+            get(time.var2) == 0
+        ]
+        if (length(time.values) > 1) {
+          new.rows <- rbindlist(lapply(time.values[-1], function(t2) {
+            chunk <- copy(depend.matrix.base)
+            chunk[[time.var2]] <- t2
+            chunk
+          }))
+          depend.matrix <- rbind(depend.matrix, new.rows)[order(
             state,
             get(time.var2)
           )]
@@ -2727,13 +2731,17 @@ prepare.initial <- function(
             time.var2
           ]] <-
             time.values[1]
-          for (t2 in time.values[-1]) {
-            depend.matrix.t2 <- depend.matrix[
-              depend.matrix[[varname]] == count.value - 1 &
-                get(time.var2) == 0
-            ]
-            depend.matrix.t2[[time.var2]] <- t2
-            depend.matrix <- rbind(depend.matrix, depend.matrix.t2)[order(
+          depend.matrix.base <- depend.matrix[
+            depend.matrix[[varname]] == count.value - 1 &
+              get(time.var2) == 0
+          ]
+          if (length(time.values) > 1) {
+            new.rows <- rbindlist(lapply(time.values[-1], function(t2) {
+              chunk <- copy(depend.matrix.base)
+              chunk[[time.var2]] <- t2
+              chunk
+            }))
+            depend.matrix <- rbind(depend.matrix, new.rows)[order(
               state,
               get(time.var2)
             )]

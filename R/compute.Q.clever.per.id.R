@@ -68,7 +68,6 @@ compute.Q.clever.per.id <- function(
   derived_processes <- state_processes[
     !(state_processes %in% names(process.types))
   ]
-  j_derived <- which(state_processes == derived_processes)
   state_processes <- setdiff(state_processes, derived_processes)
 
   if ("target.only.in.state" %in% names(states)) {
@@ -387,18 +386,20 @@ compute.Q.clever.per.id <- function(
       ##     dt_id[[time_var_match_jj]]
       ##     )
 
-      rows_by_time <- vector("list", nrow(uniq_time))
-      names(rows_by_time) <- uniq_time[["row"]]
+      match_mats <- lapply(time_var_match, function(time_var_match_jj) {
+        outer(
+          state_times[[time_var_match_jj]],
+          uniq_time[[time_var_match_jj]],
+          "=="
+        ) |
+          inf_rows[[time_var_match_jj]]
+      })
+      rows_by_time_mat <- Reduce(`&`, match_mats)
 
-      for (tm in 1:nrow(uniq_time)) {
-        rows_by_time[[tm]] <- TRUE
-        for (time_var_match_jj in time_var_match) {
-          rows_by_time[[tm]] <- rows_by_time[[tm]] &
-            (state_times[[time_var_match_jj]] ==
-              uniq_time[[time_var_match_jj]][tm] |
-              inf_rows[[time_var_match_jj]])
-        }
-      }
+      rows_by_time <- lapply(seq_len(nrow(uniq_time)), function(tm) {
+        rows_by_time_mat[, tm]
+      })
+      names(rows_by_time) <- uniq_time[["row"]]
     } else {
       tt_time <- lapply(time_var_match, function(t_rep) c()) #matrix(0, nrow = nrow(dt_id), ncol = length(time_var_match))
       rows_by_time <- lapply(time_var_match, function(t_rep) c())
