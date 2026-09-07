@@ -136,6 +136,12 @@ sim.generic <- function(
     browser()
   }
 
+  term.processes <- c(which.cens, which.terminal)
+  term.deltas <- match(term.processes, process.order) - 1L
+
+  non.term.processes <- setdiff(process.order, term.processes)
+  non.term.deltas <- match(non.term.processes, process.order) - 1L
+
   data <- simEventData(
     N = n,
     beta = beta,
@@ -146,7 +152,7 @@ sim.generic <- function(
     at_risk = at_risk,
     lower = 1e-25,
     upper = 1e8,
-    term_deltas = 0:length(which.terminal),
+    term_deltas = term.deltas,
     #gen_L0 = add_cov[["L0"]],
     #gen_A0 = {if ("A0" %in% names(add_cov)) function(N, L0) add_cov[["A0"]](N) else NULL},
     add_cov = add_cov[!(names(add_cov) %in% c("A0", "L0"))],
@@ -161,15 +167,11 @@ sim.generic <- function(
     data[["A0"]] <- NULL
   }
 
-  for (jj in 0:length(which.terminal)) {
+  for (jj in term.deltas) {
     data[[paste0("N", jj)]] <- NULL
   }
 
-  setnames(
-    data,
-    paste0("N", (length(which.terminal) + 1):(length(process.order) - 1)),
-    setdiff(process.order, c(which.cens, which.terminal))
-  )
+  setnames(data, paste0("N", non.term.deltas), non.term.processes)
 
   setnames(data, c("Delta", "Time", "ID"), c("delta", "time", "id"))
 
