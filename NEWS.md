@@ -1,3 +1,3 @@
 # MultiStateTMLE (development version)
 
-* Initial development version.
+- Initial development version.

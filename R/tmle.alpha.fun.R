@@ -126,7 +126,8 @@ tmle.alpha.fun <- function(
     message("using new alpha option: check")
     for (alpha.kk in 1:length(alpha.list)) {
       tmp.long[,
-        paste0("alpha.", names(alpha.list)[alpha.kk]) := do.call( #
+        paste0("alpha.", names(alpha.list)[alpha.kk]) := do.call(
+          #
           alpha.list[[alpha.kk]],
           .SD
         ),
@@ -205,7 +206,8 @@ tmle.alpha.fun <- function(
   if (length(alpha.list) > 0) {
     for (alpha.kk in 1:length(alpha.list)) {
       tmp.long[,
-        paste0("alpha.", names(alpha.list)[alpha.kk]) := do.call( #
+        paste0("alpha.", names(alpha.list)[alpha.kk]) := do.call(
+          #
           alpha.list[[alpha.kk]],
           .SD
         ),
