@@ -15,8 +15,7 @@
 ##
 ### Code:
 
-make.hal.library(hal.jj)
-{
+make.hal.library <- function(hal.jj) {
   if (
     sum(
       names(hal.jj) %in%
