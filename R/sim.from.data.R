@@ -162,18 +162,18 @@ sim.from.data <- function(
     add_L0 <- 0
   }
 
+  other.baseline.vars <- setdiff(baseline.vars, c("L0", "A0"))
+
   beta <- matrix(
     0,
-    nrow = length(process.order) + length(baseline.vars) + add_A0 + add_L0,
+    nrow = length(process.order) + length(other.baseline.vars) + 2,
     ncol = length(process.order)
   )
 
-  rownames(beta) <- c(
-    if (add_L0) "L0",
-    if (add_A0) "A0",
-    baseline.vars,
-    process.order
-  )
+  # simEventData() always renames beta's rows to L0, A0, ... positionally
+  # (to match its internal simmatrix), so this order must be fixed
+  # regardless of whether L0/A0 were user-supplied or auto-added.
+  rownames(beta) <- c("L0", "A0", other.baseline.vars, process.order)
   colnames(beta) <- process.order
 
   override_beta <- NULL
@@ -263,7 +263,9 @@ sim.from.data <- function(
     data[[paste0("N", jj)]] <- NULL
   }
 
-  setnames(data, paste0("N", non.term.deltas), non.term.processes)
+  if (length(non.term.processes) > 0) {
+    setnames(data, paste0("N", non.term.deltas), non.term.processes)
+  }
 
   setnames(data, c("Delta", "Time", "ID"), c("delta", "time", "id"))
 

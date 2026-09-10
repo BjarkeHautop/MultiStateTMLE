@@ -28,7 +28,8 @@
 #' @param effects list of `c(from, to, coefficient)` triples specifying Cox
 #'   effects between baseline/process variables and process intensities.
 #' @param sim.object optional list with `baseline`/`processes`/`effects`
-#'   entries, used as a fallback when those arguments are not supplied.
+#'   entries, used as a fallback when none of `baseline`, `processes`, or
+#'   `effects` are supplied directly.
 #' @param cens numeric at-risk indicator scaling for the censoring process.
 #' @param alpha.intervention named list of multiplicative interventions on
 #'   process intensities (`eta`), keyed by process name.
@@ -50,7 +51,7 @@ sim.generic <- function(
   n = 500,
   browse = FALSE
 ) {
-  if (length(baseline) == 0 | length(processes) == 0 | length(effects) == 0) {
+  if (missing(baseline) && missing(processes) && missing(effects)) {
     baseline <- sim.object$baseline
     processes <- sim.object$processes
     effects <- sim.object$effects
@@ -136,18 +137,18 @@ sim.generic <- function(
     add_L0 <- 0
   }
 
+  other.baseline.vars <- setdiff(baseline.vars, c("L0", "A0"))
+
   beta <- matrix(
     0,
-    nrow = length(process.order) + length(baseline.vars) + add_A0 + add_L0,
+    nrow = length(process.order) + length(other.baseline.vars) + 2,
     ncol = length(process.order)
   )
 
-  rownames(beta) <- c(
-    if (add_L0) "L0",
-    if (add_A0) "A0",
-    baseline.vars,
-    process.order
-  )
+  # simEventData() always renames beta's rows to L0, A0, ... positionally
+  # (to match its internal simmatrix), so this order must be fixed
+  # regardless of whether L0/A0 were user-supplied or auto-added.
+  rownames(beta) <- c("L0", "A0", other.baseline.vars, process.order)
   colnames(beta) <- process.order
 
   for (effect in effects) {
@@ -177,8 +178,10 @@ sim.generic <- function(
     lower = 1e-25,
     upper = 1e8,
     term_deltas = term.deltas,
-    #gen_L0 = add_cov[["L0"]],
-    #gen_A0 = {if ("A0" %in% names(add_cov)) function(N, L0) add_cov[["A0"]](N) else NULL},
+    gen_L0 = add_cov[["L0"]],
+    gen_A0 = {
+      if ("A0" %in% names(add_cov)) function(N, L0) add_cov[["A0"]](N) else NULL
+    },
     add_cov = add_cov[!(names(add_cov) %in% c("A0", "L0"))],
     override_beta = override_beta
   )
@@ -195,7 +198,9 @@ sim.generic <- function(
     data[[paste0("N", jj)]] <- NULL
   }
 
-  setnames(data, paste0("N", non.term.deltas), non.term.processes)
+  if (length(non.term.processes) > 0) {
+    setnames(data, paste0("N", non.term.deltas), non.term.processes)
+  }
 
   setnames(data, c("Delta", "Time", "ID"), c("delta", "time", "id"))
 
