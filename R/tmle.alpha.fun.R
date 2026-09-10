@@ -516,8 +516,10 @@ tmle.alpha.fun <- function(
 
     if (iter == 1) {
       eic.init <- copy(eic)
-      target.se <- sqrt(mean(eic^2 / n))
+      se.init <- sqrt(mean(eic^2 / n))
     }
+
+    target.se <- sqrt(mean(eic^2 / n))
 
     if (one.step) {
       one.step.est <- mean(eic + target.est)
@@ -529,7 +531,9 @@ tmle.alpha.fun <- function(
     print(paste0("eic equation solved at = ", abs(mean(eic))))
 
     if (iter > min.iter) {
-      if (abs(mean(eic)) <= conv.const * target.se / (log(n))) {
+      # se.init (fixed at iteration 1) keeps this threshold stable rather
+      # than moving with each iteration's eic.
+      if (abs(mean(eic)) <= conv.const * se.init / (log(n))) {
         converged <- TRUE
         print(paste0("converged after ", iter, " iterations"))
         break()
@@ -821,7 +825,7 @@ tmle.alpha.fun <- function(
   }
 
   if (output.eic) {
-    out[[length(out) + 1]] <- eic.init
+    out[[length(out) + 1]] <- eic
     names(out)[length(out)] <- "eic"
   }
 
