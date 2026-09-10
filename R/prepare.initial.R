@@ -544,7 +544,8 @@ prepare.initial <- function(
     all.times,
     by = c("id", "time"),
     all = TRUE
-  )[order(id, time.obs)]
+  )
+  setorder(tmp.inner, id, time.obs, na.last = TRUE)
 
   for (varname in varnames) {
     tmp.inner[, (varname) := na.locf(get(varname)), by = "id"]
@@ -553,21 +554,22 @@ prepare.initial <- function(
   #--------------------------------
   #-- expanded dataset to work with for TMLE:
 
-  tmp.long <- tmp.inner[order(id, time)][is.na(delta), delta := 0][,
-    -c("tstop"),
-    with = FALSE
-  ]
+  setorder(tmp.inner, id, time, na.last = TRUE)
+  tmp.inner[is.na(delta), delta := 0]
+  tmp.inner[, tstop := NULL]
+  tmp.long <- tmp.inner
 
-  for (fit.type.jj in 1:length(fit.types)) {
-    tmp.long <- merge(
-      tmp.long,
-      fit.cox.types[[fit.type.jj]]["tmp.type"][[1]],
-      by = "time",
-      all = TRUE
-    )
-  }
+  ## merge the (small) per-process hazard tables together first, then join
+  ## the result onto tmp.long in a single pass
+  hazard.tables <- lapply(fit.cox.types, function(x) x[["tmp.type"]])
+  combined.hazard <- Reduce(
+    function(a, b) merge(a, b, by = "time", all = TRUE),
+    hazard.tables
+  )
+  tmp.long <- merge(tmp.long, combined.hazard, by = "time", all = TRUE)
 
-  tmp.long <- tmp.long[order(id, time)][!is.na(id)]
+  setorder(tmp.long, id, time, na.last = TRUE)
+  tmp.long <- tmp.long[!is.na(id)]
 
   tmp.long[, time.obs := nafill(time.obs, "nocb"), by = "id"]
   tmp.long[is.na(time.obs), time.obs := -Inf]
