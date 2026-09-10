@@ -20,7 +20,21 @@
 #' @param clever.by.state logical; whether to compute clever covariates by state rather than pooled.
 #' @return data.table: `dt_id` augmented with column `Q` and columns `clever.Q.<name>0` and `clever.Q.<name>1` for each discovered name.
 #' @examples
-#' # compute.Q.clever.per.id(dt_id = some_dt_for_one_id, states = depend.matrix, process.types = process.types)
+#' # S = 1, single terminal process "D": Q_t collapses to the discrete-time
+#' # cumulative incidence 1 - prod(1 - h_s).
+#' h <- c(0.1, 0.2, 0.3)
+#' dt_id <- data.table::data.table(
+#'   state = c(1L, 1L, 1L),
+#'   state.row.index = c(1L, 1L, 1L),
+#'   P.D.1 = h
+#' )
+#' states <- data.table::data.table(state = 1L)
+#'
+#' compute.Q.clever.per.id(
+#'   dt_id = dt_id,
+#'   states = states,
+#'   process.types = list(D = "terminal")
+#' )
 #' @export
 #'
 compute.Q.clever.per.id <- function(

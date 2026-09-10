@@ -29,6 +29,10 @@
 #'   `alpha_hat`.
 #' @param ... additional arguments passed on to `fun`.
 #' @return numeric; the estimated derivative.
+#' @examples
+#' # fun(alpha) = alpha^2, so the derivative at alpha = 3 is 6.
+#' fun <- function(alpha, parameter, ...) list(estimate = c(tmle.est = alpha^2))
+#' estimate.derivative(alpha_hat = 3, fun = fun, parameter = "z", h = 0.01)
 #' @export
 estimate.derivative <- function(
   alpha_hat,

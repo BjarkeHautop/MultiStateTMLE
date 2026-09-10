@@ -39,6 +39,23 @@
 #' @param browse logical; if `TRUE`, drop into `browser()` before simulating.
 #' @return A `data.table` of simulated event history data with columns `id`,
 #'   `time`, `delta`, baseline covariates, and one column per process.
+#' @examples
+#' # An illness-death process: z is a one-jump "illness" event that raises
+#' # the hazard of the terminal process outcome1, with independent censoring.
+#' set.seed(1405)
+#' baseline <- list(L0 = function(N) rnorm(N))
+#' processes <- list(
+#'   z = list(type = "one.jump", eta = 0.2, nu = 1),
+#'   outcome1 = list(type = "terminal", eta = 0.3, nu = 1),
+#'   censoring = list(type = "censoring", eta = 0.1, nu = 1)
+#' )
+#' effects <- list(
+#'   c("L0", "z", 0.5),
+#'   c("z", "outcome1", 0.7)
+#' )
+#'
+#' dt <- sim.generic(baseline = baseline, processes = processes, effects = effects, n = 100)
+#' head(dt)
 #' @export
 sim.generic <- function(
   baseline = list(),

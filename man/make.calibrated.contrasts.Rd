@@ -37,3 +37,15 @@ Given TMLE fits for a treatment arm, a placebo arm, and a calibrated
 decomposition into a mediated and a calibrated contrast, with influence
 function-based confidence intervals.
 }
+\examples{
+set.seed(1405)
+treatment.fit <- list(estimate = c(tmle.est = 0.7), eic = rnorm(200, sd = 0.1))
+placebo.fit <- list(estimate = c(tmle.est = 0.3), eic = rnorm(200, sd = 0.1))
+calibrated.fit <- list(estimate = c(target.est = 0.5), eic = rnorm(200, sd = 0.1))
+
+make.calibrated.contrasts(
+  treatment.fit = treatment.fit,
+  placebo.fit = placebo.fit,
+  calibrated.fit = calibrated.fit
+)
+}

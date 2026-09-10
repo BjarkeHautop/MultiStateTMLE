@@ -70,6 +70,45 @@
 #' @return A list with the TMLE `estimate`, standard error, and (depending on
 #'   the arguments above) the efficient influence curve, convergence
 #'   diagnostics, and weight summaries.
+#' @examples
+#' set.seed(1405)
+#' baseline <- list(L0 = function(N) rnorm(N))
+#' processes <- list(
+#'   z = list(type = "one.jump", eta = 0.2, nu = 1),
+#'   outcome1 = list(type = "terminal", eta = 0.3, nu = 1),
+#'   censoring = list(type = "censoring", eta = 0.1, nu = 1)
+#' )
+#' effects <- list(
+#'   c("L0", "z", 0.5),
+#'   c("z", "outcome1", 0.7)
+#' )
+#' dt <- sim.generic(baseline = baseline, processes = processes, effects = effects, n = 100)
+#'
+#' initial.fit <- prepare.initial(
+#'   dt,
+#'   tau = 1,
+#'   fit.types = list(
+#'     z = list(
+#'       model = "Surv(tstart, tstop, delta == 2)~L0",
+#'       fit = "cox",
+#'       at.risk = function(dt) (dt[["z"]] == 0)
+#'     ),
+#'     outcome1 = list(model = "Surv(tstart, tstop, delta == 1)~L0+z", fit = "cox"),
+#'     censoring = list(model = "Surv(tstart, tstop, delta == 0)~L0", fit = "cox")
+#'   ),
+#'   verbose = FALSE
+#' )
+#'
+#' # Estimated risk of outcome1 by tau = 1 with no intervention (alpha = 1).
+#' fit <- tmle.alpha.fun(
+#'   initial.fit = initial.fit,
+#'   target = "outcome1",
+#'   tau = 1,
+#'   alpha = 1,
+#'   use.cores = 1,
+#'   verbose = FALSE
+#' )
+#' fit$estimate
 #' @export
 tmle.alpha.fun <- function(
   target = "z",

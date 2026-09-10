@@ -58,3 +58,15 @@ Searches over the shape-parameter intervention \code{alpha} for the value at
 which \code{fun(alpha, ...)}'s estimate equals \code{theta}, via bracket expansion
 followed by root finding, caching evaluations of \code{fun} along the way.
 }
+\examples{
+# Psi_z^alpha(P) = 0.6 * (1 - exp(-alpha)), with a known inverse,
+# used here to check that estimate.alpha.fun recovers it numerically.
+fun <- function(alpha) {
+  psi <- 0.6 * (1 - exp(-alpha))
+  list(estimate = c(tmle.est = psi, se = 0.05), eic = rep(psi, 10))
+}
+
+res <- estimate.alpha.fun(theta = 0.3, fun = fun, c_n = 1e-4, alpha_init = 1)
+res$alpha.hat
+res$converged
+}

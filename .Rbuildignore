@@ -18,3 +18,5 @@
 ^panache\.toml$
 ^\.git-blame-ignore-revs$
 ^README\.Rmd$
+^\.output$
+\.pdf$

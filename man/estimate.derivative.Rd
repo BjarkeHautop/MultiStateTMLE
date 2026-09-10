@@ -35,3 +35,8 @@ Approximates the derivative with respect to \code{alpha} of the TMLE/one-step
 estimate returned by \code{fun}, using a symmetric finite-difference at
 \code{alpha_hat}.
 }
+\examples{
+# fun(alpha) = alpha^2, so the derivative at alpha = 3 is 6.
+fun <- function(alpha, parameter, ...) list(estimate = c(tmle.est = alpha^2))
+estimate.derivative(alpha_hat = 3, fun = fun, parameter = "z", h = 0.01)
+}

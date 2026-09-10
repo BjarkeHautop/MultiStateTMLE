@@ -40,6 +40,17 @@
 #'   when `verbose = TRUE`.
 #' @return A list describing the solution, including the selected `alpha` and
 #'   the corresponding evaluation of `fun`.
+#' @examples
+#' # Psi_z^alpha(P) = 0.6 * (1 - exp(-alpha)), with a known inverse,
+#' # used here to check that estimate.alpha.fun recovers it numerically.
+#' fun <- function(alpha) {
+#'   psi <- 0.6 * (1 - exp(-alpha))
+#'   list(estimate = c(tmle.est = psi, se = 0.05), eic = rep(psi, 10))
+#' }
+#'
+#' res <- estimate.alpha.fun(theta = 0.3, fun = fun, c_n = 1e-4, alpha_init = 1)
+#' res$alpha.hat
+#' res$converged
 #' @export
 estimate.alpha.fun <- function(
   theta,

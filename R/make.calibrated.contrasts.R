@@ -33,6 +33,17 @@
 #' @return A `data.table` with one row per contrast (`total`, `mediated`,
 #'   `calibrated`) and columns `estimate`, `se`, `lower`, `upper`, with
 #'   `decomposition.error` and `eic.decomposition.error` attributes.
+#' @examples
+#' set.seed(1405)
+#' treatment.fit <- list(estimate = c(tmle.est = 0.7), eic = rnorm(200, sd = 0.1))
+#' placebo.fit <- list(estimate = c(tmle.est = 0.3), eic = rnorm(200, sd = 0.1))
+#' calibrated.fit <- list(estimate = c(target.est = 0.5), eic = rnorm(200, sd = 0.1))
+#'
+#' make.calibrated.contrasts(
+#'   treatment.fit = treatment.fit,
+#'   placebo.fit = placebo.fit,
+#'   calibrated.fit = calibrated.fit
+#' )
 #' @export
 make.calibrated.contrasts <- function(
   target = NULL,

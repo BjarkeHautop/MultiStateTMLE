@@ -27,7 +27,8 @@ recurrent), and Weibull intensity parameters \code{eta}/\code{nu}.}
 effects between baseline/process variables and process intensities.}
 
 \item{sim.object}{optional list with \code{baseline}/\code{processes}/\code{effects}
-entries, used as a fallback when those arguments are not supplied.}
+entries, used as a fallback when none of \code{baseline}, \code{processes}, or
+\code{effects} are supplied directly.}
 
 \item{cens}{numeric at-risk indicator scaling for the censoring process.}
 
@@ -49,4 +50,22 @@ A \code{data.table} of simulated event history data with columns \code{id},
 Simulates multistate event history data from a set of user-specified
 baseline covariates, event processes (with Weibull intensities and Cox-type
 effects), and their effects on one another, via \code{\link[simevent:simEventData]{simevent::simEventData()}}.
+}
+\examples{
+# An illness-death process: z is a one-jump "illness" event that raises
+# the hazard of the terminal process outcome1, with independent censoring.
+set.seed(1405)
+baseline <- list(L0 = function(N) rnorm(N))
+processes <- list(
+  z = list(type = "one.jump", eta = 0.2, nu = 1),
+  outcome1 = list(type = "terminal", eta = 0.3, nu = 1),
+  censoring = list(type = "censoring", eta = 0.1, nu = 1)
+)
+effects <- list(
+  c("L0", "z", 0.5),
+  c("z", "outcome1", 0.7)
+)
+
+dt <- sim.generic(baseline = baseline, processes = processes, effects = effects, n = 100)
+head(dt)
 }
