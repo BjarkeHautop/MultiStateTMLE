@@ -45,3 +45,13 @@ estimate.derivative(
 ## Value
 
 numeric; the estimated derivative.
+
+## Examples
+
+``` r
+# fun(alpha) = alpha^2, so the derivative at alpha = 3 is 6.
+fun <- function(alpha, parameter, ...) list(estimate = c(tmle.est = alpha^2))
+estimate.derivative(alpha_hat = 3, fun = fun, parameter = "z", h = 0.01)
+#> tmle.est 
+#>        6 
+```

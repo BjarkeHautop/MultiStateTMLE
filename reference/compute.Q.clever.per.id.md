@@ -104,5 +104,24 @@ data.table: `dt_id` augmented with column `Q` and columns
 ## Examples
 
 ``` r
-# compute.Q.clever.per.id(dt_id = some_dt_for_one_id, states = depend.matrix, process.types = process.types)
+# S = 1, single terminal process "D": Q_t collapses to the discrete-time
+# cumulative incidence 1 - prod(1 - h_s).
+h <- c(0.1, 0.2, 0.3)
+dt_id <- data.table::data.table(
+  state = c(1L, 1L, 1L),
+  state.row.index = c(1L, 1L, 1L),
+  P.D.1 = h
+)
+states <- data.table::data.table(state = 1L)
+
+compute.Q.clever.per.id(
+  dt_id = dt_id,
+  states = states,
+  process.types = list(D = "terminal")
+)
+#>    state state.row.index P.D.1     Q clever.Q.D0 clever.Q.D1 clever.Q.D   Q.1
+#>    <int>           <int> <num> <num>       <num>       <num>      <num> <num>
+#> 1:     1               1   0.1 0.496        0.44           1       0.56 0.496
+#> 2:     1               1   0.2 0.440        0.30           1       0.70 0.440
+#> 3:     1               1   0.3 0.300        0.30           1       0.70 0.300
 ```

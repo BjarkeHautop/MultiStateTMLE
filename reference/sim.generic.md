@@ -41,7 +41,8 @@ sim.generic(
 - sim.object:
 
   optional list with `baseline`/`processes`/`effects` entries, used as a
-  fallback when those arguments are not supplied.
+  fallback when none of `baseline`, `processes`, or `effects` are
+  supplied directly.
 
 - cens:
 
@@ -70,3 +71,33 @@ sim.generic(
 
 A `data.table` of simulated event history data with columns `id`,
 `time`, `delta`, baseline covariates, and one column per process.
+
+## Examples
+
+``` r
+# An illness-death process: z is a one-jump "illness" event that raises
+# the hazard of the terminal process outcome1, with independent censoring.
+set.seed(1405)
+baseline <- list(L0 = function(N) rnorm(N))
+processes <- list(
+  z = list(type = "one.jump", eta = 0.2, nu = 1),
+  outcome1 = list(type = "terminal", eta = 0.3, nu = 1),
+  censoring = list(type = "censoring", eta = 0.1, nu = 1)
+)
+effects <- list(
+  c("L0", "z", 0.5),
+  c("z", "outcome1", 0.7)
+)
+
+dt <- sim.generic(baseline = baseline, processes = processes, effects = effects, n = 100)
+head(dt)
+#> Key: <id>
+#>       id      time delta         L0     z
+#>    <int>     <num> <int>      <num> <num>
+#> 1:     1 1.0836890     2  0.2724785     1
+#> 2:     1 2.7886939     1  0.2724785     1
+#> 3:     2 0.6539194     1  0.3572619     0
+#> 4:     3 0.1212156     1 -0.8616620     0
+#> 5:     4 1.1416233     2  0.8083350     1
+#> 6:     4 2.6092612     1  0.8083350     1
+```

@@ -60,3 +60,50 @@ sim.from.data(
 
 A `data.table` of simulated event history data with columns `id`,
 `time`, `delta`, baseline covariates, and one column per process.
+
+## Examples
+
+``` r
+set.seed(1405)
+baseline <- list(L0 = function(N) rnorm(N))
+processes <- list(
+  z = list(type = "one.jump", eta = 0.2, nu = 1),
+  outcome1 = list(type = "terminal", eta = 0.3, nu = 1),
+  censoring = list(type = "censoring", eta = 0.1, nu = 1)
+)
+effects <- list(
+  c("L0", "z", 0.5),
+  c("z", "outcome1", 0.7)
+)
+dt <- sim.generic(baseline = baseline, processes = processes, effects = effects, n = 100)
+
+# Fit Cox/Weibull parameters from observed data, then simulate new data
+# from those fitted parameters.
+sim.parameters <- prepare.initial(
+  dt,
+  tau = 1,
+  fit.types = list(
+    z = list(
+      model = "Surv(tstart, tstop, delta == 2)~L0",
+      fit = "cox",
+      at.risk = function(dt) (dt[["z"]] == 0)
+    ),
+    outcome1 = list(model = "Surv(tstart, tstop, delta == 1)~L0+z", fit = "cox"),
+    censoring = list(model = "Surv(tstart, tstop, delta == 0)~L0", fit = "cox")
+  ),
+  verbose = FALSE,
+  return.parameters.for.simulation = TRUE
+)
+
+new.dt <- sim.from.data(n = 100, sim.parameters = sim.parameters)
+head(new.dt)
+#> Key: <id>
+#>       id      time delta        L0     z
+#>    <int>     <num> <int>     <num> <num>
+#> 1:     1 0.1508955     1 0.2366780     0
+#> 2:     2 2.1064530     0 0.8048426     0
+#> 3:     3 1.1223962     1 0.9227430     0
+#> 4:     4 0.6157989     2 0.1345364     1
+#> 5:     4 0.7253412     1 0.1345364     1
+#> 6:     5 3.2244288     1 1.6101867     0
+```

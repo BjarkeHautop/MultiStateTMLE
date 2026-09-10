@@ -100,6 +100,52 @@ parameters.</p></dd>
 <code>time</code>, <code>delta</code>, baseline covariates, and one column per process.</p>
     </div>
 
+    <div class="section level2">
+    <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1405</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">baseline</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>L0 <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">N</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">N</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">processes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"one.jump"</span>, eta <span class="op">=</span> <span class="fl">0.2</span>, nu <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  outcome1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"terminal"</span>, eta <span class="op">=</span> <span class="fl">0.3</span>, nu <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  censoring <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>type <span class="op">=</span> <span class="st">"censoring"</span>, eta <span class="op">=</span> <span class="fl">0.1</span>, nu <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">effects</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"L0"</span>, <span class="st">"z"</span>, <span class="fl">0.5</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"z"</span>, <span class="st">"outcome1"</span>, <span class="fl">0.7</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dt</span> <span class="op">&lt;-</span> <span class="fu"><a href="sim.generic.html">sim.generic</a></span><span class="op">(</span>baseline <span class="op">=</span> <span class="va">baseline</span>, processes <span class="op">=</span> <span class="va">processes</span>, effects <span class="op">=</span> <span class="va">effects</span>, n <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Fit Cox/Weibull parameters from observed data, then simulate new data</span></span></span>
+<span class="r-in"><span><span class="co"># from those fitted parameters.</span></span></span>
+<span class="r-in"><span><span class="va">sim.parameters</span> <span class="op">&lt;-</span> <span class="fu"><a href="prepare.initial.html">prepare.initial</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">dt</span>,</span></span>
+<span class="r-in"><span>  tau <span class="op">=</span> <span class="fl">1</span>,</span></span>
+<span class="r-in"><span>  fit.types <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>    z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      model <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 2)~L0"</span>,</span></span>
+<span class="r-in"><span>      fit <span class="op">=</span> <span class="st">"cox"</span>,</span></span>
+<span class="r-in"><span>      at.risk <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">dt</span><span class="op">)</span> <span class="op">(</span><span class="va">dt</span><span class="op">[[</span><span class="st">"z"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">0</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span>,</span></span>
+<span class="r-in"><span>    outcome1 <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 1)~L0+z"</span>, fit <span class="op">=</span> <span class="st">"cox"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    censoring <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>model <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 0)~L0"</span>, fit <span class="op">=</span> <span class="st">"cox"</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="op">)</span>,</span></span>
+<span class="r-in"><span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span></span>
+<span class="r-in"><span>  return.parameters.for.simulation <span class="op">=</span> <span class="cn">TRUE</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="va">new.dt</span> <span class="op">&lt;-</span> <span class="fu">sim.from.data</span><span class="op">(</span>n <span class="op">=</span> <span class="fl">100</span>, sim.parameters <span class="op">=</span> <span class="va">sim.parameters</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">new.dt</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Key: &lt;id&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       id      time delta        L0     z</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;int&gt;     &lt;num&gt; &lt;int&gt;     &lt;num&gt; &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:     1 0.1508955     1 0.2366780     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     2 2.1064530     0 0.8048426     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:     3 1.1223962     1 0.9227430     0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4:     4 0.6157989     2 0.1345364     1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5:     4 0.7253412     1 0.1345364     1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6:     5 3.2244288     1 1.6101867     0</span>
+</code></pre></div>
+    </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside></div>
 

@@ -128,7 +128,26 @@ process <code>&lt;name&gt;</code> and state index <code>s</code> in <code>1..S</
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># compute.Q.clever.per.id(dt_id = some_dt_for_one_id, states = depend.matrix, process.types = process.types)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># S = 1, single terminal process "D": Q_t collapses to the discrete-time</span></span></span>
+<span class="r-in"><span><span class="co"># cumulative incidence 1 - prod(1 - h_s).</span></span></span>
+<span class="r-in"><span><span class="va">h</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.2</span>, <span class="fl">0.3</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dt_id</span> <span class="op">&lt;-</span> <span class="fu">data.table</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/data.table.html" class="external-link">data.table</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  state <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">1L</span>, <span class="fl">1L</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  state.row.index <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1L</span>, <span class="fl">1L</span>, <span class="fl">1L</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  P.D.1 <span class="op">=</span> <span class="va">h</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">states</span> <span class="op">&lt;-</span> <span class="fu">data.table</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/data.table/man/data.table.html" class="external-link">data.table</a></span><span class="op">(</span>state <span class="op">=</span> <span class="fl">1L</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="fu">compute.Q.clever.per.id</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  dt_id <span class="op">=</span> <span class="va">dt_id</span>,</span></span>
+<span class="r-in"><span>  states <span class="op">=</span> <span class="va">states</span>,</span></span>
+<span class="r-in"><span>  process.types <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>D <span class="op">=</span> <span class="st">"terminal"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    state state.row.index P.D.1     Q clever.Q.D0 clever.Q.D1 clever.Q.D   Q.1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;int&gt;           &lt;int&gt; &lt;num&gt; &lt;num&gt;       &lt;num&gt;       &lt;num&gt;      &lt;num&gt; &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:     1               1   0.1 0.496        0.44           1       0.56 0.496</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     1               1   0.2 0.440        0.30           1       0.70 0.440</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:     1               1   0.3 0.300        0.30           1       0.70 0.300</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

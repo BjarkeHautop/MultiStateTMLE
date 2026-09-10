@@ -47,3 +47,23 @@ make.calibrated.contrasts(
 A `data.table` with one row per contrast (`total`, `mediated`,
 `calibrated`) and columns `estimate`, `se`, `lower`, `upper`, with
 `decomposition.error` and `eic.decomposition.error` attributes.
+
+## Examples
+
+``` r
+set.seed(1405)
+treatment.fit <- list(estimate = c(tmle.est = 0.7), eic = rnorm(200, sd = 0.1))
+placebo.fit <- list(estimate = c(tmle.est = 0.3), eic = rnorm(200, sd = 0.1))
+calibrated.fit <- list(estimate = c(target.est = 0.5), eic = rnorm(200, sd = 0.1))
+
+make.calibrated.contrasts(
+  treatment.fit = treatment.fit,
+  placebo.fit = placebo.fit,
+  calibrated.fit = calibrated.fit
+)
+#>      contrast estimate         se     lower     upper
+#>        <char>    <num>      <num>     <num>     <num>
+#> 1:      total      0.4 0.01027867 0.3798542 0.4201458
+#> 2:   mediated      0.2 0.01052854 0.1793644 0.2206356
+#> 3: calibrated      0.2 0.01025611 0.1798984 0.2201016
+```
