@@ -61,9 +61,15 @@ followed by root finding, caching evaluations of \code{fun} along the way.
 \examples{
 # Psi_z^alpha(P) = 0.6 * (1 - exp(-alpha)), with a known inverse,
 # used here to check that estimate.alpha.fun recovers it numerically.
+# eic mimics a real per-subject efficient influence curve, as returned
+# by tmle.alpha.fun().
+set.seed(1405)
 fun <- function(alpha) {
   psi <- 0.6 * (1 - exp(-alpha))
-  list(estimate = c(tmle.est = psi, se = 0.05), eic = rep(psi, 10))
+  n <- 200
+  ic <- rnorm(n, sd = 0.05)
+  ic <- ic - mean(ic)
+  list(estimate = c(tmle.est = psi, se = sd(ic) / sqrt(n)), eic = ic)
 }
 
 res <- estimate.alpha.fun(theta = 0.3, fun = fun, c_n = 1e-4, alpha_init = 1)
