@@ -547,8 +547,17 @@ prepare.initial <- function(
   )
   setorder(tmp.inner, id, time.obs, na.last = TRUE)
 
+  ## Use nafill(type="locf") from data.table's instead of zoo::na.locf(),
+  ## since much cheaper.
   for (varname in varnames) {
-    tmp.inner[, (varname) := na.locf(get(varname)), by = "id"]
+    tmp.inner[, (varname) := nafill(get(varname), type = "locf"), by = "id"]
+    if (anyNA(tmp.inner[[varname]])) {
+      stop(
+        "Unexpected leading NA in '",
+        varname,
+        "' after forward-fill (first observation missing for some id)."
+      )
+    }
   }
 
   #--------------------------------
