@@ -169,17 +169,11 @@ calibration.fun <- function(
   theta.se <- sqrt(mean(theta.eic^2) / n)
 
   if (theta < 0) {
-    theta <- 0
-  } else if (theta > 1) {
-    theta <- 1
+    stop(paste0("inadmissible target: theta = ", theta))
   }
 
   if (browse) {
     browser()
-  }
-
-  if (theta > 1 | theta < 0) {
-    stop(paste0("inadmissible target: theta = ", theta))
   }
 
   if (theta > 0) {
@@ -192,6 +186,18 @@ calibration.fun <- function(
       verbose = verbose,
       theta = theta
     )
+
+    if (!isTRUE(est.alpha$converged)) {
+      stop(paste0(
+        "calibration failed to converge: no alpha achieves theta = ",
+        theta,
+        " (closest achieved: ",
+        est.alpha$grid$psi[which.min(abs(est.alpha$grid$psi - theta))],
+        ", dist = ",
+        est.alpha$dist,
+        "); theta may exceed L(P), the achievable ceiling of Psi_z^alpha(P)"
+      ))
+    }
 
     est.deriv.auxiliary <- estimate.derivative(
       est.alpha$alpha.hat,
