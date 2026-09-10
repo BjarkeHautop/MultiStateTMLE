@@ -2530,13 +2530,16 @@ prepare.initial <- function(
 
           ## tmp.state <- copy(tmp.long)
 
+          ## filter once per state and reuse below
+          depend.matrix.jj <- depend.matrix[state == state.jj]
+
           which.jj <- rep(TRUE, nrow(tmp.state))
 
           for (varname in setdiff(names(depend.matrix), "state")) {
             #state.names
 
             ##message("before assigning ", varname, " for state ", state.jj)
-            tmp.state[[varname]] <- depend.matrix[state == state.jj][[varname]]
+            tmp.state[[varname]] <- depend.matrix.jj[[varname]]
 
             if (!any.hal) {
               #{
@@ -2669,9 +2672,7 @@ prepare.initial <- function(
             if (fit.type.jj %in% at.risk.ids) {
               # <- FIX: may just want to remove again
               chunk.out[[colname]] <- chunk.out[[colname]] *
-                fit.types[[fit.type.jj]][["at.risk"]](depend.matrix[
-                  state == state.jj
-                ])
+                fit.types[[fit.type.jj]][["at.risk"]](depend.matrix.jj)
               #tmp.long[, (paste0("P.", names(fit.types)[fit.type.jj], ".", state.jj)) :=
               #               tmp.long[[paste0("P.", names(fit.types)[fit.type.jj], ".", state.jj)]]*
               #               fit.types[[fit.type.jj]][["at.risk"]](depend.matrix[state == state.jj])]
