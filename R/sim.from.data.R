@@ -3,9 +3,9 @@
 ## Author: Helene
 ## Created: Aug 29 2026 (10:18) 
 ## Version: 
-## Last-Updated: Aug 31 2026 (14:21) 
+## Last-Updated: Sep  4 2026 (14:00) 
 ##           By: Helene
-##     Update #: 42
+##     Update #: 58
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -146,36 +146,55 @@ sim.from.data <- function(n = 500,
             if (v %in% c(baseline.vars, process.order)) {
                 beta[v, proc] <- cp[v]
             } else {
-                bvar <- baseline.vars[sapply(baseline.vars, function(baseline.var)
-                    length(grep(baseline.var, v, value = TRUE))>0)]
-                bvalue <- gsub(bvar, "", v)
                 
-                svar <- sim.parameters$baseline.summary[[bvar]]
-                probs <- unlist(svar$proportions)
-                vals <- seq_along(names(probs))
+                if (length(grep("\\(T", v))>0) {
 
-                bval <- vals[names(probs) == bvalue][1]
-                
-                out_vec <- cp[v]
-                #names(out_vec) <- paste0("N", (0:(length(process.order)-1))[process.order == proc])
-                names(out_vec) <- paste0(
-                    "N", match(proc, process.order)-1)
-                #out_list <- list(out_vec)
-                #names(out_list) <- paste0("(", bvar, "==", bvalue, ")")
-                expr <- paste0("(", bvar, "==", bval, ")")
-                if (is.null(override_beta[[expr]])) {
-                    override_beta[[expr]] <- out_vec
+                    expr <- v
+                    out_vec <- cp[v]
+                    names(out_vec) <- paste0(
+                        "N", match(proc, process.order)-1)
+                    
+                    if (is.null(override_beta[[expr]])) {
+                        override_beta[[expr]] <- out_vec
+                    } else {
+                        override_beta[[expr]] <- c(override_beta[[expr]], out_vec)
+                    }
+                    
                 } else {
-                    override_beta[[expr]] <- c(override_beta[[expr]], out_vec)
-                }
-                ##override_beta[[length(override_beta)+1]] <- out_vec
-                ##names(override_beta)[length(override_beta)] <- expr
-                #override_beta[[length(override_beta)+1]] <-
-                #    out_list
-            }
 
+                    bvar <- baseline.vars[sapply(baseline.vars, function(baseline.var)
+                        length(grep(baseline.var, v, value = TRUE))>0)]
+
+                    bvalue <- gsub(bvar, "", v)
+                
+                    svar <- sim.parameters$baseline.summary[[bvar]]
+                    probs <- unlist(svar$proportions)
+                    vals <- seq_along(names(probs))
+
+                    bval <- vals[names(probs) == bvalue][1]
+                
+                    out_vec <- cp[v]
+                    #names(out_vec) <- paste0("N", (0:(length(process.order)-1))[process.order == proc])
+                    names(out_vec) <- paste0(
+                        "N", match(proc, process.order)-1)
+                    #out_list <- list(out_vec)
+                    #names(out_list) <- paste0("(", bvar, "==", bvalue, ")")
+                    expr <- paste0("(", bvar, "==", bval, ")")
+                    if (is.null(override_beta[[expr]])) {
+                        override_beta[[expr]] <- out_vec
+                    } else {
+                        override_beta[[expr]] <- c(override_beta[[expr]], out_vec)
+                    }
+                    ##override_beta[[length(override_beta)+1]] <- out_vec
+                    ##names(override_beta)[length(override_beta)] <- expr
+                    #override_beta[[length(override_beta)+1]] <-
+                    #    out_list
+                }
+            }
         }
     }
+
+    ## print(override_beta)
 
     if (verbose) print(beta)
 

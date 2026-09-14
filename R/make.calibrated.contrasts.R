@@ -3,9 +3,9 @@
 ## Author: Helene
 ## Created: Sep  4 2026 (10:04) 
 ## Version: 
-## Last-Updated: Sep  4 2026 (10:21) 
+## Last-Updated: Sep  4 2026 (10:27) 
 ##           By: Helene
-##     Update #: 18
+##     Update #: 20
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -53,7 +53,7 @@ make.calibrated.contrasts <- function(
         estimate <- estimate.1 - estimate.0
         eic <- eic.1 - eic.0
 
-        se <- stats::sd(eic) / sqrt(n)
+        se <- sqrt(mean(eic^2 / n))
 
         critical.value <-
             stats::qnorm(1 - (1 - conf.level) / 2)

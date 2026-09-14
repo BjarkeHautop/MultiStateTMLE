@@ -3,9 +3,9 @@
 ## Author: Helene
 ## Created: Feb  4 2026 (08:47) 
 ## Version: 
-## Last-Updated: Aug 29 2026 (20:10) 
+## Last-Updated: Aug 31 2026 (14:49) 
 ##           By: Helene
-##     Update #: 949
+##     Update #: 963
 #----------------------------------------------------------------------
 ## 
 ### Commentary: 
@@ -248,7 +248,7 @@ prepare.initial <- function(dt,
     #--------------------------------
     #-- outcome / clever covariate part:
     # (we start with cox models, if HAL is specified this is fitted later)
-    ##browser()
+    ## browser()
     fit.cox.types <- lapply(1:length(fit.types), function(fit.type.jj) {
         model.jj <- fit.types[[fit.type.jj]][["model"]]
         if (length(depend.time)>0) {
@@ -431,7 +431,15 @@ prepare.initial <- function(dt,
     }
     
     if (length(a) > 0) {
+        #try.predict.A0 <- try(
         tmp.long[["pi.A0.1"]] <- predict(fit.A0, newdata = tmp.long, type = "response")
+        #)
+        #if (inherits(try.predict.A0, "try-error")) {
+        #    message("other option, but should check")
+        #    tmp.long <- merge(tmp.long, dt[idN == 1][, pi.A0.1 := predict(fit.A0, type = "response")][, c("id", "pi.A0.1"), with = FALSE],
+        #        by = "id", all.x = TRUE)
+        #    if (sum(is.na(tmp.long$pi.A0.1))>0) message("check here")
+        #}
     }
 
     #--------------------------------    
