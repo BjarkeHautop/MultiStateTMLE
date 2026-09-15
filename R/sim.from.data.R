@@ -224,6 +224,12 @@ sim.from.data <- function(
       if (v %in% c(baseline.vars, process.order)) {
         beta[v, proc] <- cp[v]
       } else if (length(grep("\\(T", v)) > 0) {
+        # TODO: `v` here is a raw Cox coefficient name (e.g.
+        # "as.factor(T.z)1"), not a parseable R expression, but
+        # simEventData() evals override_beta names via
+        # eval(parse(text = expr)). This errors for any depend.time
+        # term fit via Cox (as.factor(T.<var>) terms). Needs a real
+        # comparison expression, e.g. "(T.<var>==<level>)".
         expr <- v
         out_vec <- cp[v]
         names(out_vec) <- paste0(
