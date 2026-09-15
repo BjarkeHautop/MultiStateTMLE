@@ -30,7 +30,7 @@ test_that("calibration.fun validates its arguments", {
       initial.fit = initial.fit,
       theta = 0.2,
       tau = 1,
-      target = c("outcome1", "z"),
+      target = 5,
       z.name = "z",
       use.cores = 1
     ),

@@ -3,9 +3,9 @@
 ## Author: Helene
 ## Created: May 13 2026 (19:31)
 ## Version:
-## Last-Updated: Aug 28 2026 (08:59)
+## Last-Updated: Aug 31 2026 (18:19)
 ##           By: Helene
-##     Update #: 140
+##     Update #: 175
 #----------------------------------------------------------------------
 ##
 ### Commentary:
@@ -39,7 +39,8 @@
 #' @param tau follow-up horizon for the `target` process.
 #' @param tau.z follow-up horizon for the `z` process (defaults to `tau`).
 #' @param use.cores number of cores to use.
-#' @param target character; name of the outcome process being calibrated to.
+#' @param target character vector; name(s) of the outcome process(es) being
+#'   calibrated to.
 #' @param z.name character; name of the process on which the shape
 #'   intervention `alpha` acts.
 #' @param ... additional arguments passed on to [tmle.alpha.fun()].
@@ -116,7 +117,7 @@ calibration.fun <- function(
   checkmate::assert_number(tau, lower = 0, finite = TRUE)
   checkmate::assert_number(tau.z, lower = 0, finite = TRUE)
   checkmate::assert_count(use.cores, positive = TRUE)
-  checkmate::assert_string(target)
+  checkmate::assert_character(target, min.len = 1)
   checkmate::assert_string(z.name)
 
   a.fixed <- a
@@ -237,46 +238,65 @@ calibration.fun <- function(
 
   alpha.se <- sqrt(mean(alpha.eic^2) / n)
 
-  target.est <- tmle.alpha.fun.fixed(
-    tau = tau,
-    parameter = target,
-    alpha = est.alpha$alpha.hat,
-    output.eic = TRUE
-  )
-
-  target.se.crude <- target.est[["estimate"]]["se"]
-
-  if (theta > 0) {
-    est.deriv.target <- estimate.derivative(
-      est.alpha$alpha.hat,
-      parameter = target,
+  out.target <- lapply(target, function(target1) {
+    target.est <- tmle.alpha.fun.fixed(
       tau = tau,
-      fun = tmle.alpha.fun.fixed,
-      h = 0.3 *
-        n^{
-          -1 / 6
-        } *
-        sqrt(mean(est.alpha$eic^2))
+      parameter = target1,
+      alpha = est.alpha$alpha.hat,
+      output.eic = TRUE
     )
 
-    target.se <- sqrt(
-      mean((target.est[["eic"]] + est.deriv.target * alpha.eic)^2) / n
+    target.se.crude <- target.est[["estimate"]]["se"]
+
+    if (theta > 0) {
+      est.deriv.target <- estimate.derivative(
+        est.alpha$alpha.hat,
+        parameter = target1,
+        tau = tau,
+        fun = tmle.alpha.fun.fixed,
+        h = 0.3 *
+          n^{
+            -1 / 6
+          } *
+          sqrt(mean(est.alpha$eic^2))
+      )
+
+      target.se <- sqrt(
+        mean((target.est[["eic"]] + est.deriv.target * alpha.eic)^2) / n
+      )
+    } else {
+      est.deriv.target <- Inf
+      target.se <- sqrt(mean((target.est[["eic"]])^2) / n)
+    }
+
+    list(
+      target.est = target.est,
+      target.se.crude = target.se.crude,
+      target.se = target.se,
+      est.deriv.target = est.deriv.target
     )
+  })
+
+  if (length(target) > 1) {
+    names(out.target) <- target
   } else {
-    est.deriv.target <- Inf
-    target.se <- sqrt(mean((target.est[["eic"]])^2) / n)
+    names(out.target) <- ""
   }
 
   out.estimate <- c(
     alpha.est = est.alpha$alpha.hat,
     alpha.se = alpha.se,
-    target.est = as.numeric(target.est[["estimate"]][grep(
-      "tmle.est|one.step.est",
-      names(target.est[["estimate"]]),
-      value = TRUE
-    )]), #["tmle.est"]
-    target.se = target.se,
-    target.se.crude = as.numeric(target.se.crude),
+    target.est = sapply(out.target, function(out.target.1) {
+      as.numeric(out.target.1[["target.est"]][["estimate"]][grep(
+        "tmle.est|one.step.est",
+        names(out.target.1[["target.est"]][["estimate"]]),
+        value = TRUE
+      )])
+    }),
+    target.se = sapply(out.target, function(out.target.1) out.target.1[["target.se"]]),
+    target.se.crude = sapply(out.target, function(out.target.1) {
+      as.numeric(out.target.1[["target.se.crude"]])
+    }),
     theta = theta,
     theta.se = theta.se
   )
@@ -286,16 +306,29 @@ calibration.fun <- function(
     est.alpha.converged = est.alpha$converged,
     est.alpha.dist = est.alpha$dist,
     est.alpha.cn = est.alpha$c.n,
-    est.deriv.target = est.deriv.target
+    est.deriv.target = sapply(out.target, function(out.target.1) {
+      out.target.1[["est.deriv.target"]]
+    })
   )
 
   if (output.eic) {
+    target.eic <- lapply(out.target, function(out.target.1) {
+      out.target.1[["target.est"]][["eic"]]
+    })
+    eic <- lapply(out.target, function(out.target.1) {
+      out.target.1[["target.est"]][["eic"]] +
+        out.target.1[["est.deriv.target"]] * alpha.eic
+    })
+    if (length(target) == 1) {
+      target.eic <- target.eic[[1]]
+      eic <- eic[[1]]
+    }
     return(list(
       estimate = out.estimate,
       checks = out.checks,
       alpha.eic = alpha.eic,
-      target.eic = target.est[["eic"]],
-      eic = target.est[["eic"]] + est.deriv.target * alpha.eic
+      target.eic = target.eic,
+      eic = eic
     ))
   } else {
     return(list(estimate = out.estimate, checks = out.checks))

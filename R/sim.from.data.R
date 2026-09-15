@@ -3,9 +3,9 @@
 ## Author: Helene
 ## Created: Aug 29 2026 (10:18)
 ## Version:
-## Last-Updated: Aug 31 2026 (14:21)
+## Last-Updated: Sep  4 2026 (14:00)
 ##           By: Helene
-##     Update #: 42
+##     Update #: 58
 #----------------------------------------------------------------------
 ##
 ### Commentary:
@@ -223,6 +223,19 @@ sim.from.data <- function(
     for (v in names(cp)) {
       if (v %in% c(baseline.vars, process.order)) {
         beta[v, proc] <- cp[v]
+      } else if (length(grep("\\(T", v)) > 0) {
+        expr <- v
+        out_vec <- cp[v]
+        names(out_vec) <- paste0(
+          "N",
+          match(proc, process.order) - 1
+        )
+
+        if (is.null(override_beta[[expr]])) {
+          override_beta[[expr]] <- out_vec
+        } else {
+          override_beta[[expr]] <- c(override_beta[[expr]], out_vec)
+        }
       } else {
         bvar <- baseline.vars[sapply(baseline.vars, function(baseline.var) {
           length(grep(baseline.var, v, value = TRUE)) > 0

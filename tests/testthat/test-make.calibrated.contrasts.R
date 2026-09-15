@@ -62,10 +62,10 @@ test_that("make.calibrated.contrasts computes se/CI from the influence curves", 
   crit <- qnorm(0.975)
 
   expected.se <- c(
-    total = sd(treatment.eic - placebo.eic),
-    mediated = sd(treatment.eic - calibrated.eic),
-    calibrated = sd(calibrated.eic - placebo.eic)
-  ) / sqrt(n)
+    total = sqrt(mean((treatment.eic - placebo.eic)^2 / n)),
+    mediated = sqrt(mean((treatment.eic - calibrated.eic)^2 / n)),
+    calibrated = sqrt(mean((calibrated.eic - placebo.eic)^2 / n))
+  )
 
   for (row in c("total", "mediated", "calibrated")) {
     this.row <- out[out$contrast == row]
