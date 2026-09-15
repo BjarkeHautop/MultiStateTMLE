@@ -50,7 +50,7 @@ test_that("calibration.fun validates its arguments", {
 })
 
 test_that("calibration.fun finds an alpha calibrating the z-process to theta", {
-  initial.fit <- make.fixture.initial.fit(n = 400)
+  initial.fit <- make.fixture.initial.fit(n = 100)
 
   cal <- calibration.fun(
     initial.fit = initial.fit,

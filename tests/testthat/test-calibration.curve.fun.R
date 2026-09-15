@@ -55,3 +55,32 @@ test_that("calibration.curve.fun traces the estimand over the alpha grid", {
   # alpha = 0 fully suppresses z, so exposure and target estimates should be 0.
   expect_equal(unname(curve$estimate$exposure.est[1]), 0)
 })
+
+test_that("calibration.curve.fun prints progress when verbose=TRUE", {
+  initial.fit <- make.fixture.initial.fit(n = 30)
+
+  expect_output(
+    calibration.curve.fun(
+      initial.fit = initial.fit,
+      alpha.grid = 1,
+      tau = 1,
+      target = "outcome1",
+      z.name = "z",
+      use.cores = 1,
+      verbose = TRUE
+    ),
+    "iter = 1"
+  )
+
+  expect_silent(
+    calibration.curve.fun(
+      initial.fit = initial.fit,
+      alpha.grid = 1,
+      tau = 1,
+      target = "outcome1",
+      z.name = "z",
+      use.cores = 1,
+      verbose = FALSE
+    )
+  )
+})

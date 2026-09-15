@@ -451,7 +451,9 @@ tmle.alpha.fun <- function(
   }
 
   for (iter in 1:max.iter) {
-    print(paste0("iter = ", iter))
+    if (verbose) {
+      print(paste0("iter = ", iter))
+    }
 
     setkey(tmp.long, id, time)
 
@@ -469,24 +471,18 @@ tmle.alpha.fun <- function(
       keep.by = TRUE
     )
 
-    t2 <- system.time({
-      dt_list <- mclapply(
-        dt_list,
-        compute.Q.clever.per.id,
-        states = states,
-        process.types = process.types,
-        P.prefix = P.prefix,
-        parameter = target.name,
-        get.years.lost = (length(years.lost) > 0),
-        years.lost.block.size = years.lost,
-        clever.by.state = target.by.state,
-        mc.cores = min(detectCores() - 1, use.cores)
-      )
-    })
-
-    if (verbose) {
-      print(t2)
-    }
+    dt_list <- mclapply(
+      dt_list,
+      compute.Q.clever.per.id,
+      states = states,
+      process.types = process.types,
+      P.prefix = P.prefix,
+      parameter = target.name,
+      get.years.lost = (length(years.lost) > 0),
+      years.lost.block.size = years.lost,
+      clever.by.state = target.by.state,
+      mc.cores = min(detectCores() - 1, use.cores)
+    )
 
     tmp.long <- rbindlist(dt_list)
 
@@ -570,14 +566,18 @@ tmle.alpha.fun <- function(
 
     ## if (iter == 2) browser()
 
-    print(paste0("eic equation solved at = ", abs(mean(eic))))
+    if (verbose) {
+      print(paste0("eic equation solved at = ", abs(mean(eic))))
+    }
 
     if (iter > min.iter) {
       # se.init (fixed at iteration 1) keeps this threshold stable rather
       # than moving with each iteration's eic.
       if (abs(mean(eic)) <= conv.const * se.init / (log(n))) {
         converged <- TRUE
-        print(paste0("converged after ", iter, " iterations"))
+        if (verbose) {
+          print(paste0("converged after ", iter, " iterations"))
+        }
         break()
       }
     }
