@@ -17,7 +17,7 @@ estimate.alpha.fun(
   max_iter = 100,
   alpha_min = 0.001,
   alpha_max = 100,
-  use.cores = 50,
+  use.cores = 1,
   verbose = FALSE,
   trace_every = 1L
 )

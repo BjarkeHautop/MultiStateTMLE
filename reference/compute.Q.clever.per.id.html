@@ -57,8 +57,6 @@ process <code>&lt;name&gt;</code> and state index <code>s</code> in <code>1..S</
 <span>  parameter <span class="op">=</span> <span class="st">"target"</span>,</span>
 <span>  process.deltas <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  compute.clever <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>  browse <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  browse2 <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  get.years.lost <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  years.lost.block.size <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  clever.by.state <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -99,14 +97,6 @@ process <code>&lt;name&gt;</code> and state index <code>s</code> in <code>1..S</
 
 <dt id="arg-compute-clever">compute.clever<a class="anchor" aria-label="anchor" href="#arg-compute-clever"></a></dt>
 <dd><p>logical; whether to compute and append clever.Q.<name>0 / clever.Q.<name>1 (default TRUE).</name></name></p></dd>
-
-
-<dt id="arg-browse">browse<a class="anchor" aria-label="anchor" href="#arg-browse"></a></dt>
-<dd><p>logical; if <code>TRUE</code>, drop into <code><a href="https://rdrr.io/r/base/browser.html" class="external-link">browser()</a></code> at the start of the backward recursion.</p></dd>
-
-
-<dt id="arg-browse-">browse2<a class="anchor" aria-label="anchor" href="#arg-browse-"></a></dt>
-<dd><p>logical; if <code>TRUE</code>, drop into <code><a href="https://rdrr.io/r/base/browser.html" class="external-link">browser()</a></code> at a secondary breakpoint inside the recursion.</p></dd>
 
 
 <dt id="arg-get-years-lost">get.years.lost<a class="anchor" aria-label="anchor" href="#arg-get-years-lost"></a></dt>

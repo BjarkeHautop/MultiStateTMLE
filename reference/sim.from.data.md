@@ -15,7 +15,6 @@ sim.from.data(
   cens = 1,
   alpha.intervention = list(),
   baseline.intervention = list(),
-  browse = FALSE,
   verbose = FALSE
 )
 ```
@@ -46,11 +45,6 @@ sim.from.data(
 
   named list of interventions that fix a baseline covariate to a
   constant value.
-
-- browse:
-
-  logical; if `TRUE`, drop into
-  [`browser()`](https://rdrr.io/r/base/browser.html) before simulating.
 
 - verbose:
 

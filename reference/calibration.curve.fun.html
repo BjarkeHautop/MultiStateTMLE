@@ -49,12 +49,11 @@ tracing out a calibration curve relating <code>alpha</code> to the target estima
 <span>  initial.fit <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  a <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  alpha.grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">5</span>, length <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>,</span>
-<span>  browse <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  output.eic <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  tau <span class="op">=</span> <span class="fl">1.2</span>,</span>
 <span>  tau.z <span class="op">=</span> <span class="va">tau</span>,</span>
-<span>  use.cores <span class="op">=</span> <span class="fl">50</span>,</span>
+<span>  use.cores <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  target <span class="op">=</span> <span class="st">"outcome"</span>,</span>
 <span>  z.name <span class="op">=</span> <span class="st">"z"</span>,</span>
 <span>  min.iter <span class="op">=</span> <span class="fl">1</span>,</span>
@@ -81,10 +80,6 @@ tracing out a calibration curve relating <code>alpha</code> to the target estima
 <dt id="arg-alpha-grid">alpha.grid<a class="anchor" aria-label="anchor" href="#arg-alpha-grid"></a></dt>
 <dd><p>numeric vector of shape-parameter interventions to
 evaluate.</p></dd>
-
-
-<dt id="arg-browse">browse<a class="anchor" aria-label="anchor" href="#arg-browse"></a></dt>
-<dd><p>logical; if <code>TRUE</code>, drop into <code><a href="https://rdrr.io/r/base/browser.html" class="external-link">browser()</a></code>.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
@@ -176,7 +171,6 @@ corresponding TMLE estimate of the effect on <code>target</code>.</p>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in mclapply(state.chunks, function(state.chunk) {    chunk.out &lt;- data.table(row_id = tmp.state[["row_id"]])    chunk.out[["state"]] &lt;- 0    for (state.jj in state.chunk) {        if (verbose &amp; (state.jj %in% print.state.jj)) {            print(paste0(state.jj, "/", max(depend.matrix[["state"]])))        }        depend.matrix.jj &lt;- depend.matrix[state == state.jj]        which.jj &lt;- rep(TRUE, nrow(tmp.state))        for (varname in setdiff(names(depend.matrix), "state")) {            tmp.state[[varname]] &lt;- depend.matrix.jj[[varname]]            if (!any.hal) {                if (length(which.recurrent) &gt; 0) {                  if (varname %in% which.recurrent) {                    for (count.jj in 1:max.count) {                      tmp.state[, `:=`((paste0(varname, ".",                         count.jj)), (tmp.state[[varname]] &gt;=                         count.jj))]                    }                  }                }            }            which.jj &lt;- which.jj &amp; (tmp.long[[varname]] &gt;= tmp.state[[varname]])        }        if (any.hal) {            X.hal.dynamic &lt;- Matrix(model.matrix(formula(paste0("delta",                 "~-1+", paste(paste0("(", gsub("FALSE|TRUE",                   "", gsub(":", "):(", hal.vars.dynamic)), ")"),                   collapse = "+"))), data = tmp.state), sparse = TRUE)            X.hal.dynamic &lt;- flip.interactions(X.hal.dynamic,                 hal.vars.dynamic)            if (length(hal.vars.A0.dynamic) &gt; 0) {                X.hal.A0.dynamic &lt;- Matrix(model.matrix(formula(paste0("delta",                   "~-1+", paste(paste0("(", gsub("FALSE|TRUE",                     "", gsub(":", "):(", hal.vars.A0.dynamic)),                     ")"), collapse = "+"))), data = tmp.state),                   sparse = TRUE)                X.hal.A0.dynamic &lt;- flip.interactions(X.hal.A0.dynamic,                   hal.vars.A0.dynamic)            }            X.full &lt;- cbind(X.hal.static, X.hal.dynamic, X.hal.A0.dynamic,                 X.hal.A0)        }        for (fit.type.jj in (1:length(fit.types))[-cens.process.id]) {            if (intervene.A0) {                colname &lt;- paste0("P.a", aa, ".", names(fit.types)[fit.type.jj],                   ".", state.jj)            }            else {                colname &lt;- paste0("P.", names(fit.types)[fit.type.jj],                   ".", state.jj)            }            if (fit.types[[fit.type.jj]]$fit == "hal") {                hal.index &lt;- (1:length(which.hal))[names(which.hal) ==                   names(fit.types)[fit.type.jj]]                chunk.out[[colname]] &lt;- as.numeric(exp(predict(fit.hals[[hal.index]][["hal.fit"]],                   X.full[, hal.vars.list[[hal.index]]], newoffset = 0,                   s = fit.hals[[hal.index]][["lambda.cv"]])) *                   tmp.state[["risk.time"]])            }            else {                lp &lt;- predict(fit.cox.types[[fit.type.jj]]["fit.cox"][[1]],                   newdata = tmp.state, type = "lp")                chunk.out[[colname]] &lt;- as.numeric(tmp.long[[paste0("dhazard.",                   names(fit.types)[fit.type.jj])]] * exp(lp))            }            if (fit.type.jj %in% at.risk.ids) {                chunk.out[[colname]] &lt;- chunk.out[[colname]] *                   fit.types[[fit.type.jj]][["at.risk"]](depend.matrix.jj)            }        }        chunk.out[["state"]][which.jj == 1] &lt;- state.jj    }    return(chunk.out)}, mc.cores = min(detectCores() - 5, use.cores.prediction, use.cores)):</span> 'mc.cores' must be &gt;= 1</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Trace the effect on outcome1 across a small grid of shape interventions.</span></span></span>
 <span class="r-in"><span><span class="va">curve</span> <span class="op">&lt;-</span> <span class="fu">calibration.curve.fun</span><span class="op">(</span></span></span>
@@ -188,9 +182,11 @@ corresponding TMLE estimate of the effect on <code>target</code>.</p>
 <span class="r-in"><span>  use.cores <span class="op">=</span> <span class="fl">1</span>,</span></span>
 <span class="r-in"><span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'initial.fit' not found</span>
 <span class="r-in"><span><span class="va">curve</span><span class="op">$</span><span class="va">estimate</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in curve$estimate:</span> object of type 'closure' is not subsettable</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    alpha exposure.est exposure.se target.est  target.se</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;num&gt;        &lt;num&gt;       &lt;num&gt;      &lt;num&gt;      &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:     0    0.0000000  0.00000000  0.3083278 0.09156753</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     1    0.2016211  0.09379827  0.3308559 0.09389534</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

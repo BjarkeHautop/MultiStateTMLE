@@ -16,8 +16,7 @@ sim.generic(
   cens = 1,
   alpha.intervention = list(),
   baseline.intervention = list(),
-  n = 500,
-  browse = FALSE
+  n = 500
 )
 ```
 
@@ -61,11 +60,6 @@ sim.generic(
 - n:
 
   number of individuals to simulate.
-
-- browse:
-
-  logical; if `TRUE`, drop into
-  [`browser()`](https://rdrr.io/r/base/browser.html) before simulating.
 
 ## Value
 

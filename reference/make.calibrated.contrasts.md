@@ -63,7 +63,7 @@ make.calibrated.contrasts(
 )
 #>      contrast estimate         se     lower     upper
 #>        <char>    <num>      <num>     <num>     <num>
-#> 1:      total      0.4 0.01027867 0.3798542 0.4201458
-#> 2:   mediated      0.2 0.01052854 0.1793644 0.2206356
-#> 3: calibrated      0.2 0.01025611 0.1798984 0.2201016
+#> 1:      total      0.4 0.01028048 0.3798506 0.4201494
+#> 2:   mediated      0.2 0.01050568 0.1794092 0.2205908
+#> 3: calibrated      0.2 0.01028145 0.1798487 0.2201513
 ```

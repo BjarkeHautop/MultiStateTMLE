@@ -18,8 +18,6 @@ compute.Q.clever.per.id(
   parameter = "target",
   process.deltas = NULL,
   compute.clever = TRUE,
-  browse = FALSE,
-  browse2 = FALSE,
   get.years.lost = FALSE,
   years.lost.block.size = 10,
   clever.by.state = FALSE
@@ -69,18 +67,6 @@ compute.Q.clever.per.id(
 
   logical; whether to compute and append clever.Q.0 / clever.Q.1
   (default TRUE).
-
-- browse:
-
-  logical; if `TRUE`, drop into
-  [`browser()`](https://rdrr.io/r/base/browser.html) at the start of the
-  backward recursion.
-
-- browse2:
-
-  logical; if `TRUE`, drop into
-  [`browser()`](https://rdrr.io/r/base/browser.html) at a secondary
-  breakpoint inside the recursion.
 
 - get.years.lost:
 

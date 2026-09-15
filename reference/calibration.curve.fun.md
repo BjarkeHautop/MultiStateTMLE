@@ -13,12 +13,11 @@ calibration.curve.fun(
   initial.fit = NULL,
   a = NULL,
   alpha.grid = seq(0, 5, length = 10),
-  browse = FALSE,
   verbose = TRUE,
   output.eic = FALSE,
   tau = 1.2,
   tau.z = tau,
-  use.cores = 50,
+  use.cores = 1,
   target = "outcome",
   z.name = "z",
   min.iter = 1,
@@ -44,11 +43,6 @@ calibration.curve.fun(
 - alpha.grid:
 
   numeric vector of shape-parameter interventions to evaluate.
-
-- browse:
-
-  logical; if `TRUE`, drop into
-  [`browser()`](https://rdrr.io/r/base/browser.html).
 
 - verbose:
 
@@ -136,7 +130,6 @@ initial.fit <- prepare.initial(
   ),
   verbose = FALSE
 )
-#> Error in mclapply(state.chunks, function(state.chunk) {    chunk.out <- data.table(row_id = tmp.state[["row_id"]])    chunk.out[["state"]] <- 0    for (state.jj in state.chunk) {        if (verbose & (state.jj %in% print.state.jj)) {            print(paste0(state.jj, "/", max(depend.matrix[["state"]])))        }        depend.matrix.jj <- depend.matrix[state == state.jj]        which.jj <- rep(TRUE, nrow(tmp.state))        for (varname in setdiff(names(depend.matrix), "state")) {            tmp.state[[varname]] <- depend.matrix.jj[[varname]]            if (!any.hal) {                if (length(which.recurrent) > 0) {                  if (varname %in% which.recurrent) {                    for (count.jj in 1:max.count) {                      tmp.state[, `:=`((paste0(varname, ".",                         count.jj)), (tmp.state[[varname]] >=                         count.jj))]                    }                  }                }            }            which.jj <- which.jj & (tmp.long[[varname]] >= tmp.state[[varname]])        }        if (any.hal) {            X.hal.dynamic <- Matrix(model.matrix(formula(paste0("delta",                 "~-1+", paste(paste0("(", gsub("FALSE|TRUE",                   "", gsub(":", "):(", hal.vars.dynamic)), ")"),                   collapse = "+"))), data = tmp.state), sparse = TRUE)            X.hal.dynamic <- flip.interactions(X.hal.dynamic,                 hal.vars.dynamic)            if (length(hal.vars.A0.dynamic) > 0) {                X.hal.A0.dynamic <- Matrix(model.matrix(formula(paste0("delta",                   "~-1+", paste(paste0("(", gsub("FALSE|TRUE",                     "", gsub(":", "):(", hal.vars.A0.dynamic)),                     ")"), collapse = "+"))), data = tmp.state),                   sparse = TRUE)                X.hal.A0.dynamic <- flip.interactions(X.hal.A0.dynamic,                   hal.vars.A0.dynamic)            }            X.full <- cbind(X.hal.static, X.hal.dynamic, X.hal.A0.dynamic,                 X.hal.A0)        }        for (fit.type.jj in (1:length(fit.types))[-cens.process.id]) {            if (intervene.A0) {                colname <- paste0("P.a", aa, ".", names(fit.types)[fit.type.jj],                   ".", state.jj)            }            else {                colname <- paste0("P.", names(fit.types)[fit.type.jj],                   ".", state.jj)            }            if (fit.types[[fit.type.jj]]$fit == "hal") {                hal.index <- (1:length(which.hal))[names(which.hal) ==                   names(fit.types)[fit.type.jj]]                chunk.out[[colname]] <- as.numeric(exp(predict(fit.hals[[hal.index]][["hal.fit"]],                   X.full[, hal.vars.list[[hal.index]]], newoffset = 0,                   s = fit.hals[[hal.index]][["lambda.cv"]])) *                   tmp.state[["risk.time"]])            }            else {                lp <- predict(fit.cox.types[[fit.type.jj]]["fit.cox"][[1]],                   newdata = tmp.state, type = "lp")                chunk.out[[colname]] <- as.numeric(tmp.long[[paste0("dhazard.",                   names(fit.types)[fit.type.jj])]] * exp(lp))            }            if (fit.type.jj %in% at.risk.ids) {                chunk.out[[colname]] <- chunk.out[[colname]] *                   fit.types[[fit.type.jj]][["at.risk"]](depend.matrix.jj)            }        }        chunk.out[["state"]][which.jj == 1] <- state.jj    }    return(chunk.out)}, mc.cores = min(detectCores() - 5, use.cores.prediction, use.cores)): 'mc.cores' must be >= 1
 
 # Trace the effect on outcome1 across a small grid of shape interventions.
 curve <- calibration.curve.fun(
@@ -148,7 +141,9 @@ curve <- calibration.curve.fun(
   use.cores = 1,
   verbose = FALSE
 )
-#> Error: object 'initial.fit' not found
 curve$estimate
-#> Error in curve$estimate: object of type 'closure' is not subsettable
+#>    alpha exposure.est exposure.se target.est  target.se
+#>    <num>        <num>       <num>      <num>      <num>
+#> 1:     0    0.0000000  0.00000000  0.3083278 0.09156753
+#> 2:     1    0.2016211  0.09379827  0.3308559 0.09389534
 ```

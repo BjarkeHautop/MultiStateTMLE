@@ -66,14 +66,12 @@ update of the initial fit produced by <code><a href="prepare.initial.html">prepa
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  max.iter <span class="op">=</span> <span class="fl">10</span>,</span>
 <span>  min.iter <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  use.cores <span class="op">=</span> <span class="fl">50</span>,</span>
+<span>  use.cores <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  truncate.weights <span class="op">=</span> <span class="fl">0</span>,</span>
 <span>  output.convergence <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  output.eic <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  output.weights <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  output.a.weights <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  browse <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  verbose.exponential <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -191,15 +189,6 @@ summarize the clever/censoring weights.</p></dd>
 summarize the <code>a</code>-specific clever weights.</p></dd>
 
 
-<dt id="arg-browse">browse<a class="anchor" aria-label="anchor" href="#arg-browse"></a></dt>
-<dd><p>logical; if <code>TRUE</code>, drop into <code><a href="https://rdrr.io/r/base/browser.html" class="external-link">browser()</a></code>.</p></dd>
-
-
-<dt id="arg-verbose-exponential">verbose.exponential<a class="anchor" aria-label="anchor" href="#arg-verbose-exponential"></a></dt>
-<dd><p>logical; if <code>TRUE</code>, print diagnostics from the
-exponential TMLE update step.</p></dd>
-
-
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>additional arguments passed on to <code><a href="prepare.initial.html">prepare.initial()</a></code> when
 <code>initial.fit</code> is not supplied.</p></dd>
@@ -241,7 +230,6 @@ diagnostics, and weight summaries.</p>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in mclapply(state.chunks, function(state.chunk) {    chunk.out &lt;- data.table(row_id = tmp.state[["row_id"]])    chunk.out[["state"]] &lt;- 0    for (state.jj in state.chunk) {        if (verbose &amp; (state.jj %in% print.state.jj)) {            print(paste0(state.jj, "/", max(depend.matrix[["state"]])))        }        depend.matrix.jj &lt;- depend.matrix[state == state.jj]        which.jj &lt;- rep(TRUE, nrow(tmp.state))        for (varname in setdiff(names(depend.matrix), "state")) {            tmp.state[[varname]] &lt;- depend.matrix.jj[[varname]]            if (!any.hal) {                if (length(which.recurrent) &gt; 0) {                  if (varname %in% which.recurrent) {                    for (count.jj in 1:max.count) {                      tmp.state[, `:=`((paste0(varname, ".",                         count.jj)), (tmp.state[[varname]] &gt;=                         count.jj))]                    }                  }                }            }            which.jj &lt;- which.jj &amp; (tmp.long[[varname]] &gt;= tmp.state[[varname]])        }        if (any.hal) {            X.hal.dynamic &lt;- Matrix(model.matrix(formula(paste0("delta",                 "~-1+", paste(paste0("(", gsub("FALSE|TRUE",                   "", gsub(":", "):(", hal.vars.dynamic)), ")"),                   collapse = "+"))), data = tmp.state), sparse = TRUE)            X.hal.dynamic &lt;- flip.interactions(X.hal.dynamic,                 hal.vars.dynamic)            if (length(hal.vars.A0.dynamic) &gt; 0) {                X.hal.A0.dynamic &lt;- Matrix(model.matrix(formula(paste0("delta",                   "~-1+", paste(paste0("(", gsub("FALSE|TRUE",                     "", gsub(":", "):(", hal.vars.A0.dynamic)),                     ")"), collapse = "+"))), data = tmp.state),                   sparse = TRUE)                X.hal.A0.dynamic &lt;- flip.interactions(X.hal.A0.dynamic,                   hal.vars.A0.dynamic)            }            X.full &lt;- cbind(X.hal.static, X.hal.dynamic, X.hal.A0.dynamic,                 X.hal.A0)        }        for (fit.type.jj in (1:length(fit.types))[-cens.process.id]) {            if (intervene.A0) {                colname &lt;- paste0("P.a", aa, ".", names(fit.types)[fit.type.jj],                   ".", state.jj)            }            else {                colname &lt;- paste0("P.", names(fit.types)[fit.type.jj],                   ".", state.jj)            }            if (fit.types[[fit.type.jj]]$fit == "hal") {                hal.index &lt;- (1:length(which.hal))[names(which.hal) ==                   names(fit.types)[fit.type.jj]]                chunk.out[[colname]] &lt;- as.numeric(exp(predict(fit.hals[[hal.index]][["hal.fit"]],                   X.full[, hal.vars.list[[hal.index]]], newoffset = 0,                   s = fit.hals[[hal.index]][["lambda.cv"]])) *                   tmp.state[["risk.time"]])            }            else {                lp &lt;- predict(fit.cox.types[[fit.type.jj]]["fit.cox"][[1]],                   newdata = tmp.state, type = "lp")                chunk.out[[colname]] &lt;- as.numeric(tmp.long[[paste0("dhazard.",                   names(fit.types)[fit.type.jj])]] * exp(lp))            }            if (fit.type.jj %in% at.risk.ids) {                chunk.out[[colname]] &lt;- chunk.out[[colname]] *                   fit.types[[fit.type.jj]][["at.risk"]](depend.matrix.jj)            }        }        chunk.out[["state"]][which.jj == 1] &lt;- state.jj    }    return(chunk.out)}, mc.cores = min(detectCores() - 5, use.cores.prediction, use.cores)):</span> 'mc.cores' must be &gt;= 1</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Estimated risk of outcome1 by tau = 1 with no intervention (alpha = 1).</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">tmle.alpha.fun</span><span class="op">(</span></span></span>
@@ -252,9 +240,9 @@ diagnostics, and weight summaries.</p>
 <span class="r-in"><span>  use.cores <span class="op">=</span> <span class="fl">1</span>,</span></span>
 <span class="r-in"><span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'initial.fit' not found</span>
 <span class="r-in"><span><span class="va">fit</span><span class="op">$</span><span class="va">estimate</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> object 'fit' not found</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   tmle.est         se      g.est </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0.35333939 0.04921998 0.35333939 </span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
