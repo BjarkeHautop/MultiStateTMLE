@@ -99,7 +99,7 @@ calibration.fun <- function(
   output.eic = FALSE,
   tau = 1.2,
   tau.z = tau,
-  use.cores = 50,
+  use.cores = 1,
   target = "outcome",
   z.name = "z",
   ...

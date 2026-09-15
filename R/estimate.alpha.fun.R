@@ -68,7 +68,7 @@ estimate.alpha.fun <- function(
   max_iter = 100,
   alpha_min = 1e-3,
   alpha_max = 100,
-  use.cores = 50,
+  use.cores = 1,
   verbose = FALSE,
   trace_every = 1L
 ) {
@@ -367,7 +367,7 @@ if (FALSE) {
     max_iter = 100,
     alpha_min = 1e-3,
     alpha_max = 100,
-    use.cores = 50,
+    use.cores = 1,
     ...
   ) {
     # storage

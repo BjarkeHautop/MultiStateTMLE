@@ -129,7 +129,7 @@ tmle.alpha.fun <- function(
   verbose = FALSE,
   max.iter = 10,
   min.iter = 0,
-  use.cores = 50,
+  use.cores = 1,
   truncate.weights = 0,
   output.convergence = FALSE,
   output.eic = FALSE,

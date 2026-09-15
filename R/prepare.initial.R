@@ -178,8 +178,8 @@ prepare.initial <- function(
   seed.hal = NULL,
   reduce.seed.dependence = FALSE,
   penalize.time = FALSE,
-  use.cores = 50,
-  use.cores.prediction = 1, #5,
+  use.cores = 1,
+  use.cores.prediction = 1,
   verbose.hal = FALSE,
   browse.hal = FALSE,
   cv.glmnet = FALSE, #currently not supported
@@ -1549,7 +1549,7 @@ prepare.initial <- function(
           use.times = use.times,
           check.support.for.basis.functions = 0.01,
           V = V,
-          parallelize.cve = min(detectCores() - 1, use.cores),
+          parallelize.cve = use.cores,
           cv.glmnet = cv.glmnet,
           verbose = verbose.hal,
           return.cve = TRUE,
@@ -1619,7 +1619,7 @@ prepare.initial <- function(
               use.times = use.times,
               check.support.for.basis.functions = TRUE,
               V = V,
-              parallelize.cve = min(detectCores() - 1, use.cores),
+              parallelize.cve = use.cores,
               cv.glmnet = cv.glmnet,
               verbose = verbose.hal,
               return.cve = TRUE,
@@ -2546,7 +2546,7 @@ prepare.initial <- function(
     state.vec <- depend.matrix[, unique(state)] #sort(unique(depend.matrix[["state"]]))
     chunk.size <- ceiling(
       length(state.vec) /
-        min(detectCores() - 5, use.cores.prediction, use.cores)
+        use.cores.prediction
     )
     state.chunks <- split(state.vec, ceiling(seq_along(state.vec) / chunk.size))
 
@@ -2740,7 +2740,7 @@ prepare.initial <- function(
 
         return(chunk.out)
       },
-      mc.cores = min(detectCores() - 5, use.cores.prediction, use.cores)
+      mc.cores = use.cores.prediction
     )
 
     for (out in tmp.list) {
