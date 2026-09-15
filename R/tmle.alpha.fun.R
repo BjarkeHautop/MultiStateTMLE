@@ -183,7 +183,7 @@ tmle.alpha.fun <- function(
 
   if (length(initial.fit) == 0) {
     initial.fit <-
-      prepare.initial(tau = tau, a = a, verbose = verbose, ...)
+      prepare.initial(dt = dt, tau = tau, a = a, verbose = verbose, ...)
   }
 
   tmp.long <- data.table::copy(initial.fit$tmp.long)
