@@ -28,8 +28,6 @@ tmle.alpha.fun(
   output.eic = FALSE,
   output.weights = NULL,
   output.a.weights = NULL,
-  browse = FALSE,
-  verbose.exponential = FALSE,
   ...
 )
 }
@@ -96,11 +94,6 @@ summarize the clever/censoring weights.}
 
 \item{output.a.weights}{optional numeric vector of quantiles at which to
 summarize the \code{a}-specific clever weights.}
-
-\item{browse}{logical; if \code{TRUE}, drop into \code{browser()}.}
-
-\item{verbose.exponential}{logical; if \code{TRUE}, print diagnostics from the
-exponential TMLE update step.}
 
 \item{...}{additional arguments passed on to \code{\link[=prepare.initial]{prepare.initial()}} when
 \code{initial.fit} is not supplied.}

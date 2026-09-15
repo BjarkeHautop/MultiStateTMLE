@@ -11,7 +11,6 @@ calibration.fun(
   rho = NULL,
   delta = NULL,
   rho.1a = NULL,
-  browse = FALSE,
   verbose = TRUE,
   output.eic = FALSE,
   tau = 1.2,
@@ -39,8 +38,6 @@ to directly.}
 
 \item{rho.1a}{optional numeric; as \code{rho}, but relative to the effect under
 \code{a} fixed to 1 rather than \code{alpha = 1}.}
-
-\item{browse}{logical; if \code{TRUE}, drop into \code{browser()}.}
 
 \item{verbose}{logical; if \code{TRUE}, print progress.}
 

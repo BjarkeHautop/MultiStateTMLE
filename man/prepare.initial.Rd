@@ -14,8 +14,6 @@ prepare.initial(
     "Surv(tstart, tstop, delta == 1)~L0+Z+L+A0", fit = "cox"), censoring = list(model =
     "Surv(tstart, tstop, delta == 0)~L0+Z+L+A0", fit = "cox")),
   use.exponential = FALSE,
-  verbose.exponential = FALSE,
-  browse = FALSE,
   max.count = 1,
   a = NULL,
   derived.vars = list(),
@@ -42,7 +40,6 @@ prepare.initial(
   use.cores = 1,
   use.cores.prediction = 1,
   verbose.hal = FALSE,
-  browse.hal = FALSE,
   cv.glmnet = FALSE,
   verbose = FALSE,
   return.parameters.for.simulation = FALSE
@@ -60,11 +57,6 @@ prepare.initial(
 
 \item{use.exponential}{logical; if \code{TRUE}, use exponential (rather than
 Cox/HAL) hazard fits where applicable.}
-
-\item{verbose.exponential}{logical; if \code{TRUE}, print diagnostics for the
-exponential fits.}
-
-\item{browse}{logical; if \code{TRUE}, drop into \code{browser()}.}
 
 \item{max.count}{maximum recurrent-event count tracked per process in the
 product state space.}
@@ -131,9 +123,6 @@ among the penalized HAL basis terms.}
 \item{use.cores.prediction}{number of cores to use for prediction steps.}
 
 \item{verbose.hal}{logical; if \code{TRUE}, print HAL fitting diagnostics.}
-
-\item{browse.hal}{logical; if \code{TRUE}, drop into \code{browser()} inside the HAL
-fitting step.}
 
 \item{cv.glmnet}{logical; currently not supported.}
 

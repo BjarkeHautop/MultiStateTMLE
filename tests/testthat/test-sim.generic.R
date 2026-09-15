@@ -31,9 +31,9 @@ test_that("sim.generic validates its arguments", {
       processes = processes,
       effects = effects,
       n = 10,
-      browse = "x"
+      alpha.intervention = "x"
     ),
-    "'browse'"
+    "'alpha.intervention'"
   )
 })
 

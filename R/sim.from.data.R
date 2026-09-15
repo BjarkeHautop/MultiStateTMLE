@@ -31,7 +31,6 @@
 #'   process intensities (`eta`), keyed by process name.
 #' @param baseline.intervention named list of interventions that fix a
 #'   baseline covariate to a constant value.
-#' @param browse logical; if `TRUE`, drop into `browser()` before simulating.
 #' @param verbose logical; if `TRUE`, print the resolved `eta`/`nu`/`beta`
 #'   parameters.
 #' @return A `data.table` of simulated event history data with columns `id`,
@@ -77,7 +76,6 @@ sim.from.data <- function(
   cens = 1,
   alpha.intervention = list(),
   baseline.intervention = list(),
-  browse = FALSE,
   verbose = FALSE
 ) {
   checkmate::assert_count(n, positive = TRUE)
@@ -85,7 +83,6 @@ sim.from.data <- function(
   checkmate::assert_number(cens, finite = TRUE)
   checkmate::assert_list(alpha.intervention, names = "named")
   checkmate::assert_list(baseline.intervention, names = "named")
-  checkmate::assert_flag(browse)
   checkmate::assert_flag(verbose)
 
   processes <- names(sim.parameters)[
@@ -262,10 +259,6 @@ sim.from.data <- function(
 
   if (verbose) {
     print(beta)
-  }
-
-  if (browse) {
-    browser()
   }
 
   term.processes <- c(which.cens, which.terminal)

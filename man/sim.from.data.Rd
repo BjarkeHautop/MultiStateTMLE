@@ -10,7 +10,6 @@ sim.from.data(
   cens = 1,
   alpha.intervention = list(),
   baseline.intervention = list(),
-  browse = FALSE,
   verbose = FALSE
 )
 }
@@ -29,8 +28,6 @@ process intensities (\code{eta}), keyed by process name.}
 
 \item{baseline.intervention}{named list of interventions that fix a
 baseline covariate to a constant value.}
-
-\item{browse}{logical; if \code{TRUE}, drop into \code{browser()} before simulating.}
 
 \item{verbose}{logical; if \code{TRUE}, print the resolved \code{eta}/\code{nu}/\code{beta}
 parameters.}

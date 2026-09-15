@@ -13,8 +13,6 @@
 #' @param parameter character: name of the target process/outcome. If "target" (default), the first discovered terminal/outcome name is used.
 #' @param process.deltas optional numeric vector (length = number of discovered processes). Not used internally for mapping, only validated if provided.
 #' @param compute.clever logical; whether to compute and append clever.Q.<name>0 / clever.Q.<name>1 (default TRUE).
-#' @param browse logical; if `TRUE`, drop into `browser()` at the start of the backward recursion.
-#' @param browse2 logical; if `TRUE`, drop into `browser()` at a secondary breakpoint inside the recursion.
 #' @param get.years.lost logical; whether to also compute a years-lost-type summary.
 #' @param years.lost.block.size block size used when computing the years-lost summary (when `get.years.lost = TRUE`).
 #' @param clever.by.state logical; whether to compute clever covariates by state rather than pooled.
@@ -46,8 +44,6 @@ compute.Q.clever.per.id <- function(
   parameter = "target",
   process.deltas = NULL,
   compute.clever = TRUE,
-  browse = FALSE,
-  browse2 = FALSE,
   get.years.lost = FALSE,
   years.lost.block.size = 10,
   clever.by.state = FALSE
@@ -65,8 +61,6 @@ compute.Q.clever.per.id <- function(
   checkmate::assert_string(parameter)
   checkmate::assert_numeric(process.deltas, null.ok = TRUE)
   checkmate::assert_flag(compute.clever)
-  checkmate::assert_flag(browse)
-  checkmate::assert_flag(browse2)
   checkmate::assert_flag(get.years.lost)
   checkmate::assert_number(years.lost.block.size, finite = TRUE, null.ok = TRUE)
   checkmate::assert_flag(clever.by.state)
@@ -236,7 +230,6 @@ compute.Q.clever.per.id <- function(
   # Build gamma_jump_idx aligned with state_processes
   M_proc_all <- length(state_processes)
   gamma_jump_idx <- vector("list", M_proc_all)
-  ##browser()
   if (TRUE) {
     for (j_all in seq_len(M_proc_all)) {
       procj_name <- state_processes[j_all]
@@ -401,7 +394,6 @@ compute.Q.clever.per.id <- function(
     target_observed_by_state <- integer(S) # zeros
   }
 
-  ##if (browse) browser()
 
   if (length(time_var_match) > 0) {
     ## fix: if there is more than one such variable
@@ -522,7 +514,6 @@ compute.Q.clever.per.id <- function(
         target_observed_by_state <- integer(S) # zeros
       }
     }
-    ##if (browse) browser()
 
     if (Tn > 1) {
       for (tt in (Tn - 1):1) {
@@ -537,7 +528,6 @@ compute.Q.clever.per.id <- function(
 
         P_states <- hazard_arr[tt, , ]
 
-        ## if (browse) browser()
         if (FALSE) {
           if (length(time_var_match) > 0) {
             ## fix: if there is more than one such variable
@@ -688,7 +678,6 @@ compute.Q.clever.per.id <- function(
         }
       }
 
-      ##if (browse) browser()
       # 3) stateful processes (vectorized)
       if (length(state_processes) > 0L) {
         # succ_idx_mat: Tn x M where each row tt lists successor state indices for s_vec[tt]
@@ -815,10 +804,6 @@ compute.Q.clever.per.id <- function(
     }
   }
 
-  if (browse) {
-    browser()
-  }
-
   Q.out <- compute.Q.up.to.Tn(Tn)
 
   out[, Q := Q.out$Q_row]
@@ -928,10 +913,6 @@ compute.Q.clever.per.id <- function(
         }
       }
     }
-  }
-
-  if (browse2) {
-    browser()
   }
 
   return(out[])

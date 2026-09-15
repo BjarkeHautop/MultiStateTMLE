@@ -36,7 +36,6 @@
 #' @param baseline.intervention named list of interventions that fix a
 #'   baseline covariate to a constant value.
 #' @param n number of individuals to simulate.
-#' @param browse logical; if `TRUE`, drop into `browser()` before simulating.
 #' @return A `data.table` of simulated event history data with columns `id`,
 #'   `time`, `delta`, baseline covariates, and one column per process.
 #' @examples
@@ -65,8 +64,7 @@ sim.generic <- function(
   cens = 1,
   alpha.intervention = list(),
   baseline.intervention = list(),
-  n = 500,
-  browse = FALSE
+  n = 500
 ) {
   checkmate::assert_list(baseline, names = "named")
   checkmate::assert_list(processes, names = "named")
@@ -76,7 +74,6 @@ sim.generic <- function(
   checkmate::assert_list(alpha.intervention, names = "named")
   checkmate::assert_list(baseline.intervention, names = "named")
   checkmate::assert_count(n, positive = TRUE)
-  checkmate::assert_flag(browse)
 
   if (missing(baseline) && missing(processes) && missing(effects)) {
     baseline <- sim.object$baseline
@@ -183,10 +180,6 @@ sim.generic <- function(
   }
 
   override_beta <- NULL
-
-  if (browse) {
-    browser()
-  }
 
   term.processes <- c(which.cens, which.terminal)
   term.deltas <- match(term.processes, process.order) - 1L

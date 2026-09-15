@@ -62,9 +62,6 @@
 #'   summarize the clever/censoring weights.
 #' @param output.a.weights optional numeric vector of quantiles at which to
 #'   summarize the `a`-specific clever weights.
-#' @param browse logical; if `TRUE`, drop into `browser()`.
-#' @param verbose.exponential logical; if `TRUE`, print diagnostics from the
-#'   exponential TMLE update step.
 #' @param ... additional arguments passed on to [prepare.initial()] when
 #'   `initial.fit` is not supplied.
 #' @return A list with the TMLE `estimate`, standard error, and (depending on
@@ -135,8 +132,6 @@ tmle.alpha.fun <- function(
   output.eic = FALSE,
   output.weights = NULL,
   output.a.weights = NULL,
-  browse = FALSE,
-  verbose.exponential = FALSE,
   ...
 ) {
   checkmate::assert_string(target)
@@ -178,9 +173,6 @@ tmle.alpha.fun <- function(
     ),
     checkmate::check_flag(output.a.weights)
   )
-  checkmate::assert_flag(browse)
-  checkmate::assert_flag(verbose.exponential)
-
   if (length(initial.fit) == 0) {
     initial.fit <-
       prepare.initial(dt = dt, tau = tau, a = a, verbose = verbose, ...)
@@ -446,10 +438,6 @@ tmle.alpha.fun <- function(
     "clever.Q."
   )
 
-  if (browse) {
-    browser()
-  }
-
   for (iter in 1:max.iter) {
     if (verbose) {
       print(paste0("iter = ", iter))
@@ -563,8 +551,6 @@ tmle.alpha.fun <- function(
       one.step.est <- mean(eic + target.est)
       break()
     }
-
-    ## if (iter == 2) browser()
 
     if (verbose) {
       print(paste0("eic equation solved at = ", abs(mean(eic))))
@@ -707,18 +693,11 @@ tmle.alpha.fun <- function(
       }
     }
 
-    ## browser()
-
     for (process.jj in (1:length(process.names))[clever.ids]) {
       name.jj <- process.names[process.jj]
       eps.jj <- nleqslv(0.00, function(eps) target.fun(eps, process.jj))$x
       if (verbose) {
         print(paste0("eps.", process.names[process.jj], " = ", eps.jj))
-      }
-      if (FALSE & abs(eps.jj) > 10) {
-        eps.jj <- eps.jj / 10
-        ## message(print(paste0("eps.", process.names[process.jj], " ill-defined")))
-        ## if (verbose) print(paste0("eps.", process.names[process.jj], " = ", eps.jj))
       }
       if (target.by.state) {
         tmp.long[,
@@ -827,7 +806,7 @@ tmle.alpha.fun <- function(
 
     for (name.P in names.P) {
       if (any(tmp.long[[name.P]] > 1)) {
-        if (verbose.exponential) {
+        if (verbose) {
           print(paste0("transform ", name.P, " with 1-exp to avoid values >1"))
         }
         tmp.long[, (name.P) := 1 - exp(-tmp.long[[name.P]])]

@@ -12,8 +12,7 @@ sim.generic(
   cens = 1,
   alpha.intervention = list(),
   baseline.intervention = list(),
-  n = 500,
-  browse = FALSE
+  n = 500
 )
 }
 \arguments{
@@ -39,8 +38,6 @@ process intensities (\code{eta}), keyed by process name.}
 baseline covariate to a constant value.}
 
 \item{n}{number of individuals to simulate.}
-
-\item{browse}{logical; if \code{TRUE}, drop into \code{browser()} before simulating.}
 }
 \value{
 A \code{data.table} of simulated event history data with columns \code{id},

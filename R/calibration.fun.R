@@ -33,7 +33,6 @@
 #'   `alpha = 1` effect on `target` to calibrate to.
 #' @param rho.1a optional numeric; as `rho`, but relative to the effect under
 #'   `a` fixed to 1 rather than `alpha = 1`.
-#' @param browse logical; if `TRUE`, drop into `browser()`.
 #' @param verbose logical; if `TRUE`, print progress.
 #' @param output.eic logical; if `TRUE`, include influence-function values in
 #'   the output.
@@ -94,7 +93,6 @@ calibration.fun <- function(
   rho = NULL,
   delta = NULL,
   rho.1a = NULL,
-  browse = FALSE,
   verbose = TRUE,
   output.eic = FALSE,
   tau = 1.2,
@@ -113,7 +111,6 @@ calibration.fun <- function(
   if (sum(!is.null(rho), !is.null(delta), !is.null(rho.1a)) > 1) {
     stop("Only one of 'rho', 'delta', or 'rho.1a' may be supplied.")
   }
-  checkmate::assert_flag(browse)
   checkmate::assert_flag(verbose)
   checkmate::assert_flag(output.eic)
   checkmate::assert_number(tau, lower = 0, finite = TRUE)
@@ -188,10 +185,6 @@ calibration.fun <- function(
 
   if (theta < 0) {
     stop(paste0("inadmissible target: theta = ", theta))
-  }
-
-  if (browse) {
-    browser()
   }
 
   if (theta > 0) {

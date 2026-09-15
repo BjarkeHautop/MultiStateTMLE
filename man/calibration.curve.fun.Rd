@@ -8,7 +8,6 @@ calibration.curve.fun(
   initial.fit = NULL,
   a = NULL,
   alpha.grid = seq(0, 5, length = 10),
-  browse = FALSE,
   verbose = TRUE,
   output.eic = FALSE,
   tau = 1.2,
@@ -31,8 +30,6 @@ calibration.curve.fun(
 
 \item{alpha.grid}{numeric vector of shape-parameter interventions to
 evaluate.}
-
-\item{browse}{logical; if \code{TRUE}, drop into \code{browser()}.}
 
 \item{verbose}{logical; if \code{TRUE}, print progress.}
 

@@ -13,8 +13,6 @@ compute.Q.clever.per.id(
   parameter = "target",
   process.deltas = NULL,
   compute.clever = TRUE,
-  browse = FALSE,
-  browse2 = FALSE,
   get.years.lost = FALSE,
   years.lost.block.size = 10,
   clever.by.state = FALSE
@@ -36,10 +34,6 @@ compute.Q.clever.per.id(
 \item{process.deltas}{optional numeric vector (length = number of discovered processes). Not used internally for mapping, only validated if provided.}
 
 \item{compute.clever}{logical; whether to compute and append clever.Q.\if{html}{\out{<name>}}0 / clever.Q.\if{html}{\out{<name>}}1 (default TRUE).}
-
-\item{browse}{logical; if \code{TRUE}, drop into \code{browser()} at the start of the backward recursion.}
-
-\item{browse2}{logical; if \code{TRUE}, drop into \code{browser()} at a secondary breakpoint inside the recursion.}
 
 \item{get.years.lost}{logical; whether to also compute a years-lost-type summary.}
 

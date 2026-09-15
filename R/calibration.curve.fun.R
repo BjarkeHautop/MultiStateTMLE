@@ -26,7 +26,6 @@
 #'   [tmle.alpha.fun()].
 #' @param alpha.grid numeric vector of shape-parameter interventions to
 #'   evaluate.
-#' @param browse logical; if `TRUE`, drop into `browser()`.
 #' @param verbose logical; if `TRUE`, print progress.
 #' @param output.eic logical; if `TRUE`, include influence-function values in
 #'   the output.
@@ -92,7 +91,6 @@ calibration.curve.fun <- function(
   initial.fit = NULL,
   a = NULL,
   alpha.grid = seq(0, 5, length = 10),
-  browse = FALSE,
   verbose = TRUE,
   output.eic = FALSE,
   tau = 1.2,
@@ -109,7 +107,6 @@ calibration.curve.fun <- function(
   checkmate::assert_list(initial.fit, null.ok = TRUE)
   checkmate::assert_number(a, null.ok = TRUE)
   checkmate::assert_numeric(alpha.grid, min.len = 1, any.missing = FALSE)
-  checkmate::assert_flag(browse)
   checkmate::assert_flag(verbose)
   checkmate::assert_flag(output.eic)
   checkmate::assert_number(tau, lower = 0, finite = TRUE)
@@ -161,10 +158,6 @@ calibration.curve.fun <- function(
       output.weights = output.weights,
       ...
     )
-  }
-
-  if (browse) {
-    browser()
   }
 
   alpha.out <- lapply(alpha.grid, function(alpha) {

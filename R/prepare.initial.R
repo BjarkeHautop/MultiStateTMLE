@@ -31,9 +31,6 @@
 #'   `"hal"`, or `"glm"`), and an optional `at.risk` function.
 #' @param use.exponential logical; if `TRUE`, use exponential (rather than
 #'   Cox/HAL) hazard fits where applicable.
-#' @param verbose.exponential logical; if `TRUE`, print diagnostics for the
-#'   exponential fits.
-#' @param browse logical; if `TRUE`, drop into `browser()`.
 #' @param max.count maximum recurrent-event count tracked per process in the
 #'   product state space.
 #' @param a optional intervention on the baseline treatment `A0`; if
@@ -75,8 +72,6 @@
 #' @param use.cores number of cores to use for model fitting.
 #' @param use.cores.prediction number of cores to use for prediction steps.
 #' @param verbose.hal logical; if `TRUE`, print HAL fitting diagnostics.
-#' @param browse.hal logical; if `TRUE`, drop into `browser()` inside the HAL
-#'   fitting step.
 #' @param cv.glmnet logical; currently not supported.
 #' @param verbose logical; if `TRUE`, print overall progress.
 #' @param return.parameters.for.simulation logical; if `TRUE`, additionally
@@ -144,8 +139,6 @@ prepare.initial <- function(
     )
   ),
   use.exponential = FALSE,
-  verbose.exponential = FALSE,
-  browse = FALSE,
   max.count = 1,
   a = NULL,
   derived.vars = list(),
@@ -181,7 +174,6 @@ prepare.initial <- function(
   use.cores = 1,
   use.cores.prediction = 1,
   verbose.hal = FALSE,
-  browse.hal = FALSE,
   cv.glmnet = FALSE, #currently not supported
   #####################
   verbose = FALSE,
@@ -192,8 +184,6 @@ prepare.initial <- function(
   checkmate::assert_number(tau, lower = 0, finite = TRUE)
   checkmate::assert_list(fit.types, names = "named")
   checkmate::assert_flag(use.exponential)
-  checkmate::assert_flag(verbose.exponential)
-  checkmate::assert_flag(browse)
   checkmate::assert_count(max.count, positive = TRUE)
   checkmate::assert_numeric(a, null.ok = TRUE)
   checkmate::assert_list(derived.vars, names = "named")
@@ -222,7 +212,6 @@ prepare.initial <- function(
   checkmate::assert_count(use.cores, positive = TRUE)
   checkmate::assert_count(use.cores.prediction, positive = TRUE)
   checkmate::assert_flag(verbose.hal)
-  checkmate::assert_flag(browse.hal)
   checkmate::assert_flag(cv.glmnet)
   checkmate::assert_flag(verbose)
   checkmate::assert_flag(return.parameters.for.simulation)
@@ -463,7 +452,6 @@ prepare.initial <- function(
   #--------------------------------
   #-- outcome / clever covariate part:
   # (we start with cox models, if HAL is specified this is fitted later)
-  ##browser()
   fit.cox.types <- lapply(1:length(fit.types), function(fit.type.jj) {
     model.jj <- fit.types[[fit.type.jj]][["model"]]
     if (length(depend.time) > 0) {
@@ -744,10 +732,6 @@ prepare.initial <- function(
 
   #--------------------------------
   #-- hal
-
-  if (browse.hal) {
-    browser()
-  }
 
   if (any.hal) {
     deltas.hal <- as.numeric(sapply(fit.types[which.hal], function(fit.type) {
@@ -1441,10 +1425,7 @@ prepare.initial <- function(
       return(hal.out)
     }
 
-    ##if (length(hal.sl)>1) browser()
-
     ## FIX! need to make this work
-    ### browser()
     fit.hals.list <- lapply(1:length(hal.sl), function(hal.jj) {
       hal.parameters <- make.hal(hal.jj = hal.sl[[hal.jj]])
 
@@ -1521,7 +1502,6 @@ prepare.initial <- function(
       ##X <- X[, col_ones >= min.no.of.ones]
 
       x.vector <- hash_sparse_rows_dgC(X)
-      ### browser()
       tmp.long.reduced[, x := x.vector]
 
       if (FALSE) {
@@ -1729,7 +1709,6 @@ prepare.initial <- function(
 
     tmp.long[, risk.time := time - tstart]
 
-    ##browser()
 
     hal.coefs <- lapply(fit.hals, function(fh) {
       delta <- fh$delta.value
@@ -1802,7 +1781,6 @@ prepare.initial <- function(
 
   tmp.long <- tmp.long[time <= tau]
 
-  ### browser()
 
   if (any.hal) {
     hal.vars.list <- lapply(1:length(fit.hals), function(kk) {
@@ -1840,7 +1818,6 @@ prepare.initial <- function(
       hal.vars.A0.dynamic <- NULL
     }
 
-    ## browser()
 
     hal.vars.dynamic <- setdiff(
       unlist(sapply(N.vars, function(N.var) {
@@ -2029,7 +2006,6 @@ prepare.initial <- function(
     )
     X.hal.dynamic <- flip.interactions(X.hal.dynamic, hal.vars.dynamic)
 
-    ###browser()
   }
 
   #--------------------------------
@@ -2092,10 +2068,6 @@ prepare.initial <- function(
 
   #--------------------------------
   #-- to handle dependence on jumps in the past:
-
-  if (browse) {
-    browser()
-  }
 
   if (length(state.names) > 0) {
     grid.list <- lapply(state.names, function(varname) {
@@ -2539,7 +2511,6 @@ prepare.initial <- function(
       }
     }
 
-    ###browser()
 
     if (length(depend.matrix[, unique(state)]) > 10) {
       if (length(depend.matrix[, unique(state)]) < 25) {
@@ -2590,7 +2561,6 @@ prepare.initial <- function(
     )
     state.chunks <- split(state.vec, ceiling(seq_along(state.vec) / chunk.size))
 
-    ## browser()
     tmp.list <- mclapply(
       state.chunks,
       function(state.chunk) {
@@ -2798,7 +2768,7 @@ prepare.initial <- function(
   for (name.P in names.P) {
     if (any(tmp.long[[name.P]] > 1) | use.exponential) {
       if (!use.exponential) {
-        if (verbose.exponential) {
+        if (verbose) {
           print(paste0("transform ", name.P, " with 1-exp to avoid values >1"))
         }
       }
@@ -2825,7 +2795,6 @@ prepare.initial <- function(
   var.depend <- setdiff(names(depend.matrix), "state")
   process.depend <- var.depend[var.depend %in% process.names]
 
-  ### browser()
 
   if (any.hal) {
     if (
@@ -2906,7 +2875,6 @@ prepare.initial <- function(
   depend.matrix[, state.row.index := 1:.N]
   time.vars <- grep("time.", names(depend.matrix), value = TRUE)
 
-  ###browser()
 
   for (state.jj in depend.matrix[, unique(state)]) {
     for (varname in process.depend) {

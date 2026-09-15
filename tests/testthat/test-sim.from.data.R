@@ -25,8 +25,8 @@ test_that("sim.from.data validates its arguments", {
     "'cens'"
   )
   expect_error(
-    sim.from.data(n = 10, sim.parameters = sim.parameters, browse = "x"),
-    "'browse'"
+    sim.from.data(n = 10, sim.parameters = sim.parameters, verbose = "x"),
+    "'verbose'"
   )
 })
 
