@@ -52,6 +52,15 @@ make.calibrated.contrasts <- function(
   calibrated.fit,
   conf.level = 0.95
 ) {
+  checkmate::assert_string(target, null.ok = TRUE)
+  checkmate::assert_list(treatment.fit)
+  checkmate::assert_list(placebo.fit)
+  checkmate::assert_list(calibrated.fit)
+  checkmate::assert_subset(c("estimate", "eic"), names(treatment.fit))
+  checkmate::assert_subset(c("estimate", "eic"), names(placebo.fit))
+  checkmate::assert_subset(c("estimate", "eic"), names(calibrated.fit))
+  checkmate::assert_number(conf.level, lower = 0, upper = 1)
+
   treatment.est <-
     treatment.fit$estimate[["tmle.est"]]
 
@@ -74,6 +83,10 @@ make.calibrated.contrasts <- function(
   }
 
   n <- length(treatment.eic)
+
+  checkmate::assert_numeric(treatment.eic)
+  checkmate::assert_numeric(placebo.eic)
+  checkmate::assert_numeric(calibrated.eic)
 
   if (
     length(placebo.eic) != n ||

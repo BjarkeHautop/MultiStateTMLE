@@ -104,6 +104,24 @@ calibration.fun <- function(
   z.name = "z",
   ...
 ) {
+  checkmate::assert_list(initial.fit, null.ok = TRUE)
+  checkmate::assert_number(a, null.ok = TRUE)
+  checkmate::assert_number(theta, null.ok = TRUE)
+  checkmate::assert_number(rho, null.ok = TRUE)
+  checkmate::assert_number(delta, null.ok = TRUE)
+  checkmate::assert_number(rho.1a, null.ok = TRUE)
+  if (sum(!is.null(rho), !is.null(delta), !is.null(rho.1a)) > 1) {
+    stop("Only one of 'rho', 'delta', or 'rho.1a' may be supplied.")
+  }
+  checkmate::assert_flag(browse)
+  checkmate::assert_flag(verbose)
+  checkmate::assert_flag(output.eic)
+  checkmate::assert_number(tau, lower = 0, finite = TRUE)
+  checkmate::assert_number(tau.z, lower = 0, finite = TRUE)
+  checkmate::assert_count(use.cores, positive = TRUE)
+  checkmate::assert_string(target)
+  checkmate::assert_string(z.name)
+
   a.fixed <- a
   use.cores.fixed <- use.cores
   verbose.fixed <- verbose

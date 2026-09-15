@@ -43,6 +43,11 @@ estimate.derivative <- function(
   },
   ...
 ) {
+  checkmate::assert_number(alpha_hat, finite = TRUE)
+  checkmate::assert_function(fun)
+  checkmate::assert_string(parameter)
+  checkmate::assert_number(h, finite = TRUE)
+
   if (alpha_hat < h) {
     h <- alpha_hat * 3 / 4
   }

@@ -53,19 +53,37 @@ compute.Q.clever.per.id <- function(
   clever.by.state = FALSE
 ) {
   requireNamespace("data.table")
+
+  checkmate::assert_data_table(dt_id)
+  checkmate::assert_data_table(states, null.ok = TRUE)
+  checkmate::assert(
+    checkmate::check_list(process.types, names = "named", null.ok = TRUE),
+    checkmate::check_character(process.types, names = "named", null.ok = TRUE)
+  )
+  checkmate::assert_string(P.prefix)
+  checkmate::assert_string(state.idx.col)
+  checkmate::assert_string(parameter)
+  checkmate::assert_numeric(process.deltas, null.ok = TRUE)
+  checkmate::assert_flag(compute.clever)
+  checkmate::assert_flag(browse)
+  checkmate::assert_flag(browse2)
+  checkmate::assert_flag(get.years.lost)
+  checkmate::assert_number(years.lost.block.size, finite = TRUE, null.ok = TRUE)
+  checkmate::assert_flag(clever.by.state)
+
   # Defensive checks & normalization
   if (is.null(states) || nrow(states) == 0) {
     states <- data.table::data.table(state = 1L)
   }
   S <- length(unique(states[[state.idx.col]])) #nrow(states)
-  if (S < 1) {
-    stop("'states' must have at least one row")
-  }
+  checkmate::assert_count(S, positive = TRUE, .var.name = "states")
 
   Tn <- nrow(dt_id)
-  if (Tn < 1) {
-    stop("dt_id must have at least one row (time-ordered)")
-  }
+  checkmate::assert_count(
+    Tn,
+    positive = TRUE,
+    .var.name = "dt_id (must have at least one row, time-ordered)"
+  )
 
   # state columns (exclude 'at.risk' and the state index)
   state_cols_all <- setdiff(

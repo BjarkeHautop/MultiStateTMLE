@@ -72,22 +72,26 @@ estimate.alpha.fun <- function(
   verbose = FALSE,
   trace_every = 1L
 ) {
-  if (missing(c_n) || is.null(c_n) || !is.finite(c_n)) {
+  checkmate::assert_number(theta, finite = TRUE)
+  checkmate::assert_function(fun)
+  if (missing(c_n)) {
     stop("Please supply a finite c_n explicitly.")
   }
-
-  if (
-    !is.finite(alpha_min) ||
-      !is.finite(alpha_max) ||
-      alpha_min <= 0 ||
-      alpha_max <= alpha_min
-  ) {
-    stop("Require 0 < alpha_min < alpha_max.")
-  }
-
-  if (!is.finite(alpha_init)) {
+  checkmate::assert_number(c_n, finite = TRUE, .var.name = "c_n")
+  if (!checkmate::test_number(alpha_init, finite = TRUE)) {
     stop("alpha_init must be finite.")
   }
+  checkmate::assert_number(expand_up, lower = 1, finite = TRUE)
+  checkmate::assert_number(expand_down, lower = 0, upper = 1, finite = TRUE)
+  checkmate::assert_count(max_iter, positive = TRUE)
+  checkmate::assert_number(alpha_min, lower = 0, finite = TRUE)
+  checkmate::assert_number(alpha_max, finite = TRUE)
+  if (!(alpha_min > 0 && alpha_max > alpha_min)) {
+    stop("Require 0 < alpha_min < alpha_max.")
+  }
+  checkmate::assert_count(use.cores, positive = TRUE)
+  checkmate::assert_flag(verbose)
+  checkmate::assert_count(trace_every, positive = TRUE)
 
   # A little extra room for expansion + bracketing
   max_evals <- 2L * max_iter + 5L

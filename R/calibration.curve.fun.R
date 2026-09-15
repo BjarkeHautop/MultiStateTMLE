@@ -106,6 +106,22 @@ calibration.curve.fun <- function(
   block.size.target = NULL,
   ...
 ) {
+  checkmate::assert_list(initial.fit, null.ok = TRUE)
+  checkmate::assert_number(a, null.ok = TRUE)
+  checkmate::assert_numeric(alpha.grid, min.len = 1, any.missing = FALSE)
+  checkmate::assert_flag(browse)
+  checkmate::assert_flag(verbose)
+  checkmate::assert_flag(output.eic)
+  checkmate::assert_number(tau, lower = 0, finite = TRUE)
+  checkmate::assert_number(tau.z, lower = 0, finite = TRUE)
+  checkmate::assert_count(use.cores, positive = TRUE)
+  checkmate::assert_character(target, min.len = 1, any.missing = FALSE)
+  checkmate::assert_string(z.name)
+  checkmate::assert_count(min.iter)
+  checkmate::assert_flag(target.by.state)
+  checkmate::assert_number(block.size.z, null.ok = TRUE)
+  checkmate::assert_number(block.size.target, null.ok = TRUE)
+
   a.fixed <- a
   use.cores.fixed <- use.cores
   verbose.fixed <- verbose

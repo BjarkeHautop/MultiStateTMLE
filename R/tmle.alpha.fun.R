@@ -139,6 +139,48 @@ tmle.alpha.fun <- function(
   verbose.exponential = FALSE,
   ...
 ) {
+  checkmate::assert_string(target)
+  checkmate::assert_number(tau, lower = 0, finite = TRUE)
+  checkmate::assert_number(alpha, lower = 0, finite = TRUE)
+  checkmate::assert_string(z.name)
+  checkmate::assert_list(alpha.list, names = "named", null.ok = TRUE)
+  checkmate::assert_number(a, null.ok = TRUE)
+  checkmate::assert_list(initial.fit, null.ok = TRUE)
+  checkmate::assert_data_table(dt, null.ok = TRUE)
+  checkmate::assert_number(years.lost, null.ok = TRUE)
+  checkmate::assert_flag(only.first, null.ok = TRUE)
+  checkmate::assert_function(target.only.in.state, null.ok = TRUE)
+  checkmate::assert_flag(target.by.state)
+  checkmate::assert_number(conv.const, finite = TRUE)
+  checkmate::assert_flag(one.step)
+  checkmate::assert_flag(verbose)
+  checkmate::assert_count(max.iter, positive = TRUE)
+  checkmate::assert_count(min.iter)
+  checkmate::assert_count(use.cores, positive = TRUE)
+  checkmate::assert_number(truncate.weights, lower = 0, finite = TRUE)
+  checkmate::assert_flag(output.convergence)
+  checkmate::assert_flag(output.eic)
+  checkmate::assert(
+    checkmate::check_numeric(
+      output.weights,
+      lower = 0,
+      upper = 1,
+      null.ok = TRUE
+    ),
+    checkmate::check_flag(output.weights)
+  )
+  checkmate::assert(
+    checkmate::check_numeric(
+      output.a.weights,
+      lower = 0,
+      upper = 1,
+      null.ok = TRUE
+    ),
+    checkmate::check_flag(output.a.weights)
+  )
+  checkmate::assert_flag(browse)
+  checkmate::assert_flag(verbose.exponential)
+
   if (length(initial.fit) == 0) {
     initial.fit <-
       prepare.initial(tau = tau, a = a, verbose = verbose, ...)

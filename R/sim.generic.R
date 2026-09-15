@@ -68,6 +68,16 @@ sim.generic <- function(
   n = 500,
   browse = FALSE
 ) {
+  checkmate::assert_list(baseline, names = "named")
+  checkmate::assert_list(processes, names = "named")
+  checkmate::assert_list(effects)
+  checkmate::assert_list(sim.object)
+  checkmate::assert_number(cens, finite = TRUE)
+  checkmate::assert_list(alpha.intervention, names = "named")
+  checkmate::assert_list(baseline.intervention, names = "named")
+  checkmate::assert_count(n, positive = TRUE)
+  checkmate::assert_flag(browse)
+
   if (missing(baseline) && missing(processes) && missing(effects)) {
     baseline <- sim.object$baseline
     processes <- sim.object$processes

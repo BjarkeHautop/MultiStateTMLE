@@ -16,6 +16,7 @@ BugReports: https://github.com/BjarkeHautop/MultiStateTMLE/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Imports: 
+    checkmate,
     data.table,
     digest,
     Matrix,

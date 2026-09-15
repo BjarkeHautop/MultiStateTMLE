@@ -80,6 +80,14 @@ sim.from.data <- function(
   browse = FALSE,
   verbose = FALSE
 ) {
+  checkmate::assert_count(n, positive = TRUE)
+  checkmate::assert_list(sim.parameters, names = "named")
+  checkmate::assert_number(cens, finite = TRUE)
+  checkmate::assert_list(alpha.intervention, names = "named")
+  checkmate::assert_list(baseline.intervention, names = "named")
+  checkmate::assert_flag(browse)
+  checkmate::assert_flag(verbose)
+
   processes <- names(sim.parameters)[
     names(sim.parameters) != "baseline.summary"
   ]

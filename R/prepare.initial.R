@@ -187,6 +187,46 @@ prepare.initial <- function(
   verbose = FALSE,
   return.parameters.for.simulation = FALSE
 ) {
+  checkmate::assert_data_table(dt)
+  checkmate::assert_subset(c("id", "time", "delta"), names(dt))
+  checkmate::assert_number(tau, lower = 0, finite = TRUE)
+  checkmate::assert_list(fit.types, names = "named")
+  checkmate::assert_flag(use.exponential)
+  checkmate::assert_flag(verbose.exponential)
+  checkmate::assert_flag(browse)
+  checkmate::assert_count(max.count, positive = TRUE)
+  checkmate::assert_numeric(a, null.ok = TRUE)
+  checkmate::assert_list(derived.vars, names = "named")
+  checkmate::assert_list(depend.time, names = "named")
+  checkmate::assert(
+    checkmate::check_list(fit.treatment, null.ok = TRUE),
+    checkmate::check_character(fit.treatment, null.ok = TRUE)
+  )
+  checkmate::assert_flag(prune.states)
+  checkmate::assert_count(cut.time, positive = TRUE)
+  checkmate::assert_count(cut.one.way, positive = TRUE)
+  checkmate::assert_count(cut.Tk, positive = TRUE)
+  checkmate::assert_numeric(cut.Tk.values, null.ok = TRUE)
+  checkmate::assert_count(max.Tk, positive = TRUE)
+  checkmate::assert_list(two.way, null.ok = TRUE)
+  checkmate::assert_number(reduce.NK, lower = 0, upper = 1)
+  checkmate::assert_list(hal.sl)
+  checkmate::assert_flag(screen.two.way)
+  checkmate::assert_numeric(lambda.cvs, min.len = 1, any.missing = FALSE)
+  checkmate::assert_flag(event.dependent.cv)
+  checkmate::assert_character(npenalize.vars, null.ok = TRUE)
+  checkmate::assert_count(V, positive = TRUE)
+  checkmate::assert_count(seed.hal, null.ok = TRUE)
+  checkmate::assert_flag(reduce.seed.dependence)
+  checkmate::assert_flag(penalize.time)
+  checkmate::assert_count(use.cores, positive = TRUE)
+  checkmate::assert_count(use.cores.prediction, positive = TRUE)
+  checkmate::assert_flag(verbose.hal)
+  checkmate::assert_flag(browse.hal)
+  checkmate::assert_flag(cv.glmnet)
+  checkmate::assert_flag(verbose)
+  checkmate::assert_flag(return.parameters.for.simulation)
+
   dt <- copy(dt)
 
   n <- length(unique(dt[["id"]]))
@@ -3033,7 +3073,7 @@ prepare.initial <- function(
 ### faster version to get unique rows:
 
 hash_sparse_rows_dgC <- function(M) {
-  stopifnot(inherits(M, "dgCMatrix"))
+  checkmate::assert_class(M, "dgCMatrix")
 
   p <- M@p
   i <- M@i
