@@ -830,7 +830,7 @@ prepare.initial <- function(
     }
 
     for (delta.value in deltas.hal) {
-      name.hal <- names(which.hal)[deltas.hal == delta.value]
+      name.hal <- names(which.hal)[which.hal][deltas.hal == delta.value]
       is.name.hal.at.risk <- (1:length(fit.types))[
         names(fit.types) == name.hal
       ] %in%
