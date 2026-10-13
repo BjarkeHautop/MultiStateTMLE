@@ -15,20 +15,25 @@ URL: https://github.com/BjarkeHautop/MultiStateTMLE
 BugReports: https://github.com/BjarkeHautop/MultiStateTMLE/issues
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-Imports: 
+Depends:
+    R (>= 3.5)
+Imports:
+    checkmate,
     data.table,
     digest,
+    lifecycle,
     Matrix,
     nleqslv,
     parallel,
-    simevent,
     stats,
-    stringr,
     survival,
-    zoo
+    utils
 Suggests:
-    testthat (>= 3.0.0)
+    simevent,
+    testthat (>= 3.0.0),
+    withr
 Remotes:
     BjarkeHautop/simevent
+LazyData: true
 Config/testthat/edition: 3
 Config/roxygen2/version: 8.1.0

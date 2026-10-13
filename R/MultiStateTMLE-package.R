@@ -6,23 +6,19 @@
 #' @importFrom Matrix Matrix
 #' @importFrom nleqslv nleqslv
 #' @importFrom parallel detectCores mclapply
-#' @importFrom simevent simEventData
 #' @importFrom stats as.formula binomial coef formula glm lm median
 #'   model.matrix predict quantile sd setNames
-#' @importFrom stringr str_split
 #' @importFrom survival basehaz coxph coxph.control
 #' @importFrom utils combn flush.console
-#' @importFrom zoo na.locf
 ## usethis namespace: end
 NULL
 
 # Column names used via data.table's non-standard evaluation (e.g. `dt[, .(x)]`),
-# plus a couple of arguments whose defaults reference an object expected to
-# exist in the caller's environment. Not undefined globals at runtime; listed
-# here only to silence `R CMD check`'s static analysis.
+# plus the defaults of the deprecated estimate.derivative(), which reference
+# objects expected to exist in the caller's environment, and fit.hal(), which
+# HAL fits expect on the search path. Listed here only to silence
+# `R CMD check`'s static analysis.
 utils::globalVariables(c(
-  "..stateful_derived",
-  "..stateful_in_states",
   "A0.obs",
   "alpha.est.fun",
   "at.risk",
@@ -35,6 +31,7 @@ utils::globalVariables(c(
   "delta",
   "dt",
   "final.time",
+  "fit.hal",
   "grid.period",
   "grid.time",
   "Haz",
@@ -49,6 +46,7 @@ utils::globalVariables(c(
   "state.row.index",
   "surv.0",
   "surv.0.1",
+  "target.only.in.state",
   "time",
   "time.obs",
   "tstart",

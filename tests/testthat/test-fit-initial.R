@@ -1,0 +1,88 @@
+test_that("fit_initial() fits the illness-death example", {
+  fit <- fit_initial(
+    illness_death,
+    fit_types = illness.death.fit.types,
+    tau = 1
+  )
+
+  expect_equal(fit$process.names, c("z", "outcome1", "censoring"))
+  expect_equal(fit$process.deltas, c(2, 1, 0))
+  expect_equal(
+    fit$process.types,
+    list(z = "one.jump", outcome1 = "terminal", censoring = "terminal")
+  )
+  expect_equal(fit$cens.process.id, 3)
+  expect_named(fit$at.risks, "z")
+  # z is a state variable, with states z = 0 and z = 1.
+  expect_equal(fit$depend.matrix$z, c(0, 1))
+  expect_true(all(fit$tmp.long$time <= 1))
+  expect_true(all(
+    c("P.z.1", "P.z.2", "P.outcome1.1", "P.outcome1.2") %in%
+      names(fit$tmp.long)
+  ))
+})
+
+test_that("fit_initial() accepts model strings with or without whitespace", {
+  compact <- list(
+    z = list(
+      model = "Surv(tstart,tstop,delta==2)~L0",
+      at_risk = function(dt) dt[["z"]] == 0
+    ),
+    outcome1 = "Surv(tstart,tstop,delta==1)~L0+z",
+    censoring = "Surv(tstart,tstop,delta==0)~L0"
+  )
+
+  expect_equal(
+    fit_initial(illness_death, fit_types = compact, tau = 1)$tmp.long,
+    fit_initial(
+      illness_death,
+      fit_types = illness.death.fit.types,
+      tau = 1
+    )$tmp.long
+  )
+})
+
+test_that("fit_initial() validates its arguments", {
+  ft <- illness.death.fit.types
+
+  expect_error(
+    fit_initial(illness_death[, c("id", "time")], fit_types = ft, tau = 1),
+    "delta"
+  )
+  expect_error(fit_initial(illness_death, fit_types = ft, tau = -1), "tau")
+  expect_error(
+    fit_initial(illness_death, fit_types = ft[c("z", "outcome1")], tau = 1),
+    "censoring"
+  )
+  expect_error(
+    fit_initial(
+      illness_death,
+      fit_types = c(ft, list(other = "Surv(tstart, tstop, event) ~ L0")),
+      tau = 1
+    ),
+    "delta == <code>"
+  )
+  expect_error(
+    fit_initial(
+      illness_death,
+      fit_types = list(
+        z = list(model = "Surv(tstart, tstop, delta == 2) ~ L0", fit = "glm")
+      ),
+      tau = 1
+    ),
+    "fit"
+  )
+  expect_error(
+    fit_initial(illness_death, fit_types = ft, tau = 1, a = 1),
+    "treatment_model"
+  )
+  expect_error(
+    fit_initial(
+      illness_death,
+      fit_types = ft,
+      tau = 1,
+      hal_control = list(foo = 1)
+    ),
+    "hal_control"
+  )
+})

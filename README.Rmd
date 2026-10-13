@@ -42,28 +42,50 @@ pak::pak("BjarkeHautop/MultiStateTMLE")
 ## Usage
 
 ```{r}
-#| label: example
+#| label: library
 
 library(MultiStateTMLE)
 ```
 
 The pipeline has three main steps:
 
-- `prepare.initial()` fits the initial (nuisance) hazard models for each process
-  in the data (Cox, HAL, or exponential), and builds the discrete product state
-  space used internally.
-- `tmle.alpha.fun()` targets the initial fit under a stochastic intensity
-  intervention (scaling the shape of a process by `alpha`, optionally combined
-  with an intervention on baseline treatment), returning a TMLE estimate, its
-  standard error, and (optionally) the efficient influence curve.
-- `calibration.fun()`/`calibration.curve.fun()` calibrate the shape intervention
-  to a target effect size, and `make.calibrated.contrasts()` decomposes a total
-  treatment effect into mediated and calibrated contrasts.
+- `fit_initial()` fits the initial (nuisance) hazard models for each event
+  process in the data, and builds the discrete product state space used
+  internally.
+- `tmle_alpha()` targets the initial fit under a stochastic intensity
+  intervention, which scales the intensity of a process by `alpha` (optionally
+  combined with an intervention on baseline treatment). It returns a TMLE
+  estimate, its standard error, and optionally the efficient influence curve.
+- `calibrate_alpha()` and `calibration_curve()` calibrate the intervention to a
+  target effect size, and `calibrated_contrasts()` decomposes a total treatment
+  effect into mediated and calibrated contrasts.
 
-`sim.generic()` and `sim.from.data()` (built on top of
-[simevent](https://github.com/BjarkeHautop/simevent)) simulate multistate event
-history data, either from a user-specified process/effect specification, or from
-parameters previously fitted to observed data.
+For example, with the simulated illness-death data `illness_death`, where an
+illness `z` raises the risk of death `outcome1`, the risk of death by time 1 if
+the intensity of the illness were halved is estimated by:
+
+```{r}
+#| label: example
+
+fit <- fit_initial(
+  illness_death,
+  fit_types = list(
+    z = list(
+      model = "Surv(tstart, tstop, delta == 2) ~ L0",
+      at_risk = function(dt) dt[["z"]] == 0
+    ),
+    outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
+    censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
+  ),
+  tau = 1
+)
+
+est <- tmle_alpha(fit, target = "outcome1", alpha = 0.5, z_name = "z")
+est$estimate
+```
+
+To simulate multistate event history data, see the
+[simevent](https://github.com/BjarkeHautop/simevent) package.
 
 ## Contributing
 

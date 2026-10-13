@@ -1,17 +1,17 @@
-# Breaking changes desired
-
-- Use snake_case.
-
-- Clean up arguments (and defaults).
-
 # CRAN compliance
 
-- Can't set number of cores > 1 by default.
+- HAL fits call `fit.hal()`, which is not part of the package.
 
-- Add examples and tests.
+# Cleanup
+
+- Internal variable names are still dotted.
+
+- `fit_initial()` parses process `delta` codes and covariates out of model
+  strings; consider specifying processes by name, matching simevent's
+  `sim_events()` output (`event` column).
 
 # Performance:
 
-- R/prepare.initial.R: repeated `grep()`/`setdiff()`/`unique()` recomputation on
-  the same vectors inside inner loops. Needs a closer look with tests before
+- R/fit-initial.R: repeated `grep()`/`setdiff()`/`unique()` recomputation on the
+  same vectors inside inner loops. Needs a closer look with tests before
   touching.

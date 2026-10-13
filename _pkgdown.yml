@@ -1,6 +1,7 @@
 url: https://github.com/BjarkeHautop/MultiStateTMLE
 template:
   bootstrap: 5
+  math-rendering: katex
 
 reference:
 - title: Package overview
@@ -9,36 +10,46 @@ reference:
   contents:
   - MultiStateTMLE-package
 
-- title: Simulating data
-  desc: >
-    Functions for simulating multistate event history data, either from a
-    user-specified process/effect specification, or from parameters
-    previously fitted to observed data.
-  contents:
-  - sim.generic
-  - sim.from.data
-
 - title: Initial fit
   desc: >
     Fitting the initial (nuisance) hazard models and building the discrete
     product state space used internally.
   contents:
-  - prepare.initial
-  - compute.Q.clever.per.id
+  - fit_initial
 
 - title: Targeted estimation
   desc: >
     Targeting the initial fit under a stochastic intensity intervention.
   contents:
-  - tmle.alpha.fun
-  - estimate.derivative
+  - tmle_alpha
+  - estimate_derivative
 
 - title: Calibration
   desc: >
-    Calibrating a shape-parameter intervention to a target effect size, and
+    Calibrating an intensity intervention to a target effect size, and
     decomposing treatment effects into calibrated contrasts.
   contents:
-  - estimate.alpha.fun
+  - calibrate_alpha
+  - calibration_curve
+  - solve_alpha
+  - calibrated_contrasts
+
+- title: Data
+  desc: >
+    Example data.
+  contents:
+  - illness_death
+
+- title: Deprecated
+  desc: >
+    Functions superseded by the snake_case functions above. Will be removed in
+    the future.
+  contents:
+  - prepare.initial
+  - tmle.alpha.fun
   - calibration.fun
   - calibration.curve.fun
+  - estimate.alpha.fun
+  - estimate.derivative
   - make.calibrated.contrasts
+  - compute.Q.clever.per.id

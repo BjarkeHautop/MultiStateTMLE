@@ -2,7 +2,7 @@
 # backward recursion in conditional expectations, and the clever covariate
 # for a process x as h_t^x = E[Y | jump] - E[Y | no jump] (their Eq. 16-18).
 
-test_that("compute.Q.clever.per.id reproduces the discrete-time cumulative incidence for a single terminal process", {
+test_that(".compute_q_clever() reproduces the discrete-time cumulative incidence for a single terminal process", {
   # S = 1, single terminal process "D": Q_t = h_t + (1 - h_t) * Q_{t+1}
   # collapses to Q_t = 1 - prod_{s=t}^{T} (1 - h_s).
   h <- c(0.1, 0.2, 0.3)
@@ -15,10 +15,10 @@ test_that("compute.Q.clever.per.id reproduces the discrete-time cumulative incid
 
   states <- data.table::data.table(state = 1L)
 
-  out <- compute.Q.clever.per.id(
+  out <- .compute_q_clever(
     dt_id = dt_id,
     states = states,
-    process.types = list(D = "terminal")
+    process_types = list(D = "terminal")
   )
 
   expected_Q <- rev(1 - cumprod(rev(1 - h)))
@@ -26,7 +26,7 @@ test_that("compute.Q.clever.per.id reproduces the discrete-time cumulative incid
   expect_equal(out$Q, expected_Q)
 })
 
-test_that("compute.Q.clever.per.id: clever covariates match the analytic recursion", {
+test_that(".compute_q_clever(): clever covariates match the analytic recursion", {
   h <- c(0.1, 0.2, 0.3)
 
   dt_id <- data.table::data.table(
@@ -36,10 +36,10 @@ test_that("compute.Q.clever.per.id: clever covariates match the analytic recursi
   )
   states <- data.table::data.table(state = 1L)
 
-  out <- compute.Q.clever.per.id(
+  out <- .compute_q_clever(
     dt_id = dt_id,
     states = states,
-    process.types = list(D = "terminal")
+    process_types = list(D = "terminal")
   )
 
   Q <- rev(1 - cumprod(rev(1 - h)))
@@ -49,7 +49,7 @@ test_that("compute.Q.clever.per.id: clever covariates match the analytic recursi
   expect_equal(out$clever.Q.D, out$clever.Q.D1 - out$clever.Q.D0)
 })
 
-test_that("compute.Q.clever.per.id: clever covariate for a mediator process matches the jump-vs-no-jump formula", {
+test_that(".compute_q_clever(): clever covariate for a mediator process matches the jump-vs-no-jump formula", {
   # S = 2, for the state-transition path.
   # Process "Z" occurs and raises the hazard of terminal process "D".
   states <- data.table::data.table(
@@ -67,10 +67,10 @@ test_that("compute.Q.clever.per.id: clever covariate for a mediator process matc
     P.D.2 = c(0.3, 0.3)
   )
 
-  out <- compute.Q.clever.per.id(
+  out <- .compute_q_clever(
     dt_id = dt_id,
     states = states,
-    process.types = list(Z = "recurrent", D = "terminal"),
+    process_types = list(Z = "recurrent", D = "terminal"),
     parameter = "D"
   )
 
@@ -84,7 +84,7 @@ test_that("compute.Q.clever.per.id: clever covariate for a mediator process matc
   expect_equal(out$clever.Q.Z, c(0.2, 0.2))
 })
 
-test_that("compute.Q.clever.per.id returns Q = 0 with a warning when no hazard columns are found", {
+test_that(".compute_q_clever() returns Q = 0 with a warning when no hazard columns are found", {
   dt_id <- data.table::data.table(
     state = c(1L, 1L),
     state.row.index = c(1L, 1L),
@@ -93,14 +93,14 @@ test_that("compute.Q.clever.per.id returns Q = 0 with a warning when no hazard c
   states <- data.table::data.table(state = 1L)
 
   expect_warning(
-    out <- compute.Q.clever.per.id(dt_id = dt_id, states = states),
+    out <- .compute_q_clever(dt_id = dt_id, states = states),
     "No hazard columns found"
   )
 
   expect_equal(out$Q, c(0, 0))
 })
 
-test_that("compute.Q.clever.per.id errors on empty input", {
+test_that(".compute_q_clever() errors on empty input", {
   states <- data.table::data.table(state = 1L)
   dt_id <- data.table::data.table(
     state = integer(0),
@@ -109,7 +109,7 @@ test_that("compute.Q.clever.per.id errors on empty input", {
   )
 
   expect_error(
-    compute.Q.clever.per.id(dt_id = dt_id, states = states),
+    .compute_q_clever(dt_id = dt_id, states = states),
     "at least one row"
   )
 })

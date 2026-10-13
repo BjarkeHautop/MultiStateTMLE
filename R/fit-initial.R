@@ -1,213 +1,158 @@
-### prepare.initial.R ---
-#----------------------------------------------------------------------
-## Author: Helene
-## Created: Feb  4 2026 (08:47)
-## Version:
-## Last-Updated: Aug 29 2026 (20:10)
-##           By: Helene
-##     Update #: 949
-#----------------------------------------------------------------------
-##
-### Commentary:
-##
-### Change Log:
-#----------------------------------------------------------------------
-##
-### Code:
-
-#' Prepare the initial fit for multistate TMLE
+#' Fit the initial hazard models
 #'
-#' Fits initial (nuisance) hazard models for each process in `fit.types`
-#' (Cox, HAL, or exponential), builds the discrete product state space and
-#' its dependency structure, and computes the baseline clever
-#' weights/predictions needed by [tmle.alpha.fun()]. This is the
-#' initialization step of the multistate TMLE pipeline.
+#' Fits the initial (nuisance) hazard model for each event process (Cox
+#' models, or HAL), and the baseline treatment model if requested, and
+#' expands the data to the grid of all observed event times up to `tau`. It
+#' also builds the discrete product state space of the processes that other
+#' processes' hazards depend on. The result is the input to [tmle_alpha()],
+#' [calibrate_alpha()] and [calibration_curve()].
 #'
-#' @param dt data.table of observed event history data (long format, with
-#'   `id`, `time`, `delta`, and one column per process).
-#' @param tau follow-up horizon (in time units).
-#' @param fit.types named list describing, for each process, the hazard
-#'   `model` (a `Surv(...)` formula string), the `fit` method (`"cox"`,
-#'   `"hal"`, or `"glm"`), and an optional `at.risk` function.
-#' @param use.exponential logical; if `TRUE`, use exponential (rather than
-#'   Cox/HAL) hazard fits where applicable.
-#' @param verbose.exponential logical; if `TRUE`, print diagnostics for the
-#'   exponential fits.
-#' @param browse logical; if `TRUE`, drop into `browser()`.
-#' @param max.count maximum recurrent-event count tracked per process in the
-#'   product state space.
-#' @param a optional intervention on the baseline treatment `A0`; if
-#'   supplied, predictions are also computed under `A0` set to each value in
-#'   `a`.
-#' @param derived.vars list of functions deriving auxiliary state variables
-#'   from the discovered processes.
-#' @param depend.time list describing additional time-dependency structure
-#'   between processes, used when HAL is not fit.
-#' @param fit.treatment optional model specification (as for `fit.types`) for
-#'   the baseline treatment `A0` propensity model.
-#' @param prune.states logical; if `TRUE`, prune unreachable/zero-probability
-#'   states from the product state space.
-#' @param cut.time HAL basis cut count for the time variable.
-#' @param cut.one.way HAL basis cut count for one-way (main effect) terms.
-#' @param cut.Tk HAL basis cut count for history/time-since-event terms.
-#' @param cut.Tk.values optional explicit cut values for `cut.Tk`.
-#' @param max.Tk maximum history order for HAL history terms.
-#' @param two.way optional list of two-way HAL interaction term
-#'   specifications.
-#' @param reduce.NK numeric; quantile used to cap the recurrent-event count
-#'   `NK` when reducing HAL basis dimension.
-#' @param hal.sl list of HAL specifications, one per Super Learner library
-#'   candidate.
-#' @param screen.two.way logical; if `TRUE`, screen two-way HAL terms before
-#'   fitting.
-#' @param lambda.cvs numeric vector of lasso penalty values to cross-validate
-#'   over when fitting HAL.
-#' @param event.dependent.cv logical; if `TRUE`, stratify HAL cross-validation
-#'   folds by event status.
-#' @param npenalize.vars optional character vector of HAL basis terms to
-#'   exempt from lasso penalization.
-#' @param V number of cross-validation folds for HAL.
-#' @param seed.hal optional random seed for HAL cross-validation.
-#' @param reduce.seed.dependence logical; if `TRUE`, average over multiple
-#'   HAL cross-validation seeds.
-#' @param penalize.time logical; if `TRUE`, include the time variable itself
-#'   among the penalized HAL basis terms.
-#' @param use.cores number of cores to use for model fitting.
-#' @param use.cores.prediction number of cores to use for prediction steps.
-#' @param verbose.hal logical; if `TRUE`, print HAL fitting diagnostics.
-#' @param browse.hal logical; if `TRUE`, drop into `browser()` inside the HAL
-#'   fitting step.
-#' @param cv.glmnet logical; currently not supported.
-#' @param verbose logical; if `TRUE`, print overall progress.
-#' @param return.parameters.for.simulation logical; if `TRUE`, additionally
-#'   return fitted parameters formatted for [sim.from.data()].
-#' @return A list (the `initial.fit` object) containing, among others,
-#'   `tmp.long` (the long-format data with fitted hazards/weights),
-#'   `depend.matrix` (the product state space), `process.names`,
-#'   `process.types`, `process.deltas`, `cens.process.id`, and `at.risks`.
+#' @param data A `data.frame` of observed event history data in long format,
+#'   with one row per event and columns `id`, `time` and `delta` (the
+#'   integer code of the process that jumped, with `0` reserved for
+#'   censoring), plus any baseline covariates used in `fit_types`.
+#' @param fit_types A named list with one entry per event process, each
+#'   either a model formula string or a list with elements:
+#'   * `model`: a formula string of the form
+#'     `"Surv(tstart, tstop, delta == k) ~ covariates"`, where `k` is the
+#'     process's `delta` code. Other processes can be used as covariates by
+#'     name, in which case their counting process (lagged by one event) is
+#'     used.
+#'   * `fit`: `"cox"` (default) or `"hal"`.
+#'   * `at_risk`: an optional function of the data returning a logical
+#'     vector, marking the rows at risk of the process (e.g.
+#'     `function(dt) dt[["z"]] == 0` for a process that can jump at most
+#'     once).
+#'
+#'   Exactly one process must have `delta` code `0` (censoring).
+#' @param tau Positive number. Follow-up horizon; the target parameters are
+#'   evaluated at `tau`.
+#' @param treatment_model Optional model for the baseline treatment `A0`,
+#'   either a formula string such as `"A0 ~ L0"` or a list with elements
+#'   `model` and `fit` (only `"glm"` is supported). Required when `a` is
+#'   given.
+#' @param a Optional integer vector of baseline treatment values (`0`/`1`)
+#'   to compute interventional hazards and clever weights for. Each value
+#'   can then be passed as `a` to [tmle_alpha()].
+#' @param max_count Positive integer. Maximum number of jumps tracked per
+#'   recurrent process in the state space.
+#' @param derived_vars Named list of functions of the data deriving
+#'   additional state variables.
+#' @param depend_time Named list of functions describing dependence on the
+#'   time since a jump of a process, keyed by process name.
+#' @param prune_states Logical. If `TRUE`, prune states not admissible under
+#'   the `at_risk` functions of `fit_types`.
+#' @param use_exponential Logical. If `TRUE`, always transform the hazard
+#'   increments `dH` to probabilities `1 - exp(-dH)`. Otherwise this is only
+#'   done if some increments exceed 1.
+#' @param hal_control A named list of settings for processes fitted with
+#'   `fit = "hal"`, see Details.
+#' @param cores Positive integer. Number of cores used by
+#'   [parallel::mclapply()] when predicting hazards across states.
+#' @param verbose Logical. If `TRUE`, print model fits and progress.
+#'
+#' @details
+#' HAL fits are experimental and require a `fit.hal()` function to be
+#' available on the search path. `hal_control` may contain `cut_time` (35),
+#' `cut_one_way` (15), `cut_tk` (3), `cut_tk_values` (`NULL`), `two_way`
+#' (`NULL`), `reduce_nk` (0.025), `sl` (a list of HAL library
+#' specifications, built from `cut_one_way`, `cut_tk`, `cut_tk_values` and
+#' `two_way` by default), `screen_two_way` (`FALSE`), `lambda_cvs`,
+#' `event_dependent_cv` (`FALSE`), `npenalize_vars` (`NULL`), `v_folds`
+#' (10), `seed` (`NULL`), `reduce_seed_dependence` (`FALSE`),
+#' `penalize_time` (`FALSE`) and `verbose` (`FALSE`), with defaults in
+#' parentheses.
+#'
+#' @return A list containing, among others, `tmp.long` (the expanded data
+#'   with fitted hazards and clever weights), `depend.matrix` (the product
+#'   state space), `process.names`, `process.types`, `process.deltas`,
+#'   `cens.process.id` and `at.risks`.
+#'
 #' @examples
-#' set.seed(1405)
-#' baseline <- list(L0 = function(N) rnorm(N))
-#' processes <- list(
-#'   z = list(type = "one.jump", eta = 0.2, nu = 1),
-#'   outcome1 = list(type = "terminal", eta = 0.3, nu = 1),
-#'   censoring = list(type = "censoring", eta = 0.1, nu = 1)
-#' )
-#' effects <- list(
-#'   c("L0", "z", 0.5),
-#'   c("z", "outcome1", 0.7)
-#' )
-#' dt <- sim.generic(baseline = baseline, processes = processes, effects = effects, n = 100)
+#' # Illness-death data: z is an illness that can occur once, outcome1 is
+#' # death, and delta = 0 is censoring.
+#' head(illness_death)
 #'
-#' initial.fit <- prepare.initial(
-#'   dt,
-#'   tau = 1,
-#'   fit.types = list(
+#' fit <- fit_initial(
+#'   illness_death,
+#'   fit_types = list(
 #'     z = list(
-#'       model = "Surv(tstart, tstop, delta == 2)~L0",
-#'       fit = "cox",
-#'       at.risk = function(dt) (dt[["z"]] == 0)
+#'       model = "Surv(tstart, tstop, delta == 2) ~ L0",
+#'       at_risk = function(dt) dt[["z"]] == 0
 #'     ),
-#'     outcome1 = list(model = "Surv(tstart, tstop, delta == 1)~L0+z", fit = "cox"),
-#'     censoring = list(model = "Surv(tstart, tstop, delta == 0)~L0", fit = "cox")
+#'     outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
+#'     censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
 #'   ),
-#'   verbose = FALSE
+#'   tau = 1
 #' )
-#' initial.fit$process.names
+#' fit$process.types
 #' @export
-prepare.initial <- function(
-  dt,
-  tau = 1.2,
-  fit.types = list(
-    Z = list(
-      model = "Surv(tstart, tstop, delta == 2)~L0+L+A0",
-      fit = "cox",
-      at.risk = function(dt) (dt[["Z"]] == 0)
-    ),
-    L = list(
-      model = "Surv(tstart, tstop, delta == 3)~L0+Z+A0",
-      fit = "cox",
-      at.risk = function(dt) (dt[["L"]] == 0)
-    ),
-    #W = list(model = "Surv(tstart, tstop, delta == 4)~L0+Z",
-    #         fit = "cox",
-    #         at.risk = function(dt) (dt[["W"]] == 0)),
-    outcome1 = list(
-      model = "Surv(tstart, tstop, delta == 1)~L0+Z+L+A0",
-      fit = "cox"
-    ),
-    #death = list(model = "Surv(tstart, tstop, delta == 5)~L0+Z+L",
-    #             fit = "cox"),
-    censoring = list(
-      model = "Surv(tstart, tstop, delta == 0)~L0+Z+L+A0",
-      fit = "cox"
-    )
-  ),
-  use.exponential = FALSE,
-  verbose.exponential = FALSE,
-  browse = FALSE,
-  max.count = 1,
+fit_initial <- function(
+  data,
+  fit_types,
+  tau,
+  treatment_model = NULL,
   a = NULL,
-  derived.vars = list(),
-  depend.time = list(),
-  fit.treatment = NULL,
-  prune.states = FALSE,
-  ##### hal parameters:
-  cut.time = 35,
-  cut.one.way = 15,
-  cut.Tk = 3,
-  cut.Tk.values = NULL,
-  max.Tk = max.count,
-  two.way = NULL,
-  reduce.NK = 0.025,
-  hal.sl = list(c(
-    cut.one.way = cut.one.way,
-    cut.Tk = cut.Tk,
-    cut.Tk.values = cut.Tk.values,
-    two.way = two.way
-  )),
-  screen.two.way = FALSE,
-  lambda.cvs = c(
-    (9:1) / 10,
-    (9:2) / 10^2,
-    seq(1 / 10^2, 1 / 10^5, length = 100)
-  ), #c(sapply(1:5, function(jjj) (9:1)/(10^jjj))),
-  event.dependent.cv = FALSE,
-  npenalize.vars = NULL,
-  V = 10,
-  seed.hal = NULL,
-  reduce.seed.dependence = FALSE,
-  penalize.time = FALSE,
-  use.cores = 50,
-  use.cores.prediction = 1, #5,
-  verbose.hal = FALSE,
-  browse.hal = FALSE,
-  cv.glmnet = FALSE, #currently not supported
-  #####################
-  verbose = FALSE,
-  return.parameters.for.simulation = FALSE
+  max_count = 1,
+  derived_vars = list(),
+  depend_time = list(),
+  prune_states = FALSE,
+  use_exponential = FALSE,
+  hal_control = list(),
+  cores = 1,
+  verbose = FALSE
 ) {
-  dt <- copy(dt)
+  checkmate::assert_data_frame(data, min.rows = 1)
+  checkmate::assert_names(
+    names(data),
+    must.include = c("id", "time", "delta")
+  )
+  checkmate::assert_list(fit_types, names = "unique", min.len = 1)
+  checkmate::assert_number(tau, lower = 0, finite = TRUE)
+  checkmate::assert_integerish(
+    a,
+    lower = 0,
+    upper = 1,
+    any.missing = FALSE,
+    unique = TRUE,
+    null.ok = TRUE
+  )
+  checkmate::assert_count(max_count, positive = TRUE)
+  checkmate::assert_list(derived_vars, types = "function")
+  checkmate::assert_list(depend_time, types = "function")
+  checkmate::assert_flag(prune_states)
+  checkmate::assert_flag(use_exponential)
+  checkmate::assert_list(hal_control, names = "unique")
+  checkmate::assert_subset(names(hal_control), names(.hal_control_defaults))
+  checkmate::assert_count(cores, positive = TRUE)
+  checkmate::assert_flag(verbose)
+
+  fit_types <- Map(.normalize_fit_type, fit_types, names(fit_types))
+
+  if (!is.list(treatment_model)) {
+    treatment_model <- list(model = treatment_model, fit = "glm")
+  }
+  if (length(treatment_model[["model"]]) > 0) {
+    checkmate::assert_string(treatment_model[["model"]])
+    if (!identical(treatment_model[["fit"]], "glm")) {
+      stop("Only fit = \"glm\" is supported for treatment_model.")
+    }
+  }
+  if (length(a) > 0 && length(treatment_model[["model"]]) == 0) {
+    stop("A treatment_model is required when a is given.")
+  }
+
+  hal_control <- utils::modifyList(.hal_control_defaults, hal_control)
+
+  dt <- copy(as.data.table(data))
 
   n <- length(unique(dt[["id"]]))
 
-  #-- if no "fit" is specified for types, then specify it as cox:
-  for (nm in names(fit.types)) {
-    if (!is.list(fit.types[[nm]])) {
-      fit.types[[nm]] <- list(model = fit.types[[nm]], fit = "cox")
-    }
-  }
-
   any.hal <- any(
-    which.hal <- sapply(fit.types, function(fit.type) fit.type$fit == "hal")
+    which.hal <- sapply(fit_types, function(fit.type) fit.type$fit == "hal")
   )
 
-  #-- if no "fit" is specified for treatment model, then specify it as glm:
-  if (!is.list(fit.treatment)) {
-    fit.treatment <- list(model = fit.treatment, fit = "glm")
-  }
-
-  at.risk.ids <- (1:length(fit.types))[sapply(fit.types, function(fit.type) {
+  at.risk.ids <- (1:length(fit_types))[sapply(fit_types, function(fit.type) {
     ("at.risk" %in% names(fit.type))
   })]
 
@@ -234,17 +179,17 @@ prepare.initial <- function(
 
   #-- covariates/predictors extracted from models:
   varnames <- unique(c(
-    unlist(lapply(fit.types, function(fit.type) {
+    unlist(lapply(fit_types, function(fit.type) {
       if (length(fit.type[["model"]]) > 0) {
         return(strsplit(strsplit(fit.type[["model"]], "~")[[1]][2], "\\+|\\*")[[
           1
         ]])
       }
     })),
-    #unlist(as.character(lapply(fit.types[at.risk.ids], function(fit.type) {
+    #unlist(as.character(lapply(fit_types[at.risk.ids], function(fit.type) {
     #    setdiff(as.character(body(fit.type[["at.risk"]])[[2]][[2]]), c("[[", "dt"))
     #})))
-    unlist(lapply(fit.types[at.risk.ids], function(fit.type) {
+    unlist(lapply(fit_types[at.risk.ids], function(fit.type) {
       extract_dt_cols(fit.type[["at.risk"]])
     }))
   ))
@@ -254,9 +199,9 @@ prepare.initial <- function(
   N.vars <- NULL
 
   #-- remove time vars for now
-  if (length(depend.time) > 0) {
-    for (time.jj in 1:length(depend.time)) {
-      varnames <- setdiff(varnames, paste0("T.", names(depend.time)[time.jj]))
+  if (length(depend_time) > 0) {
+    for (time.jj in 1:length(depend_time)) {
+      varnames <- setdiff(varnames, paste0("T.", names(depend_time)[time.jj]))
     }
   }
 
@@ -264,18 +209,23 @@ prepare.initial <- function(
   if (length(interaction.names <- grep(":", varnames, value = TRUE)) > 0) {
     varnames <- unique(c(
       varnames[!varnames %in% interaction.names],
-      str_split(interaction.names, ":")[[1]]
+      strsplit(interaction.names, ":", fixed = TRUE)[[1]]
     ))
   }
 
   #-- corresponding delta values:
-  process.deltas <- c(as.numeric(unlist(lapply(fit.types, function(fit.type) {
-    tmp.delta <- strsplit(fit.type[["model"]], "~")[[1]][1]
-    as.numeric(substr(tmp.delta, nchar(tmp.delta) - 1, nchar(tmp.delta) - 1))
-  }))))
+  process.deltas <- vapply(
+    fit_types,
+    function(fit.type) .process_delta(fit.type[["model"]]),
+    numeric(1),
+    USE.NAMES = FALSE
+  )
+  if (sum(process.deltas == 0) != 1) {
+    stop("Exactly one process in fit_types must have delta == 0 (censoring).")
+  }
 
   #-- names of types
-  process.names <- names(fit.types)
+  process.names <- names(fit_types)
   state.names <- process.names[
     process.names %in% varnames[varnames %in% process.names]
   ]
@@ -296,10 +246,10 @@ prepare.initial <- function(
   })
   names(process.types) <- process.names
 
-  at.risks <- lapply(fit.types[at.risk.ids], function(fit.type) {
+  at.risks <- lapply(fit_types[at.risk.ids], function(fit.type) {
     fit.type[["at.risk"]]
   })
-  names(at.risks) <- names(fit.types)[at.risk.ids]
+  names(at.risks) <- names(fit_types)[at.risk.ids]
 
   which.recurrent <- intersect(
     state.names,
@@ -309,15 +259,15 @@ prepare.initial <- function(
   )
 
   #-- name of baseline treatment variable:
-  if (length(fit.treatment[["model"]]) > 0) {
-    A0.name <- strsplit(fit.treatment[["model"]], "~")[[1]][1]
+  if (length(treatment_model[["model"]]) > 0) {
+    A0.name <- strsplit(treatment_model[["model"]], "~")[[1]][1]
     varnames <- unique(c(varnames, A0.name))
   } else {
     A0.name <- NULL
   }
 
   if (typeof(dt[["time"]]) != "double") {
-    warning("NB: the time variable is not numeric - will be converted")
+    warning("The time column is not numeric and will be converted.")
     dt[, time := as.numeric(time)]
   }
 
@@ -340,7 +290,7 @@ prepare.initial <- function(
   ### this added June 4
   if (length(state.names) > 0) {
     for (process.jj in 1:length(state.names[
-      state.names %in% names(fit.types)
+      state.names %in% names(fit_types)
     ])) {
       dt[,
         (state.names[process.jj]) := cumsum(
@@ -357,7 +307,7 @@ prepare.initial <- function(
 
   if (length(which.recurrent) > 0) {
     for (var.recurrent in which.recurrent) {
-      for (count.jj in 1:max.count) {
+      for (count.jj in 1:max_count) {
         dt[,
           (paste0(var.recurrent, ".", count.jj)) := (dt[[var.recurrent]] >=
             count.jj)
@@ -366,19 +316,19 @@ prepare.initial <- function(
     }
   }
 
-  if (length(derived.vars) > 0) {
-    for (derived.jj in 1:length(derived.vars)) {
-      derived.var <- names(derived.vars)[derived.jj]
-      derived.fun <- derived.vars[[derived.jj]]
+  if (length(derived_vars) > 0) {
+    for (derived.jj in 1:length(derived_vars)) {
+      derived.var <- names(derived_vars)[derived.jj]
+      derived.fun <- derived_vars[[derived.jj]]
       dt[, (derived.var) := derived.fun(dt)]
       state.names <- unique(c(state.names, derived.var))
     }
   }
 
-  if (length(depend.time) > 0) {
-    for (time.jj in 1:length(depend.time)) {
-      time.var <- names(depend.time)[time.jj]
-      time.fun <- depend.time[[time.jj]]
+  if (length(depend_time) > 0) {
+    for (time.jj in 1:length(depend_time)) {
+      time.var <- names(depend_time)[time.jj]
+      time.fun <- depend_time[[time.jj]]
       suppressWarnings(
         dt[,
           (paste0("T.", time.var)) := min(time[
@@ -407,33 +357,28 @@ prepare.initial <- function(
   cens.process.id <- (1:length(process.deltas))[process.deltas == 0]
 
   dt[, idN := 1:.N, by = "id"]
-  if (fit.treatment[["fit"]] == "glm" & length(fit.treatment[["model"]]) > 0) {
+  if (length(treatment_model[["model"]]) > 0) {
     fit.A0 <- glm(
-      as.formula(fit.treatment[["model"]]),
+      as.formula(treatment_model[["model"]]),
       data = dt[idN == 1],
       family = binomial
     )
     if (verbose) print(summary(fit.A0))
-  } else if (length(fit.treatment[["model"]]) > 0) {
-    print(
-      "NB: need to incorporate other estimations methods than glm for treatment"
-    )
   }
 
   #--------------------------------
   #-- outcome / clever covariate part:
   # (we start with cox models, if HAL is specified this is fitted later)
-  ##browser()
-  fit.cox.types <- lapply(1:length(fit.types), function(fit.type.jj) {
-    model.jj <- fit.types[[fit.type.jj]][["model"]]
-    if (length(depend.time) > 0) {
-      for (time.jj in 1:length(depend.time)) {
+  fit.cox.types <- lapply(1:length(fit_types), function(fit.type.jj) {
+    model.jj <- fit_types[[fit.type.jj]][["model"]]
+    if (length(depend_time) > 0) {
+      for (time.jj in 1:length(depend_time)) {
         model.jj <-
           gsub(
-            paste0("T.", names(depend.time)[time.jj]),
+            paste0("T.", names(depend_time)[time.jj]),
             paste0(
               "as.factor(",
-              paste0("T.", names(depend.time)[time.jj]),
+              paste0("T.", names(depend_time)[time.jj]),
               ")"
             ),
             model.jj
@@ -444,7 +389,7 @@ prepare.initial <- function(
       for (var.recurrent in which.recurrent) {
         model.jj <- gsub(
           paste0("\\+", var.recurrent),
-          paste0(paste0("+", var.recurrent, ".", 1:max.count), collapse = ""),
+          paste0(paste0("+", var.recurrent, ".", 1:max_count), collapse = ""),
           model.jj
         )
       }
@@ -452,7 +397,7 @@ prepare.initial <- function(
     if (fit.type.jj %in% at.risk.ids) {
       tmp.cox <- coxph(
         as.formula(model.jj),
-        data = dt[fit.types[[fit.type.jj]][["at.risk"]](dt)],
+        data = dt[fit_types[[fit.type.jj]][["at.risk"]](dt)],
         control = coxph.control(timefix = FALSE)
       )
     } else {
@@ -466,98 +411,30 @@ prepare.initial <- function(
       message("------------------------------")
     }
     if (verbose) {
-      message(paste0("fit.type = ", names(fit.types)[fit.type.jj]))
+      message(paste0("fit.type = ", names(fit_types)[fit.type.jj]))
     }
     if (verbose) {
       print(tmp.cox)
     }
     tmp.type <- suppressWarnings(setDT(basehaz(
       tmp.cox,
-      centered = (!return.parameters.for.simulation)
+      centered = TRUE
     )))[,
-      (paste0("dhazard.", names(fit.types)[fit.type.jj])) := c(
+      (paste0("dhazard.", names(fit_types)[fit.type.jj])) := c(
         hazard[1],
         diff(hazard)
       )
-    ][, (paste0("hazard.", names(fit.types)[fit.type.jj])) := hazard][,
+    ][, (paste0("hazard.", names(fit_types)[fit.type.jj])) := hazard][,
       -"hazard",
       with = FALSE
     ]
     return(list(
       fit.cox = tmp.cox,
       tmp.type = tmp.type[
-        tmp.type[[paste0("dhazard.", names(fit.types)[fit.type.jj])]] > 0
+        tmp.type[[paste0("dhazard.", names(fit_types)[fit.type.jj])]] > 0
       ]
     ))
   })
-
-  if (return.parameters.for.simulation) {
-    # baseline dataset: one row per subject
-    baseline.dt <- dt[idN == 1]
-
-    # baseline covariates
-    baseline.vars <- setdiff(
-      varnames,
-      c(process.names, "time", "tstart", "tstop", "delta")
-    )
-
-    baseline.summary <- lapply(baseline.vars, function(v) {
-      x <- baseline.dt[[v]]
-
-      if (is.numeric(x)) {
-        list(
-          type = "numeric",
-          mean = mean(x, na.rm = TRUE),
-          sd = sd(x, na.rm = TRUE),
-          median = median(x, na.rm = TRUE),
-          min = min(x, na.rm = TRUE),
-          max = max(x, na.rm = TRUE)
-        )
-      } else {
-        tab <- table(x, useNA = "ifany")
-        list(
-          type = class(x)[1],
-          frequencies = as.list(tab),
-          proportions = as.list(prop.table(tab))
-        )
-      }
-    })
-
-    names(baseline.summary) <- baseline.vars
-
-    ##par(mfrow = c(1,length(fit.cox.types)))
-    parameters.for.simulation <- lapply(fit.cox.types, function(fit.cox.type) {
-      tmp.type <- fit.cox.type[["tmp.type"]]
-      tmp.type[, Haz := cumsum(tmp.type[[2]])]
-
-      ##plot(log(tmp.type$time), log(tmp.type$Haz))
-      weib_fit <- lm(log(Haz) ~ log(time), data = tmp.type)
-      ##print(summary(weib_fit))
-      coef_weib <- coef(weib_fit)
-      ##abline(a = coef_weib[1], b = coef_weib[2], col = "red")
-
-      return(list(
-        cox.parameters = coef(fit.cox.type[["fit.cox"]]),
-        weibull.parameters = c(eta = exp(coef_weib[1]), nu = coef_weib[2])
-      ))
-    })
-
-    names(parameters.for.simulation) <- names(fit.types)
-
-    parameters.for.simulation$model.structure <- list(
-      process.names = process.names,
-      process.deltas = process.deltas,
-      process.types = process.types,
-      cens.process.id = cens.process.id,
-      at.risks = at.risks
-    )
-
-    parameters.for.simulation[["baseline.summary"]] <- baseline.summary
-
-    parameters.for.simulation[["n.subjects"]] <- n
-
-    return(parameters.for.simulation)
-  }
 
   #-- get all unique times;
   unique.times <- sort(unique(dt[["time"]]))
@@ -614,16 +491,16 @@ prepare.initial <- function(
 
   tmp.long[, final.time := max(time.obs), by = "id"]
 
-  for (fit.type.jj in 1:length(fit.types)) {
+  for (fit.type.jj in 1:length(fit_types)) {
     tmp.long[
-      is.na(get(paste0("dhazard.", names(fit.types)[fit.type.jj]))),
-      (paste0("dhazard.", names(fit.types)[fit.type.jj])) := 0
+      is.na(get(paste0("dhazard.", names(fit_types)[fit.type.jj]))),
+      (paste0("dhazard.", names(fit_types)[fit.type.jj])) := 0
     ]
   }
 
   if (length(state.names) > 0) {
     for (process.jj in 1:length(state.names[
-      state.names %in% names(fit.types)
+      state.names %in% names(fit_types)
     ])) {
       tmp.long[,
         (state.names[process.jj]) := cumsum(
@@ -635,14 +512,14 @@ prepare.initial <- function(
   }
 
   if (length(state.names) > 0) {
-    for (varname in state.names[state.names %in% names(fit.types)]) {
+    for (varname in state.names[state.names %in% names(fit_types)]) {
       tmp.long[, (varname) := c(0, get(varname)[-.N]), by = "id"]
     }
   }
 
   if (length(which.recurrent) > 0) {
     for (var.recurrent in which.recurrent) {
-      for (count.jj in 1:max.count) {
+      for (count.jj in 1:max_count) {
         tmp.long[,
           (paste0(var.recurrent, ".", count.jj)) := (tmp.long[[
             var.recurrent
@@ -653,24 +530,24 @@ prepare.initial <- function(
     }
   }
 
-  if (length(derived.vars) > 0) {
-    for (derived.jj in 1:length(derived.vars)) {
-      derived.var <- names(derived.vars)[derived.jj]
-      derived.fun <- derived.vars[[derived.jj]]
+  if (length(derived_vars) > 0) {
+    for (derived.jj in 1:length(derived_vars)) {
+      derived.var <- names(derived_vars)[derived.jj]
+      derived.fun <- derived_vars[[derived.jj]]
       tmp.long[, (derived.var) := derived.fun(tmp.long)]
     }
   }
 
   tmp.long[, tstart := c(0, time[-.N]), by = "id"]
 
-  if (length(depend.time) > 0) {
-    for (time.jj in 1:length(depend.time)) {
-      time.var <- names(depend.time)[time.jj]
+  if (length(depend_time) > 0) {
+    for (time.jj in 1:length(depend_time)) {
+      time.var <- names(depend_time)[time.jj]
       time.value <- as.numeric(strsplit(time.var, "\\.")[[1]][2])
       if (is.na(time.value)) {
         time.value <- 1
       }
-      time.fun <- depend.time[[time.jj]]
+      time.fun <- depend_time[[time.jj]]
       suppressWarnings(
         tmp.long[,
           (paste0("T.", time.var)) := min(time[
@@ -705,17 +582,41 @@ prepare.initial <- function(
   #--------------------------------
   #-- hal
 
-  if (browse.hal) {
-    browser()
-  }
-
   if (any.hal) {
-    deltas.hal <- as.numeric(sapply(fit.types[which.hal], function(fit.type) {
-      strsplit(
-        strsplit(gsub(" ", "", fit.type$model), "delta==")[[1]][2],
-        ")"
-      )[[1]][1]
-    }))
+    # Unpack the HAL settings into the names used by the HAL code below.
+    cut.time <- hal_control$cut_time
+    cut.one.way <- hal_control$cut_one_way
+    cut.Tk <- hal_control$cut_tk
+    cut.Tk.values <- hal_control$cut_tk_values
+    two.way <- hal_control$two_way
+    reduce.NK <- hal_control$reduce_nk
+    hal.sl <- hal_control$sl
+    if (is.null(hal.sl)) {
+      hal.sl <- list(c(
+        cut.one.way = cut.one.way,
+        cut.Tk = cut.Tk,
+        cut.Tk.values = cut.Tk.values,
+        two.way = two.way
+      ))
+    }
+    screen.two.way <- hal_control$screen_two_way
+    lambda.cvs <- hal_control$lambda_cvs
+    event.dependent.cv <- hal_control$event_dependent_cv
+    npenalize.vars <- hal_control$npenalize_vars
+    V <- hal_control$v_folds
+    seed.hal <- hal_control$seed
+    reduce.seed.dependence <- hal_control$reduce_seed_dependence
+    penalize.time <- hal_control$penalize_time
+    verbose.hal <- hal_control$verbose
+    cv.glmnet <- FALSE
+    max.count <- max_count
+    use.cores <- cores
+
+    deltas.hal <- vapply(
+      fit_types[which.hal],
+      function(fit.type) .process_delta(fit.type$model),
+      numeric(1)
+    )
 
     tmp.long[, idN := 1:.N, by = "id"]
 
@@ -791,14 +692,14 @@ prepare.initial <- function(
 
     for (delta.value in deltas.hal) {
       name.hal <- names(which.hal)[deltas.hal == delta.value]
-      is.name.hal.at.risk <- (1:length(fit.types))[
-        names(fit.types) == name.hal
+      is.name.hal.at.risk <- (1:length(fit_types))[
+        names(fit_types) == name.hal
       ] %in%
         at.risk.ids
 
       if (is.name.hal.at.risk) {
         tmp.long[,
-          (paste0("at.risk.", delta.value)) := fit.types[[name.hal]][[
+          (paste0("at.risk.", delta.value)) := fit_types[[name.hal]][[
             "at.risk"
           ]](tmp.long)
         ]
@@ -1008,12 +909,26 @@ prepare.initial <- function(
             )
             two.way.inner <-
               two.way.inner[
-                sapply(str_split(two.way.inner[, 1], ">="), function(twi) {
-                  gsub("\\(", "", twi[1])
-                }) !=
-                  sapply(str_split(two.way.inner[, 2], ">="), function(twi) {
+                sapply(
+                  strsplit(
+                    as.character(two.way.inner[, 1]),
+                    ">=",
+                    fixed = TRUE
+                  ),
+                  function(twi) {
                     gsub("\\(", "", twi[1])
-                  }),
+                  }
+                ) !=
+                  sapply(
+                    strsplit(
+                      as.character(two.way.inner[, 2]),
+                      ">=",
+                      fixed = TRUE
+                    ),
+                    function(twi) {
+                      gsub("\\(", "", twi[1])
+                    }
+                  ),
               ]
             if (
               substr(two.way.jj[1], 1, 2) == "T." &
@@ -1021,12 +936,26 @@ prepare.initial <- function(
             ) {
               two.way.inner <-
                 two.way.inner[
-                  sapply(str_split(two.way.inner[, 1], ">="), function(twi) {
-                    as.numeric(gsub(")", "", twi[2]))
-                  }) <
-                    sapply(str_split(two.way.inner[, 2], ">="), function(twi) {
+                  sapply(
+                    strsplit(
+                      as.character(two.way.inner[, 1]),
+                      ">=",
+                      fixed = TRUE
+                    ),
+                    function(twi) {
                       as.numeric(gsub(")", "", twi[2]))
-                    }),
+                    }
+                  ) <
+                    sapply(
+                      strsplit(
+                        as.character(two.way.inner[, 2]),
+                        ">=",
+                        fixed = TRUE
+                      ),
+                      function(twi) {
+                        as.numeric(gsub(")", "", twi[2]))
+                      }
+                    ),
                 ]
             }
             if (
@@ -1035,12 +964,26 @@ prepare.initial <- function(
             ) {
               two.way.inner <-
                 two.way.inner[
-                  sapply(str_split(two.way.inner[, 1], ">="), function(twi) {
-                    as.numeric(gsub(")", "", twi[2]))
-                  }) >
-                    sapply(str_split(two.way.inner[, 2], ">="), function(twi) {
+                  sapply(
+                    strsplit(
+                      as.character(two.way.inner[, 1]),
+                      ">=",
+                      fixed = TRUE
+                    ),
+                    function(twi) {
                       as.numeric(gsub(")", "", twi[2]))
-                    }),
+                    }
+                  ) >
+                    sapply(
+                      strsplit(
+                        as.character(two.way.inner[, 2]),
+                        ">=",
+                        fixed = TRUE
+                      ),
+                      function(twi) {
+                        as.numeric(gsub(")", "", twi[2]))
+                      }
+                    ),
                 ]
             }
             if (
@@ -1049,12 +992,26 @@ prepare.initial <- function(
             ) {
               two.way.inner <-
                 two.way.inner[
-                  sapply(str_split(two.way.inner[, 1], ">="), function(twi) {
-                    as.numeric(gsub(")", "", twi[2]))
-                  }) <
-                    sapply(str_split(two.way.inner[, 2], ">="), function(twi) {
+                  sapply(
+                    strsplit(
+                      as.character(two.way.inner[, 1]),
+                      ">=",
+                      fixed = TRUE
+                    ),
+                    function(twi) {
                       as.numeric(gsub(")", "", twi[2]))
-                    }),
+                    }
+                  ) <
+                    sapply(
+                      strsplit(
+                        as.character(two.way.inner[, 2]),
+                        ">=",
+                        fixed = TRUE
+                      ),
+                      function(twi) {
+                        as.numeric(gsub(")", "", twi[2]))
+                      }
+                    ),
                 ]
             }
             return(two.way.inner[
@@ -1401,10 +1358,7 @@ prepare.initial <- function(
       return(hal.out)
     }
 
-    ##if (length(hal.sl)>1) browser()
-
     ## FIX! need to make this work
-    ### browser()
     fit.hals.list <- lapply(1:length(hal.sl), function(hal.jj) {
       hal.parameters <- make.hal(hal.jj = hal.sl[[hal.jj]])
 
@@ -1481,7 +1435,6 @@ prepare.initial <- function(
       ##X <- X[, col_ones >= min.no.of.ones]
 
       x.vector <- hash_sparse_rows_dgC(X)
-      ### browser()
       tmp.long.reduced[, x := x.vector]
 
       if (FALSE) {
@@ -1521,7 +1474,7 @@ prepare.initial <- function(
         ##message("-------")
 
         ##name.hal <- names(which.hal)[deltas.hal == delta.value]
-        ##is.name.hal.at.risk <- (1:length(fit.types))[names(fit.types) == name.hal] %in% at.risk.ids
+        ##is.name.hal.at.risk <- (1:length(fit_types))[names(fit_types) == name.hal] %in% at.risk.ids
 
         tmp.long.reduced[, risk.time := get(paste0("risk.time.", delta.value))]
 
@@ -1689,8 +1642,6 @@ prepare.initial <- function(
 
     tmp.long[, risk.time := time - tstart]
 
-    ##browser()
-
     hal.coefs <- lapply(fit.hals, function(fh) {
       delta <- fh$delta.value
       get.coef <- coef(fh$hal.fit, s = fh$lambda)
@@ -1762,8 +1713,6 @@ prepare.initial <- function(
 
   tmp.long <- tmp.long[time <= tau]
 
-  ### browser()
-
   if (any.hal) {
     hal.vars.list <- lapply(1:length(fit.hals), function(kk) {
       test.get.beta <- try(
@@ -1776,7 +1725,7 @@ prepare.initial <- function(
       return(out.beta)
     })
 
-    if (length(derived.vars) > 0) {
+    if (length(derived_vars) > 0) {
       message("FIX: still need to check that HAL handles derived.var correctly")
     }
 
@@ -1799,8 +1748,6 @@ prepare.initial <- function(
     } else {
       hal.vars.A0.dynamic <- NULL
     }
-
-    ## browser()
 
     hal.vars.dynamic <- setdiff(
       unlist(sapply(N.vars, function(N.var) {
@@ -1988,29 +1935,27 @@ prepare.initial <- function(
       sparse = TRUE
     )
     X.hal.dynamic <- flip.interactions(X.hal.dynamic, hal.vars.dynamic)
-
-    ###browser()
   }
 
   #--------------------------------
   #-- compute needed quantities for (initial) estimation and targeting
 
-  for (fit.type.jj in 1:length(fit.types)) {
+  for (fit.type.jj in 1:length(fit_types)) {
     if (fit.type.jj %in% at.risk.ids) {
       tmp.long[,
-        (paste0("at.risk.", names(fit.types)[fit.type.jj])) := fit.types[[
+        (paste0("at.risk.", names(fit_types)[fit.type.jj])) := fit_types[[
           fit.type.jj
         ]][["at.risk"]](tmp.long)
       ]
     }
-    if (fit.types[[fit.type.jj]]$fit == "hal") {
+    if (fit_types[[fit.type.jj]]$fit == "hal") {
       hal.index <- (1:length(which.hal))[
-        names(which.hal) == names(fit.types)[fit.type.jj]
+        names(which.hal) == names(fit_types)[fit.type.jj]
       ]
       ##delta.value <- fit.hals[[hal.index]][["delta.value"]]
       #### HERE (below), does not work with interaction?
       tmp.long[,
-        (paste0("P.", names(fit.types)[fit.type.jj])) := exp(predict(
+        (paste0("P.", names(fit_types)[fit.type.jj])) := exp(predict(
           fit.hals[[hal.index]][["hal.fit"]],
           cbind(
             X.hal.static,
@@ -2025,24 +1970,24 @@ prepare.initial <- function(
       ]
     } else {
       tmp.long[,
-        (paste0("exp.", names(fit.types)[fit.type.jj])) := exp(predict(
+        (paste0("exp.", names(fit_types)[fit.type.jj])) := exp(predict(
           fit.cox.types[[fit.type.jj]]["fit.cox"][[1]],
           newdata = tmp.long,
           type = "lp"
         ))
       ]
       tmp.long[,
-        (paste0("P.", names(fit.types)[fit.type.jj])) := tmp.long[[paste0(
+        (paste0("P.", names(fit_types)[fit.type.jj])) := tmp.long[[paste0(
           "dhazard.",
-          names(fit.types)[fit.type.jj]
+          names(fit_types)[fit.type.jj]
         )]] *
-          tmp.long[[paste0("exp.", names(fit.types)[fit.type.jj])]]
+          tmp.long[[paste0("exp.", names(fit_types)[fit.type.jj])]]
       ]
     }
     if (fit.type.jj == cens.process.id) {
       tmp.long[,
         surv.0 := exp(
-          -cumsum(get(paste0("P.", names(fit.types)[fit.type.jj])))
+          -cumsum(get(paste0("P.", names(fit_types)[fit.type.jj])))
         ),
         by = "id"
       ]
@@ -2053,14 +1998,10 @@ prepare.initial <- function(
   #--------------------------------
   #-- to handle dependence on jumps in the past:
 
-  if (browse) {
-    browser()
-  }
-
   if (length(state.names) > 0) {
     grid.list <- lapply(state.names, function(varname) {
       0:min(
-        ifelse(varname %in% process.names, max.count, Inf),
+        ifelse(varname %in% process.names, max_count, Inf),
         max(unique(tmp.long[[varname]]))
       )
     })
@@ -2074,7 +2015,7 @@ prepare.initial <- function(
           function(non.zero.jj) {
             if (
               (non.zero.var <- names(non.zero.state.vars)[non.zero.jj]) %in%
-                names(derived.vars)
+                names(derived_vars)
             ) {
               return(0) #(unique(tmp.long[[non.zero.var]]))
             } else if (
@@ -2127,67 +2068,6 @@ prepare.initial <- function(
           }
         }
 
-        if (FALSE & length(derived.vars) > 0) {
-          for (derived.jj in 1:length(derived.vars)) {
-            derived.var <- names(derived.vars)[derived.jj]
-            derived.fun <- derived.vars[[derived.jj]]
-            if (derived.var %in% names(depend.matrix)) {
-              depend.matrix <- depend.matrix[,
-                names(depend.matrix) != derived.var,
-                with = FALSE
-              ]
-            }
-            print(colnames(depend.matrix))
-            depend.matrix[, derived.var := derived.fun(depend.matrix)]
-            if (
-              any(sapply(
-                derived.cols <- extract_dt_cols(derived.fun),
-                function(varname) max.count < max(unique(tmp.long[[varname]]))
-              ))
-            ) {
-              depend.matrix.max <- depend.matrix[
-                apply(
-                  sapply(derived.cols, function(derived.col) {
-                    depend.matrix[[derived.col]] ==
-                      max(depend.matrix[[derived.col]])
-                  }),
-                  1,
-                  all
-                )
-              ]
-              unique.vals.max <- unique(tmp.long[apply(
-                sapply(derived.cols, function(derived.col) {
-                  tmp.long[[derived.col]] >= max(depend.matrix[[derived.col]])
-                }),
-                1,
-                all
-              )][["derived.var"]])
-              for (vals.max in setdiff(
-                unique.vals.max,
-                depend.matrix.max[["derived.var"]]
-              )) {
-                depend.matrix <-
-                  rbind(
-                    depend.matrix,
-                    depend.matrix[
-                      apply(
-                        sapply(derived.cols, function(derived.col) {
-                          depend.matrix[[derived.col]] ==
-                            max(depend.matrix[[derived.col]])
-                        }),
-                        1,
-                        all
-                      )
-                    ][, derived.var := vals.max]
-                  ) # <- (this may need be fixed for more general derived.vars)
-              }
-            }
-            vals <- unique(tmp.long[[derived.var]])
-            depend.matrix <- depend.matrix[derived.var %in% vals]
-            setnames(depend.matrix, "derived.var", derived.var)
-            print(colnames(depend.matrix))
-          }
-        }
         for (non.zero.jj in (1:length(non.zero.state.vars))[
           names(non.zero.state.vars) %in% T.vars
         ]) {
@@ -2230,14 +2110,14 @@ prepare.initial <- function(
           tmp.long[, (paste0(non.zero.var, "_1")) := NULL]
         }
       }
-    } else if (length(depend.time) > 0) {
-      for (time.jj in 1:length(depend.time)) {
-        time.var <- names(depend.time)[time.jj]
+    } else if (length(depend_time) > 0) {
+      for (time.jj in 1:length(depend_time)) {
+        time.var <- names(depend_time)[time.jj]
         time.value <- as.numeric(strsplit(time.var, "\\.")[[1]][2])
         if (is.na(time.value)) {
           time.value <- 1
         }
-        time.fun <- depend.time[[time.jj]]
+        time.fun <- depend_time[[time.jj]]
         ##tmp.long[, (paste0("T.", time.var)) := min(time[c(get(time.var)[-1],get(time.var)[.N]) == 1]), by = "id"]
         time.var0 <- strsplit(time.var, "\\.")[[1]][1]
         depend.matrix <-
@@ -2248,10 +2128,10 @@ prepare.initial <- function(
         ## check -> tmp.long[tstart >= get(paste0("T.", time.var)), (paste0("T.", time.var)) := time.fun(get(paste0("T.", time.var)))]
       }
     }
-    if (length(derived.vars) > 0) {
-      for (derived.jj in 1:length(derived.vars)) {
-        derived.var <- names(derived.vars)[derived.jj]
-        derived.fun <- derived.vars[[derived.jj]]
+    if (length(derived_vars) > 0) {
+      for (derived.jj in 1:length(derived_vars)) {
+        derived.var <- names(derived_vars)[derived.jj]
+        derived.fun <- derived_vars[[derived.jj]]
         if (derived.var %in% names(depend.matrix)) {
           depend.matrix <- depend.matrix[,
             names(depend.matrix) != derived.var,
@@ -2262,7 +2142,7 @@ prepare.initial <- function(
         if (
           any(sapply(
             derived.cols <- extract_dt_cols(derived.fun),
-            function(varname) max.count < max(unique(tmp.long[[varname]]))
+            function(varname) max_count < max(unique(tmp.long[[varname]]))
           ))
         ) {
           depend.matrix.max <- depend.matrix[
@@ -2299,7 +2179,7 @@ prepare.initial <- function(
                     all
                   )
                 ][, derived.var := vals.max]
-              ) # <- (this may need be fixed for more general derived.vars)
+              ) # <- (this may need be fixed for more general derived_vars)
           }
           ## setnames(depend.matrix, "derived.var", paste0(derived.var, " = ", paste0(derived.cols, collapse = ",")))
           ## tmp.long[, At := At(tmp.long)]
@@ -2315,25 +2195,25 @@ prepare.initial <- function(
     depend.matrix <- data.table(state = 1L)
   }
 
-  if (prune.states) {
+  if (prune_states) {
     ## this was added to handle the case that some jumps are not admissible/possible
-    for (fit.type.jj in 1:length(fit.types)) {
+    for (fit.type.jj in 1:length(fit_types)) {
       if (fit.type.jj %in% at.risk.ids) {
         depend.matrix[,
-          (paste0("at.risk.", names(fit.types)[fit.type.jj])) := fit.types[[
+          (paste0("at.risk.", names(fit_types)[fit.type.jj])) := fit_types[[
             fit.type.jj
           ]][["at.risk"]](depend.matrix) |
-            fit.types[[fit.type.jj]][["at.risk"]](depend.matrix - 1)
+            fit_types[[fit.type.jj]][["at.risk"]](depend.matrix - 1)
         ]
         if (
           all(depend.matrix[[paste0(
             "at.risk.",
-            names(fit.types)[fit.type.jj]
+            names(fit_types)[fit.type.jj]
           )]])
         ) {
           depend.matrix[[paste0(
             "at.risk.",
-            names(fit.types)[fit.type.jj]
+            names(fit_types)[fit.type.jj]
           )]] <- NULL
         }
       }
@@ -2438,17 +2318,17 @@ prepare.initial <- function(
           )
         }
 
-        for (fit.type.jj in (1:length(fit.types))[-cens.process.id]) {
-          if (fit.types[[fit.type.jj]]$fit == "hal") {
+        for (fit.type.jj in (1:length(fit_types))[-cens.process.id]) {
+          if (fit_types[[fit.type.jj]]$fit == "hal") {
             hal.index <- (1:length(which.hal))[
-              names(which.hal) == names(fit.types)[fit.type.jj]
+              names(which.hal) == names(fit_types)[fit.type.jj]
             ]
             tmp.long[,
               (paste0(
                 "P.a",
                 aa,
                 ".",
-                names(fit.types)[fit.type.jj]
+                names(fit_types)[fit.type.jj]
               )) := exp(predict(
                 fit.hals[[hal.index]][["hal.fit"]],
                 cbind(
@@ -2465,13 +2345,13 @@ prepare.initial <- function(
           }
         }
       } else {
-        for (fit.type.jj in (1:length(fit.types))[-cens.process.id]) {
+        for (fit.type.jj in (1:length(fit_types))[-cens.process.id]) {
           tmp.long[,
             (paste0(
               "exp.a",
               aa,
               ".",
-              names(fit.types)[fit.type.jj]
+              names(fit_types)[fit.type.jj]
             )) := exp(predict(
               fit.cox.types[[fit.type.jj]]["fit.cox"][[1]],
               newdata = tmp.long,
@@ -2483,23 +2363,21 @@ prepare.initial <- function(
               "P.a",
               aa,
               ".",
-              names(fit.types)[fit.type.jj]
+              names(fit_types)[fit.type.jj]
             )) := tmp.long[[paste0(
               "dhazard.",
-              names(fit.types)[fit.type.jj]
+              names(fit_types)[fit.type.jj]
             )]] *
               tmp.long[[paste0(
                 "exp.a",
                 aa,
                 ".",
-                names(fit.types)[fit.type.jj]
+                names(fit_types)[fit.type.jj]
               )]]
           ]
         }
       }
     }
-
-    ###browser()
 
     if (length(depend.matrix[, unique(state)]) > 10) {
       if (length(depend.matrix[, unique(state)]) < 25) {
@@ -2546,29 +2424,21 @@ prepare.initial <- function(
     state.vec <- depend.matrix[, unique(state)] #sort(unique(depend.matrix[["state"]]))
     chunk.size <- ceiling(
       length(state.vec) /
-        min(detectCores() - 5, use.cores.prediction, use.cores)
+        .n_cores(cores)
     )
     state.chunks <- split(state.vec, ceiling(seq_along(state.vec) / chunk.size))
 
-    ## browser()
     tmp.list <- mclapply(
       state.chunks,
       function(state.chunk) {
-        chunk.out <- #vector("list", length(state.chunk))
-          data.table(row_id = tmp.state[["row_id"]])
+        chunk.out <- data.table(row_id = tmp.state[["row_id"]])
 
         chunk.out[["state"]] <- 0
 
         for (state.jj in state.chunk) {
-          ## tmp.state <- copy(tmp.state)
-
-          if (verbose & (state.jj %in% print.state.jj)) {
-            print(paste0(state.jj, "/", max(depend.matrix[["state"]])))
+          if (verbose && (state.jj %in% print.state.jj)) {
+            message("State ", state.jj, "/", max(depend.matrix[["state"]]))
           }
-
-          ##print(state.jj)
-
-          ## tmp.state <- copy(tmp.long)
 
           ## filter once per state and reuse below
           depend.matrix.jj <- depend.matrix[state == state.jj]
@@ -2576,29 +2446,14 @@ prepare.initial <- function(
           which.jj <- rep(TRUE, nrow(tmp.state))
 
           for (varname in setdiff(names(depend.matrix), "state")) {
-            #state.names
-
-            ##message("before assigning ", varname, " for state ", state.jj)
             tmp.state[[varname]] <- depend.matrix.jj[[varname]]
 
-            if (!any.hal) {
-              #{
-              # which.jj <- which.jj*(tmp.long[[varname]] == tmp.state[[varname]])
-              #} else {
-              if (length(which.recurrent) > 0) {
-                if (varname %in% which.recurrent) {
-                  for (count.jj in 1:max.count) {
-                    tmp.state[,
-                      (paste0(varname, ".", count.jj)) := (tmp.state[[
-                        varname
-                      ]] >=
-                        count.jj)
-                    ]
-                  }
-                }
+            if (!any.hal && varname %in% which.recurrent) {
+              for (count.jj in 1:max_count) {
+                tmp.state[[paste0(varname, ".", count.jj)]] <-
+                  tmp.state[[varname]] >= count.jj
               }
             }
-            #   which.jj <- which.jj*(tmp.long[[varname]] >= tmp.state[[varname]])
             which.jj <- which.jj & (tmp.long[[varname]] >= tmp.state[[varname]])
           }
 
@@ -2663,27 +2518,27 @@ prepare.initial <- function(
             )
           }
 
-          for (fit.type.jj in (1:length(fit.types))[-cens.process.id]) {
+          for (fit.type.jj in (1:length(fit_types))[-cens.process.id]) {
             if (intervene.A0) {
               colname <- paste0(
                 "P.a",
                 aa,
                 ".",
-                names(fit.types)[fit.type.jj],
+                names(fit_types)[fit.type.jj],
                 ".",
                 state.jj
               )
             } else {
               colname <- paste0(
                 "P.",
-                names(fit.types)[fit.type.jj],
+                names(fit_types)[fit.type.jj],
                 ".",
                 state.jj
               )
             }
-            if (fit.types[[fit.type.jj]]$fit == "hal") {
+            if (fit_types[[fit.type.jj]]$fit == "hal") {
               hal.index <- (1:length(which.hal))[
-                names(which.hal) == names(fit.types)[fit.type.jj]
+                names(which.hal) == names(fit_types)[fit.type.jj]
               ]
               ##message("fit.type.jj ", fit.type.jj, " for state ", state.jj)
               chunk.out[[colname]] <- as.numeric(
@@ -2702,31 +2557,31 @@ prepare.initial <- function(
                 type = "lp"
               )
               chunk.out[[colname]] <- as.numeric(
-                tmp.long[[paste0("dhazard.", names(fit.types)[fit.type.jj])]] *
+                tmp.long[[paste0("dhazard.", names(fit_types)[fit.type.jj])]] *
                   exp(lp)
               )
-              ##tmp.state[, (paste0("exp.", names(fit.types)[fit.type.jj])) := exp()]
-              #tmp.long[, (paste0("P.", names(fit.types)[fit.type.jj], ".", state.jj)) :=
-              #               tmp.state[[paste0("dhazard.", names(fit.types)[fit.type.jj])]]*tmp.state[[paste0("exp.", names(fit.types)[fit.type.jj])]]]
+              ##tmp.state[, (paste0("exp.", names(fit_types)[fit.type.jj])) := exp()]
+              #tmp.long[, (paste0("P.", names(fit_types)[fit.type.jj], ".", state.jj)) :=
+              #               tmp.state[[paste0("dhazard.", names(fit_types)[fit.type.jj])]]*tmp.state[[paste0("exp.", names(fit_types)[fit.type.jj])]]]
             }
             if (fit.type.jj %in% at.risk.ids) {
               # <- FIX: may just want to remove again
               chunk.out[[colname]] <- chunk.out[[colname]] *
-                fit.types[[fit.type.jj]][["at.risk"]](depend.matrix.jj)
-              #tmp.long[, (paste0("P.", names(fit.types)[fit.type.jj], ".", state.jj)) :=
-              #               tmp.long[[paste0("P.", names(fit.types)[fit.type.jj], ".", state.jj)]]*
-              #               fit.types[[fit.type.jj]][["at.risk"]](depend.matrix[state == state.jj])]
+                fit_types[[fit.type.jj]][["at.risk"]](depend.matrix.jj)
+              #tmp.long[, (paste0("P.", names(fit_types)[fit.type.jj], ".", state.jj)) :=
+              #               tmp.long[[paste0("P.", names(fit_types)[fit.type.jj], ".", state.jj)]]*
+              #               fit_types[[fit.type.jj]][["at.risk"]](depend.matrix[state == state.jj])]
             }
             ## if (intervene.A0) {
             ##     setnames(
             ##         chunk.out,
             ##         old = colname,
-            ##         new = paste0("P.a", aa, ".", names(fit.types)[fit.type.jj], ".", state.jj)
+            ##         new = paste0("P.a", aa, ".", names(fit_types)[fit.type.jj], ".", state.jj)
             ##     )
             ##     #names(chunk.out)[names(chunk.out) == colname] <-
-            ##     #    paste0("P.a", aa, ".", names(fit.types)[fit.type.jj], ".", state.jj)
-            ##     ## setnames(tmp.long, paste0("P.", names(fit.types)[fit.type.jj], ".", state.jj),
-            ##     ##        paste0("P.", "a", aa, ".", names(fit.types)[fit.type.jj], ".", state.jj))
+            ##     #    paste0("P.a", aa, ".", names(fit_types)[fit.type.jj], ".", state.jj)
+            ##     ## setnames(tmp.long, paste0("P.", names(fit_types)[fit.type.jj], ".", state.jj),
+            ##     ##        paste0("P.", "a", aa, ".", names(fit_types)[fit.type.jj], ".", state.jj))
             ## }
           }
 
@@ -2740,7 +2595,7 @@ prepare.initial <- function(
 
         return(chunk.out)
       },
-      mc.cores = min(detectCores() - 5, use.cores.prediction, use.cores)
+      mc.cores = .n_cores(cores)
     )
 
     for (out in tmp.list) {
@@ -2756,20 +2611,24 @@ prepare.initial <- function(
   names.P <- names(tmp.long)[substr(names(tmp.long), 1, 2) == "P."]
 
   for (name.P in names.P) {
-    if (any(tmp.long[[name.P]] > 1) | use.exponential) {
-      if (!use.exponential) {
-        if (verbose.exponential) {
-          print(paste0("transform ", name.P, " with 1-exp to avoid values >1"))
+    if (any(tmp.long[[name.P]] > 1) | use_exponential) {
+      if (!use_exponential) {
+        if (verbose) {
+          message(
+            "Transforming ",
+            name.P,
+            " with 1 - exp(-x) to avoid values > 1."
+          )
         }
       }
       tmp.long[, (name.P) := 1 - exp(-tmp.long[[name.P]])]
     }
   }
 
-  if (length(derived.vars) > 0) {
-    for (derived.jj in 1:length(derived.vars)) {
-      derived.var <- names(derived.vars)[derived.jj]
-      derived.fun <- derived.vars[[derived.jj]]
+  if (length(derived_vars) > 0) {
+    for (derived.jj in 1:length(derived_vars)) {
+      derived.var <- names(derived_vars)[derived.jj]
+      derived.fun <- derived_vars[[derived.jj]]
       derived.cols <- extract_dt_cols(derived.fun)
       if (derived.var %in% names(depend.matrix)) {
         setnames(
@@ -2784,8 +2643,6 @@ prepare.initial <- function(
 
   var.depend <- setdiff(names(depend.matrix), "state")
   process.depend <- var.depend[var.depend %in% process.names]
-
-  ### browser()
 
   if (any.hal) {
     if (
@@ -2823,13 +2680,13 @@ prepare.initial <- function(
         }
       }
     }
-  } else if (length(depend.time) > 0) {
+  } else if (length(depend_time) > 0) {
     for (varname in process.depend) {
       # processess in states
-      if (length(grep(varname, names(depend.time))) > 0) {
+      if (length(grep(varname, names(depend_time))) > 0) {
         for (time.var in paste0(
           "T.",
-          grep(varname, names(depend.time), value = TRUE) ## names(depend.time)
+          grep(varname, names(depend_time), value = TRUE) ## names(depend_time)
         )) {
           count.value <- as.numeric(strsplit(time.var, "\\.")[[1]][3])
           if (is.na(count.value)) {
@@ -2865,8 +2722,6 @@ prepare.initial <- function(
 
   depend.matrix[, state.row.index := 1:.N]
   time.vars <- grep("time.", names(depend.matrix), value = TRUE)
-
-  ###browser()
 
   for (state.jj in depend.matrix[, unique(state)]) {
     for (varname in process.depend) {
@@ -2906,11 +2761,11 @@ prepare.initial <- function(
             }
           }
         }
-      } else if (length(depend.time) > 0) {
-        if (length(grep(varname, names(depend.time))) > 0) {
+      } else if (length(depend_time) > 0) {
+        if (length(grep(varname, names(depend_time))) > 0) {
           for (time.var in grep(
             varname,
-            paste0("T.", names(depend.time)),
+            paste0("T.", names(depend_time)),
             value = TRUE
           )) {
             count.value <- as.numeric(strsplit(time.var, "\\.")[[1]][3])
@@ -2928,18 +2783,18 @@ prepare.initial <- function(
         }
       }
 
-      if (length(derived.vars) > 0) {
+      if (length(derived_vars) > 0) {
         # <- this still needs checking
         if (
           length(grep(
             varname,
-            grep(names(derived.vars), names(depend.matrix), value = TRUE)
+            grep(names(derived_vars), names(depend.matrix), value = TRUE)
           )) >
             0
         ) {
           for (derived.var in grep(
             varname,
-            grep(names(derived.vars), names(depend.matrix), value = TRUE),
+            grep(names(derived_vars), names(depend.matrix), value = TRUE),
             value = TRUE
           )) {
             depend.state.jj[[derived.var]] <- 1 - depend.state.jj[[derived.var]]
@@ -3025,13 +2880,8 @@ prepare.initial <- function(
   ))
 }
 
-
-######################################################################
-### prepare.initial.R ends here
-
-######################################################################
-### faster version to get unique rows:
-
+# Hash each row of a sparse matrix by its sparsity pattern and values, as a
+# fast way to find unique rows.
 hash_sparse_rows_dgC <- function(M) {
   stopifnot(inherits(M, "dgCMatrix"))
 
@@ -3074,6 +2924,3 @@ hash_sparse_rows_dgC <- function(M) {
 
   out
 }
-
-######################################################################
-### prepare.initial.R ends here

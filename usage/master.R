@@ -32,16 +32,7 @@ run.master <- function(install.simevent = FALSE, file.path = "") {
   }
   library(simevent)
 
-  source(paste0("./", file.path, "R/sim.from.data.R"))
-  source(paste0("./", file.path, "R/sim.generic.R"))
-  source(paste0("./", file.path, "R/prepare.initial.R"))
-  source(paste0("./", file.path, "R/compute.Q.clever.per.id.R"))
-  source(paste0("./", file.path, "R/tmle.alpha.fun.R"))
-  source(paste0("./", file.path, "R/calibration.curve.fun.R"))
-  source(paste0("./", file.path, "R/calibration.fun.R"))
-  source(paste0("./", file.path, "R/make.calibrated.contrasts.R"))
-  source(paste0("./", file.path, "R/estimate.alpha.fun.R"))
-  source(paste0("./", file.path, "R/estimate.derivative.R"))
+  devtools::load_all(paste0("./", file.path))
 }
 
 ######################################################################

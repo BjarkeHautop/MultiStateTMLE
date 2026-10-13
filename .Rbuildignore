@@ -20,3 +20,6 @@
 ^README\.Rmd$
 ^\.output$
 \.pdf$
+^data-raw$
+^\.claude$
+^scratch$
