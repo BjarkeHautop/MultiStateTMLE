@@ -15,8 +15,8 @@
 #'   `z_name`, under the opposite baseline treatment `1 - a`.
 #'
 #' @inheritParams tmle_alpha
-#' @param target String. Name of the process whose risk is estimated under
-#'   the calibrated intervention.
+#' @param target Character vector. Names of the processes whose risks are
+#'   estimated under the calibrated intervention.
 #' @param theta,rho,delta,rho_1a Numbers specifying the calibration target,
 #'   see Description. Give exactly one.
 #' @param output_eic Logical. If `TRUE`, include the influence curves in the
@@ -33,6 +33,10 @@
 #'   * `alpha.eic`, `target.eic` and `eic` (if `output_eic = TRUE`): the
 #'     influence curves of the calibrated alpha, of the risk of `target`
 #'     treating alpha as known, and of the risk of `target`.
+#'
+#'   With several targets, the `target.*` entries of `estimate` and `checks`
+#'   are suffixed by the target name (e.g. `target.est.outcome1`), and
+#'   `target.eic` and `eic` are lists named by target.
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -68,7 +72,7 @@ calibrate_alpha <- function(
   ...
 ) {
   .assert_initial_fit(initial_fit)
-  checkmate::assert_string(target)
+  checkmate::assert_character(target, min.len = 1, any.missing = FALSE)
   checkmate::assert_string(z_name)
   checkmate::assert_number(theta, lower = 0, finite = TRUE, null.ok = TRUE)
   checkmate::assert_number(rho, lower = 0, finite = TRUE, null.ok = TRUE)
@@ -170,28 +174,39 @@ calibrate_alpha <- function(
 
   alpha.se <- sqrt(mean(alpha.eic^2) / n)
 
-  target.est <- fit_at(alpha = est.alpha$alpha.hat, parameter = target)
-
-  if (theta > 0) {
-    est.deriv.target <- estimate_derivative(
-      fit_at,
-      alpha = est.alpha$alpha.hat,
-      h = h,
-      parameter = target
+  out.target <- lapply(target, function(target1) {
+    target.est <- fit_at(alpha = est.alpha$alpha.hat, parameter = target1)
+    if (theta > 0) {
+      est.deriv.target <- estimate_derivative(
+        fit_at,
+        alpha = est.alpha$alpha.hat,
+        h = h,
+        parameter = target1
+      )
+      eic <- target.est[["eic"]] + est.deriv.target * alpha.eic
+    } else {
+      est.deriv.target <- Inf
+      eic <- target.est[["eic"]]
+    }
+    list(
+      target.est = target.est,
+      est.deriv.target = est.deriv.target,
+      eic = eic
     )
-    eic <- target.est[["eic"]] + est.deriv.target * alpha.eic
-  } else {
-    est.deriv.target <- Inf
-    eic <- target.est[["eic"]]
-  }
+  })
+  names(out.target) <- if (length(target) > 1) target else ""
+
+  per_target <- function(f) vapply(out.target, f, numeric(1))
 
   out <- list(
     estimate = c(
       alpha.est = est.alpha$alpha.hat,
       alpha.se = alpha.se,
-      target.est = .point_estimate(target.est),
-      target.se = sqrt(mean(eic^2) / n),
-      target.se.crude = as.numeric(target.est[["estimate"]][["se"]]),
+      target.est = per_target(function(x) .point_estimate(x$target.est)),
+      target.se = per_target(function(x) sqrt(mean(x$eic^2) / n)),
+      target.se.crude = per_target(function(x) {
+        as.numeric(x$target.est[["estimate"]][["se"]])
+      }),
       theta = theta,
       theta.se = theta.se
     ),
@@ -200,13 +215,19 @@ calibrate_alpha <- function(
       est.alpha.converged = est.alpha$converged,
       est.alpha.dist = est.alpha$dist,
       est.alpha.cn = est.alpha$c.n,
-      est.deriv.target = est.deriv.target
+      est.deriv.target = per_target(function(x) x$est.deriv.target)
     )
   )
 
   if (output_eic) {
+    target.eic <- lapply(out.target, function(x) x$target.est[["eic"]])
+    eic <- lapply(out.target, function(x) x$eic)
+    if (length(target) == 1) {
+      target.eic <- target.eic[[1]]
+      eic <- eic[[1]]
+    }
     out$alpha.eic <- alpha.eic
-    out$target.eic <- target.est[["eic"]]
+    out$target.eic <- target.eic
     out$eic <- eic
   }
 

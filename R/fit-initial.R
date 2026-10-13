@@ -134,6 +134,7 @@ fit_initial <- function(
   }
   if (length(treatment_model[["model"]]) > 0) {
     checkmate::assert_string(treatment_model[["model"]])
+    treatment_model[["model"]] <- gsub("\\s+", "", treatment_model[["model"]])
     if (!identical(treatment_model[["fit"]], "glm")) {
       stop("Only fit = \"glm\" is supported for treatment_model.")
     }
@@ -691,7 +692,7 @@ fit_initial <- function(
     }
 
     for (delta.value in deltas.hal) {
-      name.hal <- names(which.hal)[deltas.hal == delta.value]
+      name.hal <- names(which.hal)[which.hal][deltas.hal == delta.value]
       is.name.hal.at.risk <- (1:length(fit_types))[
         names(fit_types) == name.hal
       ] %in%
@@ -1473,7 +1474,7 @@ fit_initial <- function(
         }
         ##message("-------")
 
-        ##name.hal <- names(which.hal)[deltas.hal == delta.value]
+        ##name.hal <- names(which.hal)[which.hal][deltas.hal == delta.value]
         ##is.name.hal.at.risk <- (1:length(fit_types))[names(fit_types) == name.hal] %in% at.risk.ids
 
         tmp.long.reduced[, risk.time := get(paste0("risk.time.", delta.value))]

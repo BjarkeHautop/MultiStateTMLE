@@ -55,3 +55,74 @@ test_that("tmle_alpha() validates its arguments", {
     "alpha is ignored"
   )
 })
+
+test_that("tmle_alpha() supports only_first, target_only_in_state, target_by_state", {
+  fit <- fixture.fit(30)
+
+  expect_true(is.numeric(
+    tmle_alpha(fit, target = "z", only_first = TRUE)$estimate[["tmle.est"]]
+  ))
+  expect_true(is.numeric(
+    tmle_alpha(
+      fit,
+      target = "outcome1",
+      target_only_in_state = function(states) states[["z"]] == 0
+    )$estimate[["tmle.est"]]
+  ))
+  expect_true(is.numeric(
+    tmle_alpha(fit, target = "outcome1", target_by_state = TRUE)$estimate[[
+      "tmle.est"
+    ]]
+  ))
+})
+
+test_that("tmle_alpha() truncates clever weights", {
+  est <- tmle_alpha(
+    fixture.fit(30),
+    target = "outcome1",
+    alpha = 3,
+    truncate_weights = 1.5,
+    output_weights = 0.5
+  )
+
+  expect_lte(est$weights[["q50"]], 1.5 + 1e-8)
+  expect_true("no.truncated" %in% names(est$weights))
+})
+
+test_that("tmle_alpha() estimates under a baseline intervention 'a'", {
+  fit <- fit_initial(
+    fixture.data.treated(),
+    fit_types = illness.death.fit.types,
+    tau = 1,
+    treatment_model = "A0 ~ L0",
+    a = 0:1
+  )
+
+  est <- tmle_alpha(fit, target = "outcome1", a = 1, output_a_weights = 0.5)
+  expect_named(est$a.weights, "q50")
+  expect_true(
+    est$estimate[["tmle.est"]] >= 0 && est$estimate[["tmle.est"]] <= 1
+  )
+
+  expect_error(tmle_alpha(fit, target = "outcome1", a = 5), "a")
+})
+
+test_that("tmle_alpha()'s alpha_list reproduces a constant scalar alpha", {
+  fit <- fixture.fit(30)
+  constant <- list(z = function(time) rep(2, length(time)))
+
+  scalar <- tmle_alpha(fit, target = "outcome1", alpha = 2)
+  expect_equal(
+    tmle_alpha(fit, target = "outcome1", alpha_list = constant)$estimate,
+    scalar$estimate
+  )
+  expect_equal(
+    tmle_alpha(
+      fit,
+      target = "outcome1",
+      alpha_list = constant,
+      target_by_state = TRUE
+    )$estimate[["tmle.est"]],
+    scalar$estimate[["tmle.est"]]
+  )
+})

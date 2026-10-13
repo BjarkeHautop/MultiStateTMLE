@@ -39,7 +39,7 @@ prepare.initial(
   seed.hal = NULL,
   reduce.seed.dependence = FALSE,
   penalize.time = FALSE,
-  use.cores = 50,
+  use.cores = 1,
   use.cores.prediction = 1,
   verbose.hal = FALSE,
   browse.hal = FALSE,

@@ -78,7 +78,7 @@ prepare.initial <- function(
   seed.hal = NULL,
   reduce.seed.dependence = FALSE,
   penalize.time = FALSE,
-  use.cores = 50,
+  use.cores = 1,
   use.cores.prediction = 1,
   verbose.hal = FALSE,
   browse.hal = FALSE,
@@ -151,7 +151,7 @@ prepare.initial <- function(
   seed.hal = NULL,
   reduce.seed.dependence = FALSE,
   penalize.time = FALSE,
-  use.cores = 50,
+  use.cores = 1,
   verbose.hal = FALSE,
   verbose = FALSE,
   return.parameters.for.simulation = FALSE,
@@ -240,7 +240,7 @@ tmle.alpha.fun <- function(
   verbose = FALSE,
   max.iter = 10,
   min.iter = 0,
-  use.cores = 50,
+  use.cores = 1,
   truncate.weights = 0,
   output.convergence = FALSE,
   output.eic = FALSE,
@@ -252,7 +252,13 @@ tmle.alpha.fun <- function(
 ) {
   lifecycle::deprecate_warn("0.1.0", "tmle.alpha.fun()", "tmle_alpha()")
   if (length(initial.fit) == 0) {
-    initial.fit <- .prepare_initial(tau = tau, a = a, verbose = verbose, ...)
+    initial.fit <- .prepare_initial(
+      dt = dt,
+      tau = tau,
+      a = a,
+      verbose = verbose,
+      ...
+    )
   }
   if (is.logical(output.weights)) {
     output.weights <- as.numeric(output.weights)
@@ -312,7 +318,7 @@ calibration.fun <- function(
   output.eic = FALSE,
   tau = 1.2,
   tau.z = tau,
-  use.cores = 50,
+  use.cores = 1,
   target = "outcome",
   z.name = "z",
   ...
@@ -368,7 +374,7 @@ calibration.curve.fun <- function(
   output.eic = FALSE,
   tau = 1.2,
   tau.z = tau,
-  use.cores = 50,
+  use.cores = 1,
   target = "outcome",
   z.name = "z",
   min.iter = 1,
@@ -426,7 +432,7 @@ estimate.alpha.fun <- function(
   max_iter = 100,
   alpha_min = 1e-3,
   alpha_max = 100,
-  use.cores = 50,
+  use.cores = 1,
   verbose = FALSE,
   trace_every = 1L
 ) {

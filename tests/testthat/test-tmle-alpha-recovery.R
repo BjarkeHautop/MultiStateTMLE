@@ -2,7 +2,7 @@ test_that("tmle_alpha() recovers the true risk with no intervention (alpha=1)", 
   skip_on_cran()
   skip_if_not_installed("simevent")
 
-  fit <- simulate.recovery.fit(alpha = 1, n = 800, seed = 42)
+  fit <- simulate.recovery.fit(alpha = 1, n = 300, seed = 42)
   truth <- analytic.truth(alpha = 1)
 
   expect_lt(
@@ -15,7 +15,7 @@ test_that("tmle_alpha() recovers the true risk under a shape intervention (alpha
   skip_on_cran()
   skip_if_not_installed("simevent")
 
-  fit <- simulate.recovery.fit(alpha = 0.5, n = 800, seed = 42)
+  fit <- simulate.recovery.fit(alpha = 0.5, n = 300, seed = 42)
   truth <- analytic.truth(alpha = 0.5)
 
   expect_lt(

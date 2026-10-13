@@ -22,8 +22,8 @@ calibrate_alpha(
 \arguments{
 \item{initial_fit}{An initial fit, as returned by \code{\link[=fit_initial]{fit_initial()}}.}
 
-\item{target}{String. Name of the process whose risk is estimated under
-the calibrated intervention.}
+\item{target}{Character vector. Names of the processes whose risks are
+estimated under the calibrated intervention.}
 
 \item{z_name}{String. Name of the process whose intensity \code{alpha} scales.
 If no such process exists in \code{initial_fit}, \code{alpha} is ignored with a
@@ -58,6 +58,10 @@ target \code{theta} with standard error \code{theta.se}.
 influence curves of the calibrated alpha, of the risk of \code{target}
 treating alpha as known, and of the risk of \code{target}.
 }
+
+With several targets, the \verb{target.*} entries of \code{estimate} and \code{checks}
+are suffixed by the target name (e.g. \code{target.est.outcome1}), and
+\code{target.eic} and \code{eic} are lists named by target.
 }
 \description{
 Finds the intervention \code{alpha} on the intensity of the process \code{z_name}

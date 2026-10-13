@@ -121,3 +121,24 @@ test_that("dotted tmle.alpha.fun() arguments are translated for tmle_alpha()", {
   )
   expect_equal(.snake_case_args(list()), list())
 })
+
+test_that("deprecated tmle.alpha.fun() builds the initial fit from dt", {
+  withr::local_options(lifecycle_verbosity = "quiet")
+
+  est <- tmle.alpha.fun(
+    dt = fixture.data(30),
+    fit.types = list(
+      z = list(
+        model = "Surv(tstart, tstop, delta == 2)~L0",
+        at.risk = function(dt) (dt[["z"]] == 0)
+      ),
+      outcome1 = "Surv(tstart, tstop, delta == 1)~L0+z",
+      censoring = "Surv(tstart, tstop, delta == 0)~L0"
+    ),
+    target = "outcome1",
+    tau = 1,
+    use.cores = 1
+  )
+
+  expect_equal(est, tmle_alpha(fixture.fit(30), target = "outcome1"))
+})

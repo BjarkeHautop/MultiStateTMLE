@@ -68,3 +68,25 @@ simulate.recovery.fit <- function(alpha, n, seed) {
   )
   tmle_alpha(initial_fit, target = "outcome1", alpha = alpha)
 }
+
+# The first n individuals of illness_death, for fast unit tests.
+fixture.data <- function(n = 40) {
+  illness_death[illness_death$id <= n, ]
+}
+
+fixture.fit <- function(n = 40, ...) {
+  fit_initial(
+    fixture.data(n),
+    fit_types = illness.death.fit.types,
+    tau = 1,
+    ...
+  )
+}
+
+# fixture.data() with a binary baseline treatment A0.
+fixture.data.treated <- function(n = 40) {
+  data <- fixture.data(n)
+  withr::with_seed(1, a0 <- rbinom(n, 1, 0.5))
+  data$A0 <- a0[data$id]
+  data
+}

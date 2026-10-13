@@ -83,7 +83,7 @@ calibrated_contrasts <- function(
     estimate <- estimate.1 - estimate.0
     eic <- eic.1 - eic.0
 
-    se <- stats::sd(eic) / sqrt(n)
+    se <- sqrt(mean(eic^2 / n))
 
     critical.value <-
       stats::qnorm(1 - (1 - conf_level) / 2)
