@@ -1,11 +1,8 @@
-# Prepare the initial fit for multistate TMLE
+# Prepare the initial fit (deprecated)
 
-Fits initial (nuisance) hazard models for each process in `fit.types`
-(Cox, HAL, or exponential), builds the discrete product state space and
-its dependency structure, and computes the baseline clever
-weights/predictions needed by
-[`tmle.alpha.fun()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle.alpha.fun.md).
-This is the initialization step of the multistate TMLE pipeline.
+`prepare.initial()` is deprecated as of MultiStateTMLE 0.1.0. Use
+[`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
+instead.
 
 ## Usage
 
@@ -20,6 +17,8 @@ prepare.initial(
     "Surv(tstart, tstop, delta == 1)~L0+Z+L+A0", fit = "cox"), censoring = list(model =
     "Surv(tstart, tstop, delta == 0)~L0+Z+L+A0", fit = "cox")),
   use.exponential = FALSE,
+  verbose.exponential = FALSE,
+  browse = FALSE,
   max.count = 1,
   a = NULL,
   derived.vars = list(),
@@ -46,6 +45,7 @@ prepare.initial(
   use.cores = 1,
   use.cores.prediction = 1,
   verbose.hal = FALSE,
+  browse.hal = FALSE,
   cv.glmnet = FALSE,
   verbose = FALSE,
   return.parameters.for.simulation = FALSE
@@ -56,186 +56,54 @@ prepare.initial(
 
 - dt:
 
-  data.table of observed event history data (long format, with `id`,
-  `time`, `delta`, and one column per process).
+  Observed data, see `data` in
+  [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
 
-- tau:
+- tau, a, verbose:
 
-  follow-up horizon (in time units).
+  See
+  [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
 
-- fit.types:
+- fit.types, max.count, derived.vars, depend.time, prune.states,
+  use.exponential:
 
-  named list describing, for each process, the hazard `model` (a
-  `Surv(...)` formula string), the `fit` method (`"cox"`, `"hal"`, or
-  `"glm"`), and an optional `at.risk` function.
+  See the snake_case equivalents in
+  [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
+  Use `at.risk` for the at-risk functions of `fit.types`.
 
-- use.exponential:
+- verbose.exponential:
 
-  logical; if `TRUE`, use exponential (rather than Cox/HAL) hazard fits
-  where applicable.
-
-- max.count:
-
-  maximum recurrent-event count tracked per process in the product state
-  space.
-
-- a:
-
-  optional intervention on the baseline treatment `A0`; if supplied,
-  predictions are also computed under `A0` set to each value in `a`.
-
-- derived.vars:
-
-  list of functions deriving auxiliary state variables from the
-  discovered processes.
-
-- depend.time:
-
-  list describing additional time-dependency structure between
-  processes, used when HAL is not fit.
+  Merged into `verbose`.
 
 - fit.treatment:
 
-  optional model specification (as for `fit.types`) for the baseline
-  treatment `A0` propensity model.
+  See `treatment_model` in
+  [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
 
-- prune.states:
+- cut.time, cut.one.way, cut.Tk, cut.Tk.values, two.way, reduce.NK,
+  hal.sl, screen.two.way, lambda.cvs, event.dependent.cv,
+  npenalize.vars, V, seed.hal, reduce.seed.dependence, penalize.time,
+  verbose.hal:
 
-  logical; if `TRUE`, prune unreachable/zero-probability states from the
-  product state space.
-
-- cut.time:
-
-  HAL basis cut count for the time variable.
-
-- cut.one.way:
-
-  HAL basis cut count for one-way (main effect) terms.
-
-- cut.Tk:
-
-  HAL basis cut count for history/time-since-event terms.
-
-- cut.Tk.values:
-
-  optional explicit cut values for `cut.Tk`.
-
-- max.Tk:
-
-  maximum history order for HAL history terms.
-
-- two.way:
-
-  optional list of two-way HAL interaction term specifications.
-
-- reduce.NK:
-
-  numeric; quantile used to cap the recurrent-event count `NK` when
-  reducing HAL basis dimension.
-
-- hal.sl:
-
-  list of HAL specifications, one per Super Learner library candidate.
-
-- screen.two.way:
-
-  logical; if `TRUE`, screen two-way HAL terms before fitting.
-
-- lambda.cvs:
-
-  numeric vector of lasso penalty values to cross-validate over when
-  fitting HAL.
-
-- event.dependent.cv:
-
-  logical; if `TRUE`, stratify HAL cross-validation folds by event
-  status.
-
-- npenalize.vars:
-
-  optional character vector of HAL basis terms to exempt from lasso
-  penalization.
-
-- V:
-
-  number of cross-validation folds for HAL.
-
-- seed.hal:
-
-  optional random seed for HAL cross-validation.
-
-- reduce.seed.dependence:
-
-  logical; if `TRUE`, average over multiple HAL cross-validation seeds.
-
-- penalize.time:
-
-  logical; if `TRUE`, include the time variable itself among the
-  penalized HAL basis terms.
+  HAL settings, see `hal_control` in
+  [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
 
 - use.cores:
 
-  number of cores to use for model fitting.
+  See `cores` in
+  [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
 
-- use.cores.prediction:
+- use.cores.prediction, max.Tk, cv.glmnet, browse, browse.hal:
 
-  number of cores to use for prediction steps.
-
-- verbose.hal:
-
-  logical; if `TRUE`, print HAL fitting diagnostics.
-
-- cv.glmnet:
-
-  logical; currently not supported.
-
-- verbose:
-
-  logical; if `TRUE`, print overall progress.
+  Ignored.
 
 - return.parameters.for.simulation:
 
-  logical; if `TRUE`, additionally return fitted parameters formatted
-  for
-  [`sim.from.data()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/sim.from.data.md).
+  No longer supported, since `sim.from.data()` has been removed. Use
+  [`simevent::sim_model_from_fits()`](https://rdrr.io/pkg/simevent/man/sim_model_from_fits.html)
+  instead.
 
 ## Value
 
-A list (the `initial.fit` object) containing, among others, `tmp.long`
-(the long-format data with fitted hazards/weights), `depend.matrix` (the
-product state space), `process.names`, `process.types`,
-`process.deltas`, `cens.process.id`, and `at.risks`.
-
-## Examples
-
-``` r
-set.seed(1405)
-baseline <- list(L0 = function(N) rnorm(N))
-processes <- list(
-  z = list(type = "one.jump", eta = 0.2, nu = 1),
-  outcome1 = list(type = "terminal", eta = 0.3, nu = 1),
-  censoring = list(type = "censoring", eta = 0.1, nu = 1)
-)
-effects <- list(
-  c("L0", "z", 0.5),
-  c("z", "outcome1", 0.7)
-)
-dt <- sim.generic(baseline = baseline, processes = processes, effects = effects, n = 100)
-
-initial.fit <- prepare.initial(
-  dt,
-  tau = 1,
-  fit.types = list(
-    z = list(
-      model = "Surv(tstart, tstop, delta == 2)~L0",
-      fit = "cox",
-      at.risk = function(dt) (dt[["z"]] == 0)
-    ),
-    outcome1 = list(model = "Surv(tstart, tstop, delta == 1)~L0+z", fit = "cox"),
-    censoring = list(model = "Surv(tstart, tstop, delta == 0)~L0", fit = "cox")
-  ),
-  verbose = FALSE
-)
-initial.fit$process.names
-#> [1] "z"         "outcome1"  "censoring"
-```
+See
+[`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).

@@ -6,7 +6,8 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Causal Inference for Multistate Event Processes via TMLE • MultiStateTMLE</title>
-<script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<!-- katex math --><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script><script src="katex-auto.js"></script><script src="deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
@@ -68,13 +69,32 @@
 <p>The pipeline has three main steps:</p>
 <ul>
 <li>
-<code><a href="reference/prepare.initial.html">prepare.initial()</a></code> fits the initial (nuisance) hazard models for each process in the data (Cox, HAL, or exponential), and builds the discrete product state space used internally.</li>
+<code><a href="reference/fit_initial.html">fit_initial()</a></code> fits the initial (nuisance) hazard models for each event process in the data, and builds the discrete product state space used internally.</li>
 <li>
-<code><a href="reference/tmle.alpha.fun.html">tmle.alpha.fun()</a></code> targets the initial fit under a stochastic intensity intervention (scaling the shape of a process by <code>alpha</code>, optionally combined with an intervention on baseline treatment), returning a TMLE estimate, its standard error, and (optionally) the efficient influence curve.</li>
+<code><a href="reference/tmle_alpha.html">tmle_alpha()</a></code> targets the initial fit under a stochastic intensity intervention, which scales the intensity of a process by <code>alpha</code> (optionally combined with an intervention on baseline treatment). It returns a TMLE estimate, its standard error, and optionally the efficient influence curve.</li>
 <li>
-<code><a href="reference/calibration.fun.html">calibration.fun()</a></code>/<code><a href="reference/calibration.curve.fun.html">calibration.curve.fun()</a></code> calibrate the shape intervention to a target effect size, and <code><a href="reference/make.calibrated.contrasts.html">make.calibrated.contrasts()</a></code> decomposes a total treatment effect into mediated and calibrated contrasts.</li>
+<code><a href="reference/calibrate_alpha.html">calibrate_alpha()</a></code> and <code><a href="reference/calibration_curve.html">calibration_curve()</a></code> calibrate the intervention to a target effect size, and <code><a href="reference/calibrated_contrasts.html">calibrated_contrasts()</a></code> decomposes a total treatment effect into mediated and calibrated contrasts.</li>
 </ul>
-<p><code><a href="reference/sim.generic.html">sim.generic()</a></code> and <code><a href="reference/sim.from.data.html">sim.from.data()</a></code> (built on top of <a href="https://github.com/BjarkeHautop/simevent" class="external-link">simevent</a>) simulate multistate event history data, either from a user-specified process/effect specification, or from parameters previously fitted to observed data.</p>
+<p>For example, with the simulated illness-death data <code>illness_death</code>, where an illness <code>z</code> raises the risk of death <code>outcome1</code>, the risk of death by time 1 if the intensity of the illness were halved is estimated by:</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fit_initial.html">fit_initial</a></span><span class="op">(</span></span>
+<span>  <span class="va">illness_death</span>,</span>
+<span>  fit_types <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>      model <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 2) ~ L0"</span>,</span>
+<span>      at_risk <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">dt</span><span class="op">)</span> <span class="va">dt</span><span class="op">[[</span><span class="st">"z"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">0</span></span>
+<span>    <span class="op">)</span>,</span>
+<span>    outcome1 <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 1) ~ L0 + z"</span>,</span>
+<span>    censoring <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 0) ~ L0"</span></span>
+<span>  <span class="op">)</span>,</span>
+<span>  tau <span class="op">=</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">est</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/tmle_alpha.html">tmle_alpha</a></span><span class="op">(</span><span class="va">fit</span>, target <span class="op">=</span> <span class="st">"outcome1"</span>, alpha <span class="op">=</span> <span class="fl">0.5</span>, z_name <span class="op">=</span> <span class="st">"z"</span><span class="op">)</span></span>
+<span><span class="va">est</span><span class="op">$</span><span class="va">estimate</span></span>
+<span><span class="co">#&gt;   tmle.est         se      g.est </span></span>
+<span><span class="co">#&gt; 0.30405495 0.03853505 0.31239982</span></span></code></pre></div>
+<p>To simulate multistate event history data, see the <a href="https://github.com/BjarkeHautop/simevent" class="external-link">simevent</a> package.</p>
 </div>
 <div class="section level2">
 <h2 id="contributing">Contributing<a class="anchor" aria-label="anchor" href="#contributing"></a>
@@ -131,7 +151,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.9000.</p>
 </div>
 
     </footer>

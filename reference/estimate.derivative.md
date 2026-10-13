@@ -1,8 +1,8 @@
-# Estimate the numerical derivative of an alpha-indexed estimand
+# Estimate the derivative with respect to alpha (deprecated)
 
-Approximates the derivative with respect to `alpha` of the TMLE/one-step
-estimate returned by `fun`, using a symmetric finite-difference at
-`alpha_hat`.
+`estimate.derivative()` is deprecated as of MultiStateTMLE 0.1.0. Use
+[`estimate_derivative()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate_derivative.md)
+instead.
 
 ## Usage
 
@@ -22,36 +22,23 @@ estimate.derivative(
 
 - alpha_hat:
 
-  numeric; the point at which to estimate the derivative.
+  See `alpha` in
+  [`estimate_derivative()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate_derivative.md).
 
-- fun:
+- fun, h:
 
-  function taking `alpha`, `parameter`, and `...`, returning a list with
-  an `estimate` element containing `tmle.est`/`one.step.est`.
+  See
+  [`estimate_derivative()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate_derivative.md).
 
 - parameter:
 
-  character; the target process/outcome passed to `fun`.
-
-- h:
-
-  numeric step size for the finite difference; shrunk if it exceeds
-  `alpha_hat`.
+  Passed on to `fun` as `parameter`.
 
 - ...:
 
-  additional arguments passed on to `fun`.
+  Passed on to `fun`.
 
 ## Value
 
-numeric; the estimated derivative.
-
-## Examples
-
-``` r
-# fun(alpha) = alpha^2, so the derivative at alpha = 3 is 6.
-fun <- function(alpha, parameter, ...) list(estimate = c(tmle.est = alpha^2))
-estimate.derivative(alpha_hat = 3, fun = fun, parameter = "z", h = 0.01)
-#> tmle.est 
-#>        6 
-```
+See
+[`estimate_derivative()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate_derivative.md).

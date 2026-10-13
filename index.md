@@ -26,28 +26,51 @@ library(MultiStateTMLE)
 
 The pipeline has three main steps:
 
-- [`prepare.initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/prepare.initial.md)
-  fits the initial (nuisance) hazard models for each process in the data
-  (Cox, HAL, or exponential), and builds the discrete product state
-  space used internally.
-- [`tmle.alpha.fun()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle.alpha.fun.md)
-  targets the initial fit under a stochastic intensity intervention
-  (scaling the shape of a process by `alpha`, optionally combined with
-  an intervention on baseline treatment), returning a TMLE estimate, its
-  standard error, and (optionally) the efficient influence curve.
-- [`calibration.fun()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration.fun.md)/[`calibration.curve.fun()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration.curve.fun.md)
-  calibrate the shape intervention to a target effect size, and
-  [`make.calibrated.contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/make.calibrated.contrasts.md)
+- [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
+  fits the initial (nuisance) hazard models for each event process in
+  the data, and builds the discrete product state space used internally.
+- [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
+  targets the initial fit under a stochastic intensity intervention,
+  which scales the intensity of a process by `alpha` (optionally
+  combined with an intervention on baseline treatment). It returns a
+  TMLE estimate, its standard error, and optionally the efficient
+  influence curve.
+- [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md)
+  and
+  [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md)
+  calibrate the intervention to a target effect size, and
+  [`calibrated_contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.md)
   decomposes a total treatment effect into mediated and calibrated
   contrasts.
 
-[`sim.generic()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/sim.generic.md)
-and
-[`sim.from.data()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/sim.from.data.md)
-(built on top of [simevent](https://github.com/BjarkeHautop/simevent))
-simulate multistate event history data, either from a user-specified
-process/effect specification, or from parameters previously fitted to
-observed data.
+For example, with the simulated illness-death data `illness_death`,
+where an illness `z` raises the risk of death `outcome1`, the risk of
+death by time 1 if the intensity of the illness were halved is estimated
+by:
+
+``` r
+
+fit <- fit_initial(
+  illness_death,
+  fit_types = list(
+    z = list(
+      model = "Surv(tstart, tstop, delta == 2) ~ L0",
+      at_risk = function(dt) dt[["z"]] == 0
+    ),
+    outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
+    censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
+  ),
+  tau = 1
+)
+
+est <- tmle_alpha(fit, target = "outcome1", alpha = 0.5, z_name = "z")
+est$estimate
+#>   tmle.est         se      g.est 
+#> 0.30405495 0.03853505 0.31239982
+```
+
+To simulate multistate event history data, see the
+[simevent](https://github.com/BjarkeHautop/simevent) package.
 
 ## Contributing
 

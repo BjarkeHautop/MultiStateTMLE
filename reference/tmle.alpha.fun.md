@@ -1,10 +1,8 @@
-# Targeted maximum likelihood estimation under a shape-parameter intervention
+# TMLE under a shape-parameter intervention (deprecated)
 
-Estimates the effect of a stochastic intensity intervention (scaling the
-shape of the `z` process by `alpha`, optionally combined with an
-intervention `a` on baseline treatment) on `target`, via an iterative
-TMLE update of the initial fit produced by
-[`prepare.initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/prepare.initial.md).
+`tmle.alpha.fun()` is deprecated as of MultiStateTMLE 0.1.0. Use
+[`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
+instead.
 
 ## Usage
 
@@ -33,173 +31,60 @@ tmle.alpha.fun(
   output.eic = FALSE,
   output.weights = NULL,
   output.a.weights = NULL,
+  browse = FALSE,
+  verbose.exponential = FALSE,
   ...
 )
 ```
 
 ## Arguments
 
-- target:
+- target, alpha, a, verbose:
 
-  character; name of the target process/outcome.
+  See
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
 - tau:
 
-  follow-up horizon (in time units) for `target`.
+  Only used when `initial.fit` is `NULL`; the horizon is that of
+  `initial.fit`.
 
-- alpha:
+- z.name, alpha.list, years.lost, target.only.in.state, target.by.state,
+  conv.const, one.step, max.iter, min.iter, truncate.weights,
+  output.convergence, output.eic, output.weights, output.a.weights:
 
-  numeric; multiplicative shape-parameter intervention applied to the
-  `z` process (ignored if `alpha.list` is supplied).
-
-- z.name:
-
-  character; name of the process on which `alpha` acts.
-
-- alpha.list:
-
-  optional named list of intervention functions, one per process, of the
-  form `function(time, covariates)`; supersedes `alpha`.
-
-- a:
-
-  optional intervention on the baseline treatment `A0` (must match the
-  `a` used to build `initial.fit`, if `initial.fit` is supplied).
+  See the snake_case equivalents in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
 - initial.fit:
 
-  initial fit object, as returned by
-  [`prepare.initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/prepare.initial.md);
-  computed from `dt`/`tau`/`a`/`...` if not supplied.
+  See `initial_fit` in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
+  If `NULL`, it is computed by
+  `prepare.initial(tau = tau, a = a, verbose = verbose, ...)`.
 
-- dt:
+- dt, browse, verbose.exponential:
 
-  data.table of observed event history data, passed to
-  [`prepare.initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/prepare.initial.md)
-  when `initial.fit` is not supplied.
-
-- years.lost:
-
-  optional; if supplied, computes years-lost-type estimands with this
-  block size.
+  Ignored.
 
 - only.first:
 
-  logical; if `TRUE`, restrict `target` to its first occurrence (treat
-  it as a one-jump process).
-
-- target.only.in.state:
-
-  optional function of `states` identifying the subset of states in
-  which `target` events are counted.
-
-- target.by.state:
-
-  logical; whether to compute clever covariates by state rather than
-  pooled.
-
-- conv.const:
-
-  constant scaling the convergence criterion on the mean efficient
-  influence curve.
-
-- one.step:
-
-  logical; if `TRUE`, return a one-step estimator instead of iterating
-  to TMLE convergence.
-
-- verbose:
-
-  logical; if `TRUE`, print iteration progress.
-
-- max.iter:
-
-  maximum number of TMLE update iterations.
-
-- min.iter:
-
-  minimum number of TMLE update iterations before checking convergence.
+  See `only_first` in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md);
+  `NULL` means `FALSE`.
 
 - use.cores:
 
-  number of cores to use for the per-id computations.
-
-- truncate.weights:
-
-  numeric; if `> 0`, truncate clever weights above this value.
-
-- output.convergence:
-
-  logical; if `TRUE`, include convergence diagnostics in the output.
-
-- output.eic:
-
-  logical; if `TRUE`, include the efficient influence curve in the
-  output.
-
-- output.weights:
-
-  optional numeric vector of quantiles at which to summarize the
-  clever/censoring weights.
-
-- output.a.weights:
-
-  optional numeric vector of quantiles at which to summarize the
-  `a`-specific clever weights.
+  See `cores` in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
 - ...:
 
-  additional arguments passed on to
+  Passed on to
   [`prepare.initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/prepare.initial.md)
-  when `initial.fit` is not supplied.
+  when `initial.fit` is `NULL`.
 
 ## Value
 
-A list with the TMLE `estimate`, standard error, and (depending on the
-arguments above) the efficient influence curve, convergence diagnostics,
-and weight summaries.
-
-## Examples
-
-``` r
-set.seed(1405)
-baseline <- list(L0 = function(N) rnorm(N))
-processes <- list(
-  z = list(type = "one.jump", eta = 0.2, nu = 1),
-  outcome1 = list(type = "terminal", eta = 0.3, nu = 1),
-  censoring = list(type = "censoring", eta = 0.1, nu = 1)
-)
-effects <- list(
-  c("L0", "z", 0.5),
-  c("z", "outcome1", 0.7)
-)
-dt <- sim.generic(baseline = baseline, processes = processes, effects = effects, n = 100)
-
-initial.fit <- prepare.initial(
-  dt,
-  tau = 1,
-  fit.types = list(
-    z = list(
-      model = "Surv(tstart, tstop, delta == 2)~L0",
-      fit = "cox",
-      at.risk = function(dt) (dt[["z"]] == 0)
-    ),
-    outcome1 = list(model = "Surv(tstart, tstop, delta == 1)~L0+z", fit = "cox"),
-    censoring = list(model = "Surv(tstart, tstop, delta == 0)~L0", fit = "cox")
-  ),
-  verbose = FALSE
-)
-
-# Estimated risk of outcome1 by tau = 1 with no intervention (alpha = 1).
-fit <- tmle.alpha.fun(
-  initial.fit = initial.fit,
-  target = "outcome1",
-  tau = 1,
-  alpha = 1,
-  use.cores = 1,
-  verbose = FALSE
-)
-fit$estimate
-#>   tmle.est         se      g.est 
-#> 0.35333939 0.04921998 0.35333939 
-```
+See
+[`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).

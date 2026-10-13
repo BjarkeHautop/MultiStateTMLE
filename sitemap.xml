@@ -7,16 +7,22 @@
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/index.html</loc></url>
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/news/index.html</loc></url>
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/MultiStateTMLE-package.html</loc></url>
+<url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.html</loc></url>
+<url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.html</loc></url>
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration.curve.fun.html</loc></url>
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration.fun.html</loc></url>
+<url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.html</loc></url>
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/compute.Q.clever.per.id.html</loc></url>
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate.alpha.fun.html</loc></url>
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate.derivative.html</loc></url>
+<url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate_derivative.html</loc></url>
+<url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.html</loc></url>
+<url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/illness_death.html</loc></url>
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/index.html</loc></url>
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/make.calibrated.contrasts.html</loc></url>
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/prepare.initial.html</loc></url>
-<url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/sim.from.data.html</loc></url>
-<url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/sim.generic.html</loc></url>
+<url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/solve_alpha.html</loc></url>
 <url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle.alpha.fun.html</loc></url>
+<url><loc>https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.html</loc></url>
 </urlset>
 
