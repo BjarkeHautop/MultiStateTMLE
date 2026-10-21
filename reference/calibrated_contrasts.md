@@ -27,14 +27,12 @@ calibrated_contrasts(
 - treatment_fit, placebo_fit:
 
   Fits for the treatment and placebo arms, as returned by
-  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
-  with `output_eic = TRUE`.
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
 - calibrated_fit:
 
   Fit for the calibrated intervention, as returned by
-  [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md)
-  with `output_eic = TRUE`.
+  [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md).
 
 - target:
 
@@ -48,23 +46,24 @@ calibrated_contrasts(
 ## Value
 
 A `data.table` with one row per contrast (`total`, `mediated` and
-`calibrated`) and columns `estimate`, `se`, `lower` and `upper`. The
-attributes `decomposition.error` and `eic.decomposition.error` give how
-far the estimates and influence curves are from satisfying total =
-mediated + calibrated, which should be zero up to numerical error.
+`calibrated`) and columns `target` (`NA` if `target` is `NULL`),
+`contrast`, `estimate`, `se`, `lower` and `upper`. The attributes
+`decomposition_error` and `eic_decomposition_error` give how far the
+estimates and influence curves are from satisfying total = mediated +
+calibrated, which should be zero up to numerical error.
 
 ## Examples
 
 ``` r
 set.seed(1405)
-treatment_fit <- list(estimate = c(tmle.est = 0.7), eic = rnorm(200, sd = 0.1))
-placebo_fit <- list(estimate = c(tmle.est = 0.3), eic = rnorm(200, sd = 0.1))
-calibrated_fit <- list(estimate = c(target.est = 0.5), eic = rnorm(200, sd = 0.1))
+treatment_fit <- list(estimate = c(tmle_est = 0.7), eic = rnorm(200, sd = 0.1))
+placebo_fit <- list(estimate = c(tmle_est = 0.3), eic = rnorm(200, sd = 0.1))
+calibrated_fit <- list(estimate = c(target_est = 0.5), eic = rnorm(200, sd = 0.1))
 
 calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
-#>      contrast estimate         se     lower     upper
-#>        <char>    <num>      <num>     <num>     <num>
-#> 1:      total      0.4 0.01028048 0.3798506 0.4201494
-#> 2:   mediated      0.2 0.01050568 0.1794092 0.2205908
-#> 3: calibrated      0.2 0.01028145 0.1798487 0.2201513
+#>    target   contrast estimate         se     lower     upper
+#>    <char>     <char>    <num>      <num>     <num>     <num>
+#> 1:   <NA>      total      0.4 0.01028048 0.3798506 0.4201494
+#> 2:   <NA>   mediated      0.2 0.01050568 0.1794092 0.2205908
+#> 3:   <NA> calibrated      0.2 0.01028145 0.1798487 0.2201513
 ```

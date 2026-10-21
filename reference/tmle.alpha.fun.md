@@ -50,8 +50,7 @@ tmle.alpha.fun(
   `initial.fit`.
 
 - z.name, alpha.list, years.lost, target.only.in.state, target.by.state,
-  conv.const, one.step, max.iter, min.iter, truncate.weights,
-  output.convergence, output.eic, output.weights, output.a.weights:
+  conv.const, one.step, max.iter, min.iter, truncate.weights:
 
   See the snake_case equivalents in
   [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
@@ -77,6 +76,13 @@ tmle.alpha.fun(
 
   See `cores` in
   [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
+
+- output.convergence, output.eic, output.weights, output.a.weights:
+
+  Ignored;
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
+  always returns the convergence diagnostics, influence curve and weight
+  summaries.
 
 - ...:
 

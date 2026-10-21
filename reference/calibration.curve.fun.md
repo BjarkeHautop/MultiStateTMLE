@@ -34,6 +34,12 @@ calibration.curve.fun(
   See `initial_fit` in
   [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md).
 
+- output.eic:
+
+  Ignored;
+  [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md)
+  always returns the influence curves.
+
 - tau, tau.z, browse:
 
   Ignored; the horizon is that of `initial.fit`.
@@ -49,7 +55,7 @@ calibration.curve.fun(
   [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md).
 
 - z.name, alpha.grid, min.iter, target.by.state, block.size.z,
-  block.size.target, output.eic:
+  block.size.target:
 
   See the snake_case equivalents in
   [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md).

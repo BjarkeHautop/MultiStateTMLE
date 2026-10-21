@@ -23,7 +23,8 @@ evaluations of fun along the way."></head><body>
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/MultiStateTMLE.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -72,7 +73,7 @@ evaluations of <code>fun</code> along the way.</p>
 
 <dl><dt id="arg-fun">fun<a class="anchor" aria-label="anchor" href="#arg-fun"></a></dt>
 <dd><p>A function of <code>alpha</code> returning a list with elements
-<code>estimate</code> (a named vector containing <code>tmle.est</code> or <code>one.step.est</code>, and
+<code>estimate</code> (a named vector containing <code>tmle_est</code> or <code>one_step_est</code>, and
 <code>se</code>) and <code>eic</code>, such as a call to <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
 
 
@@ -121,10 +122,10 @@ evaluations.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list with elements <code>alpha.hat</code> (the best <code>alpha</code> found),
+    <p>A list with elements <code>alpha_hat</code> (the best <code>alpha</code> found),
 <code>converged</code> (whether it is within <code>c_n</code> of <code>theta</code>), <code>dist</code> (its
-distance to <code>theta</code>), <code>c.n</code>, <code>grid</code> (a data frame of all evaluated
-<code>alpha</code>, <code>psi</code> and <code>se</code>) and <code>eic</code> (the influence curve at <code>alpha.hat</code>).</p>
+distance to <code>theta</code>), <code>c_n</code>, <code>grid</code> (a data frame of all evaluated
+<code>alpha</code>, <code>psi</code> and <code>se</code>) and <code>eic</code> (the influence curve at <code>alpha_hat</code>).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -138,10 +139,10 @@ used by <code><a href="calibrate_alpha.html">calibrate_alpha()</a></code>.</p>
 <span class="r-in"><span><span class="co"># solve_alpha() should recover alpha = -log(1 - 0.3 / 0.6).</span></span></span>
 <span class="r-in"><span><span class="va">fun</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">alpha</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span>  <span class="va">psi</span> <span class="op">&lt;-</span> <span class="fl">0.6</span> <span class="op">*</span> <span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">exp</a></span><span class="op">(</span><span class="op">-</span><span class="va">alpha</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>estimate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>tmle.est <span class="op">=</span> <span class="va">psi</span>, se <span class="op">=</span> <span class="fl">0.01</span><span class="op">)</span>, eic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>estimate <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span>tmle_est <span class="op">=</span> <span class="va">psi</span>, se <span class="op">=</span> <span class="fl">0.01</span><span class="op">)</span>, eic <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">10</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span><span class="va">res</span> <span class="op">&lt;-</span> <span class="fu">solve_alpha</span><span class="op">(</span><span class="va">fun</span>, theta <span class="op">=</span> <span class="fl">0.3</span>, c_n <span class="op">=</span> <span class="fl">1e-6</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">res</span><span class="op">$</span><span class="va">alpha.hat</span></span></span>
+<span class="r-in"><span><span class="va">res</span><span class="op">$</span><span class="va">alpha_hat</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.6931482</span>
 <span class="r-in"><span><span class="op">-</span><span class="fu"><a href="https://rdrr.io/r/base/Log.html" class="external-link">log</a></span><span class="op">(</span><span class="fl">1</span> <span class="op">-</span> <span class="fl">0.3</span> <span class="op">/</span> <span class="fl">0.6</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.6931472</span>

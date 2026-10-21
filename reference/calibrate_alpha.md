@@ -17,7 +17,6 @@ calibrate_alpha(
   delta = NULL,
   rho_1a = NULL,
   a = NULL,
-  output_eic = FALSE,
   cores = 1,
   verbose = FALSE,
   ...
@@ -52,10 +51,6 @@ calibrate_alpha(
   be one of the values of `a` given to
   [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
 
-- output_eic:
-
-  Logical. If `TRUE`, include the influence curves in the output.
-
 - cores:
 
   Positive integer. Number of cores used by
@@ -75,21 +70,21 @@ calibrate_alpha(
 
 A list with elements:
 
-- `estimate`: a named vector with the calibrated `alpha.est` and its
-  `alpha.se`, the risk of `target` (`target.est`) with standard error
-  `target.se` (accounting for the estimation of alpha) and
-  `target.se.crude` (treating alpha as known), and the calibration
-  target `theta` with standard error `theta.se`.
+- `estimate`: a named vector with the calibrated `alpha_est` and its
+  `alpha_se`, the risk of `target` (`target_est`) with standard error
+  `target_se` (accounting for the estimation of alpha) and
+  `target_se_crude` (treating alpha as known), and the calibration
+  target `theta` with standard error `theta_se`.
 
 - `checks`: diagnostics of the alpha search and derivative estimates.
 
-- `alpha.eic`, `target.eic` and `eic` (if `output_eic = TRUE`): the
-  influence curves of the calibrated alpha, of the risk of `target`
-  treating alpha as known, and of the risk of `target`.
+- `alpha_eic`, `target_eic` and `eic`: the influence curves of the
+  calibrated alpha, of the risk of `target` treating alpha as known, and
+  of the risk of `target`.
 
-With several targets, the `target.*` entries of `estimate` and `checks`
-are suffixed by the target name (e.g. `target.est.outcome1`), and
-`target.eic` and `eic` are lists named by target.
+With several targets, the per-target entries of `estimate` and `checks`
+are suffixed by the target name (e.g. `target_est_death`), and
+`target_eic` and `eic` are lists named by target.
 
 ## Details
 
@@ -113,21 +108,22 @@ fit <- fit_initial(
   illness_death,
   fit_types = list(
     z = list(
-      model = "Surv(tstart, tstop, delta == 2) ~ L0",
+      delta = 2,
+      model = ~ L0,
       at_risk = function(dt) dt[["z"]] == 0
     ),
-    outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
-    censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
+    death = list(delta = 1, model = ~ L0 + z),
+    censoring = list(delta = 0, model = ~ L0)
   ),
   tau = 1
 )
 
-# Risk of outcome1 under the intervention on z that brings the risk of z
+# Risk of death under the intervention on z that brings the risk of z
 # down to 80% of its observed value.
-cal <- calibrate_alpha(fit, target = "outcome1", z_name = "z", rho = 0.8)
+cal <- calibrate_alpha(fit, target = "death", z_name = "z", rho = 0.8)
 cal$estimate
-#>       alpha.est        alpha.se      target.est       target.se target.se.crude 
+#>       alpha_est        alpha_se      target_est       target_se target_se_crude 
 #>      0.79272380      0.00995552      0.31992034      0.03864198      0.03866085 
-#>           theta        theta.se 
+#>           theta        theta_se 
 #>      0.12713026      0.02505712 
 ```

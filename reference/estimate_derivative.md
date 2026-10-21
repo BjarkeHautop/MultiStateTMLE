@@ -14,7 +14,7 @@ estimate_derivative(fun, alpha, h, ...)
 - fun:
 
   A function of `alpha` (and `...`) returning a list with an element
-  `estimate`, a named vector containing `tmle.est` or `one.step.est`,
+  `estimate`, a named vector containing `tmle_est` or `one_step_est`,
   such as a call to
   [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
@@ -40,7 +40,7 @@ A number, the estimated derivative.
 
 ``` r
 # The derivative of alpha^2 at alpha = 3 is 6.
-fun <- function(alpha) list(estimate = c(tmle.est = alpha^2))
+fun <- function(alpha) list(estimate = c(tmle_est = alpha^2))
 estimate_derivative(fun, alpha = 3, h = 0.01)
 #> [1] 6
 ```

@@ -29,7 +29,7 @@ solve_alpha(
 - fun:
 
   A function of `alpha` returning a list with elements `estimate` (a
-  named vector containing `tmle.est` or `one.step.est`, and `se`) and
+  named vector containing `tmle_est` or `one_step_est`, and `se`) and
   `eic`, such as a call to
   [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
@@ -75,10 +75,10 @@ solve_alpha(
 
 ## Value
 
-A list with elements `alpha.hat` (the best `alpha` found), `converged`
+A list with elements `alpha_hat` (the best `alpha` found), `converged`
 (whether it is within `c_n` of `theta`), `dist` (its distance to
-`theta`), `c.n`, `grid` (a data frame of all evaluated `alpha`, `psi`
-and `se`) and `eic` (the influence curve at `alpha.hat`).
+`theta`), `c_n`, `grid` (a data frame of all evaluated `alpha`, `psi`
+and `se`) and `eic` (the influence curve at `alpha_hat`).
 
 ## Details
 
@@ -93,10 +93,10 @@ is used by
 # solve_alpha() should recover alpha = -log(1 - 0.3 / 0.6).
 fun <- function(alpha) {
   psi <- 0.6 * (1 - exp(-alpha))
-  list(estimate = c(tmle.est = psi, se = 0.01), eic = rep(0, 10))
+  list(estimate = c(tmle_est = psi, se = 0.01), eic = rep(0, 10))
 }
 res <- solve_alpha(fun, theta = 0.3, c_n = 1e-6)
-res$alpha.hat
+res$alpha_hat
 #> [1] 0.6931482
 -log(1 - 0.3 / 0.6)
 #> [1] 0.6931472

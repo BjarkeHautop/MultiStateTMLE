@@ -33,6 +33,12 @@ calibration.fun(
   See `initial_fit` in
   [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md).
 
+- output.eic:
+
+  Ignored;
+  [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md)
+  always returns the influence curves.
+
 - tau, tau.z, browse:
 
   Ignored; the horizon is that of `initial.fit`.
@@ -48,7 +54,7 @@ calibration.fun(
   [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md).
   `theta` is ignored if `rho`, `delta` or `rho.1a` is given.
 
-- z.name, rho.1a, output.eic:
+- z.name, rho.1a:
 
   See the snake_case equivalents in
   [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md).

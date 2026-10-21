@@ -25,7 +25,8 @@ calibrating to the estimated exposure risk rather than to alpha."></head><body>
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/MultiStateTMLE.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -64,7 +65,6 @@ calibrating to the estimated exposure risk rather than to <code>alpha</code>.</p
 <span>  target_by_state <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  block_size_z <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  block_size_target <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  output_eic <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  cores <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -116,11 +116,6 @@ given, the expected time lost is estimated for <code>z_name</code> and <code>tar
 respectively, instead of the risk; see <code>years_lost</code> in <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
 
 
-<dt id="arg-output-eic">output_eic<a class="anchor" aria-label="anchor" href="#arg-output-eic"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, include the influence curves in the
-output.</p></dd>
-
-
 <dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
 <dd><p>Positive integer. Number of cores used by
 <code><a href="https://rdrr.io/r/parallel/mclapply.html" class="external-link">parallel::mclapply()</a></code> for the per-individual computations.</p></dd>
@@ -137,13 +132,13 @@ output.</p></dd>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>A list with elements:</p><ul><li><p><code>estimate</code>: a <code>data.table</code> with one row per value of <code>alpha_grid</code> and
-columns <code>alpha</code>, <code>exposure.est</code>, <code>exposure.se</code>, <code>target.est</code> and
-<code>target.se</code> (suffixed by the target name when there are several
+columns <code>alpha</code>, <code>exposure_est</code>, <code>exposure_se</code>, <code>target_est</code> and
+<code>target_se</code> (suffixed by <code>_&lt;target&gt;</code> when there are several
 targets).</p></li>
 <li><p><code>checks</code>: per value of <code>alpha_grid</code>, the estimated derivatives of the
 exposure and target estimates with respect to <code>alpha</code>.</p></li>
-<li><p><code>eics</code>: per value of <code>alpha_grid</code>, the influence curves if
-<code>output_eic = TRUE</code>, otherwise <code>NULL</code>.</p></li>
+<li><p><code>eics</code>: per value of <code>alpha_grid</code>, the influence curves <code>alpha_eic</code>,
+<code>calibration_eic</code>, <code>target_eic</code> and <code>eic</code>.</p></li>
 </ul></div>
 
     <div class="section level2">
@@ -152,23 +147,24 @@ exposure and target estimates with respect to <code>alpha</code>.</p></li>
 <span class="r-in"><span>  <span class="va">illness_death</span>,</span></span>
 <span class="r-in"><span>  fit_types <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>      model <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 2) ~ L0"</span>,</span></span>
+<span class="r-in"><span>      delta <span class="op">=</span> <span class="fl">2</span>,</span></span>
+<span class="r-in"><span>      model <span class="op">=</span> <span class="op">~</span> <span class="va">L0</span>,</span></span>
 <span class="r-in"><span>      at_risk <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">dt</span><span class="op">)</span> <span class="va">dt</span><span class="op">[[</span><span class="st">"z"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">0</span></span></span>
 <span class="r-in"><span>    <span class="op">)</span>,</span></span>
-<span class="r-in"><span>    outcome1 <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 1) ~ L0 + z"</span>,</span></span>
-<span class="r-in"><span>    censoring <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 0) ~ L0"</span></span></span>
+<span class="r-in"><span>    death <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>delta <span class="op">=</span> <span class="fl">1</span>, model <span class="op">=</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    censoring <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>delta <span class="op">=</span> <span class="fl">0</span>, model <span class="op">=</span> <span class="op">~</span> <span class="va">L0</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  tau <span class="op">=</span> <span class="fl">1</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">curve</span> <span class="op">&lt;-</span> <span class="fu">calibration_curve</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">fit</span>,</span></span>
-<span class="r-in"><span>  target <span class="op">=</span> <span class="st">"outcome1"</span>,</span></span>
+<span class="r-in"><span>  target <span class="op">=</span> <span class="st">"death"</span>,</span></span>
 <span class="r-in"><span>  z_name <span class="op">=</span> <span class="st">"z"</span>,</span></span>
 <span class="r-in"><span>  alpha_grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">curve</span><span class="op">$</span><span class="va">estimate</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    alpha exposure.est exposure.se target.est  target.se</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    alpha exposure_est exposure_se target_est  target_se</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;num&gt;        &lt;num&gt;       &lt;num&gt;      &lt;num&gt;      &lt;num&gt;</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 1:   0.0   0.00000000  0.00000000  0.2820265 0.03975707</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 2:   0.5   0.08791201  0.01791587  0.3040549 0.03896630</span>

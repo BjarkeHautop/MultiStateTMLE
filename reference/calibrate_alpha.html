@@ -21,7 +21,8 @@ standard error of the latter accounts for the estimation of alpha."></head><body
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/MultiStateTMLE.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -57,7 +58,6 @@ standard error of the latter accounts for the estimation of <code>alpha</code>.<
 <span>  delta <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  rho_1a <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  a <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  output_eic <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  cores <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  <span class="va">...</span></span>
@@ -93,11 +93,6 @@ see Description. Give exactly one.</p></dd>
 Must be one of the values of <code>a</code> given to <code><a href="fit_initial.html">fit_initial()</a></code>.</p></dd>
 
 
-<dt id="arg-output-eic">output_eic<a class="anchor" aria-label="anchor" href="#arg-output-eic"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, include the influence curves in the
-output.</p></dd>
-
-
 <dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
 <dd><p>Positive integer. Number of cores used by
 <code><a href="https://rdrr.io/r/parallel/mclapply.html" class="external-link">parallel::mclapply()</a></code> for the per-individual computations.</p></dd>
@@ -113,18 +108,17 @@ output.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list with elements:</p><ul><li><p><code>estimate</code>: a named vector with the calibrated <code>alpha.est</code> and its
-<code>alpha.se</code>, the risk of <code>target</code> (<code>target.est</code>) with standard error
-<code>target.se</code> (accounting for the estimation of alpha) and
-<code>target.se.crude</code> (treating alpha as known), and the calibration
-target <code>theta</code> with standard error <code>theta.se</code>.</p></li>
+    <p>A list with elements:</p><ul><li><p><code>estimate</code>: a named vector with the calibrated <code>alpha_est</code> and its
+<code>alpha_se</code>, the risk of <code>target</code> (<code>target_est</code>) with standard error
+<code>target_se</code> (accounting for the estimation of alpha) and
+<code>target_se_crude</code> (treating alpha as known), and the calibration
+target <code>theta</code> with standard error <code>theta_se</code>.</p></li>
 <li><p><code>checks</code>: diagnostics of the alpha search and derivative estimates.</p></li>
-<li><p><code>alpha.eic</code>, <code>target.eic</code> and <code>eic</code> (if <code>output_eic = TRUE</code>): the
-influence curves of the calibrated alpha, of the risk of <code>target</code>
+<li><p><code>alpha_eic</code>, <code>target_eic</code> and <code>eic</code>: the influence curves of the calibrated alpha, of the risk of <code>target</code>
 treating alpha as known, and of the risk of <code>target</code>.</p></li>
-</ul><p>With several targets, the <code>target.*</code> entries of <code>estimate</code> and <code>checks</code>
-are suffixed by the target name (e.g. <code>target.est.outcome1</code>), and
-<code>target.eic</code> and <code>eic</code> are lists named by target.</p>
+</ul><p>With several targets, the per-target entries of <code>estimate</code> and <code>checks</code>
+are suffixed by the target name (e.g. <code>target_est_death</code>), and
+<code>target_eic</code> and <code>eic</code> are lists named by target.</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -143,22 +137,23 @@ intervention.</p></li>
 <span class="r-in"><span>  <span class="va">illness_death</span>,</span></span>
 <span class="r-in"><span>  fit_types <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    z <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>      model <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 2) ~ L0"</span>,</span></span>
+<span class="r-in"><span>      delta <span class="op">=</span> <span class="fl">2</span>,</span></span>
+<span class="r-in"><span>      model <span class="op">=</span> <span class="op">~</span> <span class="va">L0</span>,</span></span>
 <span class="r-in"><span>      at_risk <span class="op">=</span> <span class="kw">function</span><span class="op">(</span><span class="va">dt</span><span class="op">)</span> <span class="va">dt</span><span class="op">[[</span><span class="st">"z"</span><span class="op">]</span><span class="op">]</span> <span class="op">==</span> <span class="fl">0</span></span></span>
 <span class="r-in"><span>    <span class="op">)</span>,</span></span>
-<span class="r-in"><span>    outcome1 <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 1) ~ L0 + z"</span>,</span></span>
-<span class="r-in"><span>    censoring <span class="op">=</span> <span class="st">"Surv(tstart, tstop, delta == 0) ~ L0"</span></span></span>
+<span class="r-in"><span>    death <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>delta <span class="op">=</span> <span class="fl">1</span>, model <span class="op">=</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">z</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    censoring <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>delta <span class="op">=</span> <span class="fl">0</span>, model <span class="op">=</span> <span class="op">~</span> <span class="va">L0</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  tau <span class="op">=</span> <span class="fl">1</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Risk of outcome1 under the intervention on z that brings the risk of z</span></span></span>
+<span class="r-in"><span><span class="co"># Risk of death under the intervention on z that brings the risk of z</span></span></span>
 <span class="r-in"><span><span class="co"># down to 80% of its observed value.</span></span></span>
-<span class="r-in"><span><span class="va">cal</span> <span class="op">&lt;-</span> <span class="fu">calibrate_alpha</span><span class="op">(</span><span class="va">fit</span>, target <span class="op">=</span> <span class="st">"outcome1"</span>, z_name <span class="op">=</span> <span class="st">"z"</span>, rho <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">cal</span> <span class="op">&lt;-</span> <span class="fu">calibrate_alpha</span><span class="op">(</span><span class="va">fit</span>, target <span class="op">=</span> <span class="st">"death"</span>, z_name <span class="op">=</span> <span class="st">"z"</span>, rho <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">cal</span><span class="op">$</span><span class="va">estimate</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       alpha.est        alpha.se      target.est       target.se target.se.crude </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       alpha_est        alpha_se      target_est       target_se target_se_crude </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      0.79272380      0.00995552      0.31992034      0.03864198      0.03866085 </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           theta        theta.se </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           theta        theta_se </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>      0.12713026      0.02505712 </span>
 </code></pre></div>
     </div>

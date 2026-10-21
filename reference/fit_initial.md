@@ -41,12 +41,14 @@ fit_initial(
 
 - fit_types:
 
-  A named list with one entry per event process, each either a model
-  formula string or a list with elements:
+  A named list with one entry per event process, named by the process.
+  Each entry is a list with elements:
 
-  - `model`: a formula string of the form
-    `"Surv(tstart, tstop, delta == k) ~ covariates"`, where `k` is the
-    process's `delta` code. Other processes can be used as covariates by
+  - `delta`: the process's integer code in the `delta` column of `data`.
+    Exactly one process must have code `0` (censoring).
+
+  - `model`: a one-sided formula of the covariates of its hazard model,
+    such as `~ L0 + z`. Other processes can be used as covariates by
     name, in which case their counting process (lagged by one event) is
     used.
 
@@ -57,8 +59,6 @@ fit_initial(
     `function(dt) dt[["z"]] == 0` for a process that can jump at most
     once).
 
-  Exactly one process must have `delta` code `0` (censoring).
-
 - tau:
 
   Positive number. Follow-up horizon; the target parameters are
@@ -66,8 +66,8 @@ fit_initial(
 
 - treatment_model:
 
-  Optional model for the baseline treatment `A0`, either a formula
-  string such as `"A0 ~ L0"` or a list with elements `model` and `fit`
+  Optional model for the baseline treatment, either a formula such as
+  `A0 ~ L0` or a list with elements `model` (such a formula) and `fit`
   (only `"glm"` is supported). Required when `a` is given.
 
 - a:
@@ -120,10 +120,10 @@ fit_initial(
 
 ## Value
 
-A list containing, among others, `tmp.long` (the expanded data with
-fitted hazards and clever weights), `depend.matrix` (the product state
-space), `process.names`, `process.types`, `process.deltas`,
-`cens.process.id` and `at.risks`.
+A list containing, among others, `tmp_long` (the expanded data with
+fitted hazards and clever weights), `depend_matrix` (the product state
+space), `process_names`, `process_types`, `process_deltas`,
+`cens_process_id` and `at_risks`.
 
 ## Details
 
@@ -141,8 +141,8 @@ parentheses.
 ## Examples
 
 ``` r
-# Illness-death data: z is an illness that can occur once, outcome1 is
-# death, and delta = 0 is censoring.
+# Illness-death data: z is an illness that can occur once, death is
+# terminal, and delta = 0 is censoring.
 head(illness_death)
 #>   id      time delta         L0
 #> 1  1 1.0836890     1  0.2724785
@@ -156,19 +156,20 @@ fit <- fit_initial(
   illness_death,
   fit_types = list(
     z = list(
-      model = "Surv(tstart, tstop, delta == 2) ~ L0",
+      delta = 2,
+      model = ~ L0,
       at_risk = function(dt) dt[["z"]] == 0
     ),
-    outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
-    censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
+    death = list(delta = 1, model = ~ L0 + z),
+    censoring = list(delta = 0, model = ~ L0)
   ),
   tau = 1
 )
-fit$process.types
+fit$process_types
 #> $z
-#> [1] "one.jump"
+#> [1] "one_jump"
 #> 
-#> $outcome1
+#> $death
 #> [1] "terminal"
 #> 
 #> $censoring

@@ -20,7 +20,6 @@ calibration_curve(
   target_by_state = FALSE,
   block_size_z = NULL,
   block_size_target = NULL,
-  output_eic = FALSE,
   cores = 1,
   verbose = FALSE,
   ...
@@ -70,10 +69,6 @@ calibration_curve(
   risk; see `years_lost` in
   [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
-- output_eic:
-
-  Logical. If `TRUE`, include the influence curves in the output.
-
 - cores:
 
   Positive integer. Number of cores used by
@@ -94,15 +89,14 @@ calibration_curve(
 A list with elements:
 
 - `estimate`: a `data.table` with one row per value of `alpha_grid` and
-  columns `alpha`, `exposure.est`, `exposure.se`, `target.est` and
-  `target.se` (suffixed by the target name when there are several
-  targets).
+  columns `alpha`, `exposure_est`, `exposure_se`, `target_est` and
+  `target_se` (suffixed by `_<target>` when there are several targets).
 
 - `checks`: per value of `alpha_grid`, the estimated derivatives of the
   exposure and target estimates with respect to `alpha`.
 
-- `eics`: per value of `alpha_grid`, the influence curves if
-  `output_eic = TRUE`, otherwise `NULL`.
+- `eics`: per value of `alpha_grid`, the influence curves `alpha_eic`,
+  `calibration_eic`, `target_eic` and `eic`.
 
 ## Examples
 
@@ -111,23 +105,24 @@ fit <- fit_initial(
   illness_death,
   fit_types = list(
     z = list(
-      model = "Surv(tstart, tstop, delta == 2) ~ L0",
+      delta = 2,
+      model = ~ L0,
       at_risk = function(dt) dt[["z"]] == 0
     ),
-    outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
-    censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
+    death = list(delta = 1, model = ~ L0 + z),
+    censoring = list(delta = 0, model = ~ L0)
   ),
   tau = 1
 )
 
 curve <- calibration_curve(
   fit,
-  target = "outcome1",
+  target = "death",
   z_name = "z",
   alpha_grid = c(0, 0.5, 1)
 )
 curve$estimate
-#>    alpha exposure.est exposure.se target.est  target.se
+#>    alpha exposure_est exposure_se target_est  target_se
 #>    <num>        <num>       <num>      <num>      <num>
 #> 1:   0.0   0.00000000  0.00000000  0.2820265 0.03975707
 #> 2:   0.5   0.08791201  0.01791587  0.3040549 0.03896630

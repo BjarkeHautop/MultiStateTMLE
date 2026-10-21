@@ -26,10 +26,6 @@ tmle_alpha(
   max_iter = 10,
   min_iter = 0,
   truncate_weights = 0,
-  output_convergence = FALSE,
-  output_eic = FALSE,
-  output_weights = NULL,
-  output_a_weights = NULL,
   cores = 1,
   verbose = FALSE
 )
@@ -61,7 +57,7 @@ tmle_alpha(
 
   Experimental. Optional named list of functions, one per process,
   giving a time-varying intervention on that process's intensity. Each
-  function's arguments name the columns of `initial_fit$tmp.long` it
+  function's arguments name the columns of `initial_fit$tmp_long` it
   depends on. Supersedes `alpha` and `z_name`.
 
 - a:
@@ -84,7 +80,7 @@ tmle_alpha(
 
 - target_only_in_state:
 
-  Optional function of the state space (`initial_fit$depend.matrix`)
+  Optional function of the state space (`initial_fit$depend_matrix`)
   returning a logical vector, marking the states in which `target`
   events count.
 
@@ -117,25 +113,6 @@ tmle_alpha(
   Non-negative number. If positive, the clever weights of the
   intervention are truncated at this value.
 
-- output_convergence:
-
-  Logical. If `TRUE`, include convergence diagnostics in the output.
-
-- output_eic:
-
-  Logical. If `TRUE`, include the efficient influence curve in the
-  output.
-
-- output_weights:
-
-  Optional numeric vector of probabilities at which to report quantiles
-  of the per-individual maximal intervention and censoring weights.
-
-- output_a_weights:
-
-  Optional numeric vector of probabilities at which to report quantiles
-  of the per-individual maximal treatment weights.
-
 - cores:
 
   Positive integer. Number of cores used by
@@ -148,11 +125,28 @@ tmle_alpha(
 
 ## Value
 
-A list with element `estimate`, a named vector with the estimate
-(`tmle.est`, or `one.step.est` if `one_step = TRUE`), its standard error
-`se`, and the initial plug-in estimate `g.est`. Depending on the
-arguments, the list also contains `convergence`, `weights`,
-`cens.weights`, `a.weights` and `eic`.
+A list with elements:
+
+- `estimate`: a named vector with the estimate (`tmle_est`, or
+  `one_step_est` if `one_step = TRUE`), its standard error `se`, and the
+  initial plug-in estimate `g_est`.
+
+- `eic`: the efficient influence curve, one value per individual.
+
+- `convergence`: a named vector with the number of iterations `iter`,
+  the absolute mean of the efficient influence curve `eic_solved_at`,
+  and whether the iterations `converged`. A warning is given if they did
+  not.
+
+- `weights`: a matrix with the quantiles (columns `q50`, `q90`, `q99`
+  and `q100`) over individuals of each individual's maximal
+  `intervention`, `censoring` and `treatment` weight, and of their
+  product `total`, the weight entering the targeting step (rows), as a
+  positivity diagnostic. The intervention weights are those after
+  truncation, and the treatment weights are 1 when `a` is not given.
+
+- `n_truncated`: the number of individuals whose initial intervention
+  weight was truncated (0 if `truncate_weights = 0`).
 
 ## Details
 
@@ -168,18 +162,19 @@ fit <- fit_initial(
   illness_death,
   fit_types = list(
     z = list(
-      model = "Surv(tstart, tstop, delta == 2) ~ L0",
+      delta = 2,
+      model = ~ L0,
       at_risk = function(dt) dt[["z"]] == 0
     ),
-    outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
-    censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
+    death = list(delta = 1, model = ~ L0 + z),
+    censoring = list(delta = 0, model = ~ L0)
   ),
   tau = 1
 )
 
-# Risk of outcome1 by tau = 1 if the intensity of z were halved.
-est <- tmle_alpha(fit, target = "outcome1", alpha = 0.5, z_name = "z")
+# Risk of death by tau = 1 if the intensity of z were halved.
+est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
 est$estimate
-#>   tmle.est         se      g.est 
+#>   tmle_est         se      g_est 
 #> 0.30405495 0.03853505 0.31239982 
 ```
