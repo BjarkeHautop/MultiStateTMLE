@@ -28,6 +28,11 @@ test_that("calibrated_contrasts() decomposes total into mediated + calibrated", 
     calibrated_fit = calibrated.fit
   )
 
+  expect_named(
+    out,
+    c("target", "contrast", "estimate", "se", "lower", "upper")
+  )
+  expect_true(all(is.na(out$target)))
   expect_equal(out$contrast, c("total", "mediated", "calibrated"))
   expect_equal(out$estimate[out$contrast == "total"], 0.7 - 0.3)
   expect_equal(out$estimate[out$contrast == "mediated"], 0.7 - 0.5)
@@ -161,4 +166,15 @@ test_that("calibrated_contrasts() supports selecting a named target", {
   expect_equal(out$estimate[out$contrast == "mediated"], 1 - 0.4)
   expect_equal(out$estimate[out$contrast == "calibrated"], 0.4 - 0)
   expect_true(all(out$target == "arm1"))
+})
+
+test_that("calibrated_contrasts() accepts one-step fits", {
+  eic <- c(0.1, -0.1)
+  out <- calibrated_contrasts(
+    list(estimate = c(one_step_est = 0.7), eic = eic),
+    list(estimate = c(one_step_est = 0.3), eic = eic),
+    list(estimate = c(target_est = 0.5), eic = eic)
+  )
+
+  expect_equal(out$estimate, c(0.7 - 0.3, 0.7 - 0.5, 0.5 - 0.3))
 })

@@ -42,6 +42,20 @@ test_that("fit_initial() accepts model strings with or without whitespace", {
   )
 })
 
+test_that("fit_initial() accepts transformed covariates in models", {
+  transformed <- illness.death.fit.types
+  transformed$death <- "Surv(tstart, tstop, delta == 1) ~ log(exp(L0)) + z"
+
+  expect_equal(
+    fit_initial(illness_death, fit_types = transformed, tau = 1)$tmp_long,
+    fit_initial(
+      illness_death,
+      fit_types = illness.death.fit.types,
+      tau = 1
+    )$tmp_long
+  )
+})
+
 test_that("fit_initial() validates its arguments", {
   ft <- illness.death.fit.types
 

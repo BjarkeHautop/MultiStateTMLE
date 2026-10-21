@@ -182,9 +182,9 @@ fit_initial <- function(
   varnames <- unique(c(
     unlist(lapply(fit_types, function(fit.type) {
       if (length(fit.type[["model"]]) > 0) {
-        return(strsplit(strsplit(fit.type[["model"]], "~")[[1]][2], "\\+|\\*")[[
-          1
-        ]])
+        # The variables, not the terms, so that e.g. log(L0) gives L0.
+        rhs <- strsplit(fit.type[["model"]], "~")[[1]][2]
+        return(all.vars(as.formula(paste("~", rhs))))
       }
     })),
     #unlist(as.character(lapply(fit_types[at.risk.ids], function(fit.type) {

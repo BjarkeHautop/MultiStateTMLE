@@ -27,7 +27,8 @@ intervals.}
 }
 \value{
 A \code{data.table} with one row per contrast (\code{total}, \code{mediated}
-and \code{calibrated}) and columns \code{estimate}, \code{se}, \code{lower} and \code{upper}.
+and \code{calibrated}) and columns \code{target} (\code{NA} if \code{target} is \code{NULL}),
+\code{contrast}, \code{estimate}, \code{se}, \code{lower} and \code{upper}.
 The attributes \code{decomposition_error} and \code{eic_decomposition_error} give
 how far the estimates and influence curves are from satisfying
 total = mediated + calibrated, which should be zero up to numerical

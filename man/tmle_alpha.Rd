@@ -97,8 +97,8 @@ and \code{q100}) over individuals of each individual's maximal
 product \code{total}, the weight entering the targeting step (rows), as a
 positivity diagnostic. The intervention weights are those after
 truncation, and the treatment weights are 1 when \code{a} is not given.
-\item \code{n_truncated}: the number of individuals whose intervention weight
-was truncated (0 if \code{truncate_weights = 0}).
+\item \code{n_truncated}: the number of individuals whose initial intervention
+weight was truncated (0 if \code{truncate_weights = 0}).
 }
 }
 \description{

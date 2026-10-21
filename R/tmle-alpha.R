@@ -64,8 +64,8 @@
 #'     product `total`, the weight entering the targeting step (rows), as a
 #'     positivity diagnostic. The intervention weights are those after
 #'     truncation, and the treatment weights are 1 when `a` is not given.
-#'   * `n_truncated`: the number of individuals whose intervention weight
-#'     was truncated (0 if `truncate_weights = 0`).
+#'   * `n_truncated`: the number of individuals whose initial intervention
+#'     weight was truncated (0 if `truncate_weights = 0`).
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -220,25 +220,29 @@ tmle_alpha <- function(
   #--------------------------------
   #-- compute clever weights:
 
-  n.truncated <- 0
-  if (z.present) {
+  # Recompute the intervention's clever weights from the current hazards,
+  # truncated at truncate_weights. Returns the number of individuals whose
+  # weight was truncated.
+  update_weights <- function() {
     if (length(alpha_list) > 0) {
       .update_alpha_list_weights(tmp.long, alpha_list)
     } else {
       .update_alpha_weights(tmp.long, alpha, z.name)
     }
-    if (truncate_weights > 0) {
-      n.truncated <- tmp.long[
-        time <= final.time & clever.weight.alpha > truncate_weights,
-        length(unique(id))
-      ]
-      tmp.long[
-        time <= final.time & clever.weight.alpha > truncate_weights,
-        clever.weight.alpha := truncate_weights
-      ]
+    if (truncate_weights == 0) {
+      return(0)
     }
+    truncated <- tmp.long[["time"]] <= tmp.long[["final.time"]] &
+      tmp.long[["clever.weight.alpha"]] > truncate_weights
+    tmp.long[truncated, clever.weight.alpha := truncate_weights]
+    length(unique(tmp.long[["id"]][truncated]))
+  }
+
+  if (z.present) {
+    n.truncated <- update_weights()
   } else {
     tmp.long[, clever.weight.alpha := 1]
+    n.truncated <- 0
   }
 
   # Quantiles over individuals of each individual's maximal weight up to
@@ -458,10 +462,8 @@ tmle_alpha <- function(
       }
     }
 
-    if (length(alpha_list) > 0) {
-      .update_alpha_list_weights(tmp.long, alpha_list)
-    } else if (z.present) {
-      .update_alpha_weights(tmp.long, alpha, z.name)
+    if (z.present) {
+      update_weights()
     }
 
     names.P <- names(tmp.long)[substr(names(tmp.long), 1, 2) == "P."]

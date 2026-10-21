@@ -17,7 +17,8 @@
 #'   intervals.
 #'
 #' @return A `data.table` with one row per contrast (`total`, `mediated`
-#'   and `calibrated`) and columns `estimate`, `se`, `lower` and `upper`.
+#'   and `calibrated`) and columns `target` (`NA` if `target` is `NULL`),
+#'   `contrast`, `estimate`, `se`, `lower` and `upper`.
 #'   The attributes `decomposition_error` and `eic_decomposition_error` give
 #'   how far the estimates and influence curves are from satisfying
 #'   total = mediated + calibrated, which should be zero up to numerical
@@ -44,11 +45,9 @@ calibrated_contrasts <- function(
   checkmate::assert_string(target, null.ok = TRUE)
   checkmate::assert_number(conf_level, lower = 0, upper = 1)
 
-  treatment.est <-
-    treatment_fit$estimate[["tmle_est"]]
+  treatment.est <- .point_estimate(treatment_fit)
 
-  placebo.est <-
-    placebo_fit$estimate[["tmle_est"]]
+  placebo.est <- .point_estimate(placebo_fit)
 
   calibrated.est <-
     calibrated_fit$estimate[[ifelse(
@@ -118,7 +117,11 @@ calibrated_contrasts <- function(
   )
 
   out <- rbind(total, mediated, calibrated)
-  out <- data.table(target = target, contrast = rownames(out), out)
+  out <- data.table(
+    target = if (length(target) > 0) target else NA_character_,
+    contrast = rownames(out),
+    out
+  )
 
   decomposition.error <-
     total[["estimate"]] -
