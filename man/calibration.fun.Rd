@@ -25,6 +25,9 @@ calibration.fun(
 \arguments{
 \item{initial.fit}{See \code{initial_fit} in \code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
 
+\item{output.eic}{Ignored; \code{\link[=calibrate_alpha]{calibrate_alpha()}} always returns the
+influence curves.}
+
 \item{tau, tau.z, browse}{Ignored; the horizon is that of \code{initial.fit}.}
 
 \item{use.cores}{See \code{cores} in \code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
@@ -32,8 +35,7 @@ calibration.fun(
 \item{target, a, theta, rho, delta, verbose}{See \code{\link[=calibrate_alpha]{calibrate_alpha()}}. \code{theta}
 is ignored if \code{rho}, \code{delta} or \code{rho.1a} is given.}
 
-\item{z.name, rho.1a, output.eic}{See the snake_case equivalents in
-\code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
+\item{z.name, rho.1a}{See the snake_case equivalents in \code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
 
 \item{...}{Passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}, with dotted argument names
 translated to their snake_case equivalents.}

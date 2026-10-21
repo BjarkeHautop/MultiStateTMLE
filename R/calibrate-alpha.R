@@ -19,8 +19,6 @@
 #'   estimated under the calibrated intervention.
 #' @param theta,rho,delta,rho_1a Numbers specifying the calibration target,
 #'   see Description. Give exactly one.
-#' @param output_eic Logical. If `TRUE`, include the influence curves in the
-#'   output.
 #' @param ... Further arguments passed on to [tmle_alpha()].
 #'
 #' @return A list with elements:
@@ -30,8 +28,7 @@
 #'     `target_se_crude` (treating alpha as known), and the calibration
 #'     target `theta` with standard error `theta_se`.
 #'   * `checks`: diagnostics of the alpha search and derivative estimates.
-#'   * `alpha_eic`, `target_eic` and `eic` (if `output_eic = TRUE`): the
-#'     influence curves of the calibrated alpha, of the risk of `target`
+#'   * `alpha_eic`, `target_eic` and `eic`: the influence curves of the calibrated alpha, of the risk of `target`
 #'     treating alpha as known, and of the risk of `target`.
 #'
 #'   With several targets, the per-target entries of `estimate` and `checks`
@@ -66,7 +63,6 @@ calibrate_alpha <- function(
   delta = NULL,
   rho_1a = NULL,
   a = NULL,
-  output_eic = FALSE,
   cores = 1,
   verbose = FALSE,
   ...
@@ -86,7 +82,6 @@ calibrate_alpha <- function(
   if (!is.null(rho_1a) && is.null(a)) {
     stop("rho_1a requires a baseline treatment a.")
   }
-  checkmate::assert_flag(output_eic)
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
@@ -100,7 +95,6 @@ calibrate_alpha <- function(
       alpha = alpha,
       z_name = z_name,
       a = a,
-      output_eic = TRUE,
       cores = cores,
       verbose = verbose,
       ...
@@ -229,17 +223,15 @@ calibrate_alpha <- function(
     )
   )
 
-  if (output_eic) {
-    target.eic <- lapply(out.target, function(x) x$target.est[["eic"]])
-    eic <- lapply(out.target, function(x) x$eic)
-    if (length(target) == 1) {
-      target.eic <- target.eic[[1]]
-      eic <- eic[[1]]
-    }
-    out$alpha_eic <- alpha.eic
-    out$target_eic <- target.eic
-    out$eic <- eic
+  target.eic <- lapply(out.target, function(x) x$target.est[["eic"]])
+  eic <- lapply(out.target, function(x) x$eic)
+  if (length(target) == 1) {
+    target.eic <- target.eic[[1]]
+    eic <- eic[[1]]
   }
+  out$alpha_eic <- alpha.eic
+  out$target_eic <- target.eic
+  out$eic <- eic
 
   out
 }

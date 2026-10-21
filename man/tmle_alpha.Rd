@@ -20,10 +20,6 @@ tmle_alpha(
   max_iter = 10,
   min_iter = 0,
   truncate_weights = 0,
-  output_convergence = FALSE,
-  output_eic = FALSE,
-  output_weights = NULL,
-  output_a_weights = NULL,
   cores = 1,
   verbose = FALSE
 )
@@ -79,30 +75,31 @@ before checking convergence.}
 \item{truncate_weights}{Non-negative number. If positive, the clever
 weights of the intervention are truncated at this value.}
 
-\item{output_convergence}{Logical. If \code{TRUE}, include convergence
-diagnostics in the output.}
-
-\item{output_eic}{Logical. If \code{TRUE}, include the efficient influence
-curve in the output.}
-
-\item{output_weights}{Optional numeric vector of probabilities at which to
-report quantiles of the per-individual maximal intervention and
-censoring weights.}
-
-\item{output_a_weights}{Optional numeric vector of probabilities at which
-to report quantiles of the per-individual maximal treatment weights.}
-
 \item{cores}{Positive integer. Number of cores used by
 \code{\link[parallel:mclapply]{parallel::mclapply()}} for the per-individual computations.}
 
 \item{verbose}{Logical. If \code{TRUE}, print progress.}
 }
 \value{
-A list with element \code{estimate}, a named vector with the estimate
-(\code{tmle_est}, or \code{one_step_est} if \code{one_step = TRUE}), its standard
-error \code{se}, and the initial plug-in estimate \code{g_est}. Depending on the
-arguments, the list also contains \code{convergence}, \code{weights},
-\code{cens_weights}, \code{a_weights} and \code{eic}.
+A list with elements:
+\itemize{
+\item \code{estimate}: a named vector with the estimate (\code{tmle_est}, or
+\code{one_step_est} if \code{one_step = TRUE}), its standard error \code{se}, and the
+initial plug-in estimate \code{g_est}.
+\item \code{eic}: the efficient influence curve, one value per individual.
+\item \code{convergence}: a named vector with the number of iterations \code{iter},
+the absolute mean of the efficient influence curve \code{eic_solved_at},
+and whether the iterations \code{converged}. A warning is given if they
+did not.
+\item \code{weights}: a matrix with the quantiles (columns \code{q50}, \code{q90}, \code{q99}
+and \code{q100}) over individuals of each individual's maximal
+\code{intervention}, \code{censoring} and \code{treatment} weight, and of their
+product \code{total}, the weight entering the targeting step (rows), as a
+positivity diagnostic. The intervention weights are those after
+truncation, and the treatment weights are 1 when \code{a} is not given.
+\item \code{n_truncated}: the number of individuals whose intervention weight
+was truncated (0 if \code{truncate_weights = 0}).
+}
 }
 \description{
 Estimates a target parameter under a stochastic intensity intervention

@@ -14,7 +14,6 @@ calibration_curve(
   target_by_state = FALSE,
   block_size_z = NULL,
   block_size_target = NULL,
-  output_eic = FALSE,
   cores = 1,
   verbose = FALSE,
   ...
@@ -46,9 +45,6 @@ covariates in the targeting step.}
 given, the expected time lost is estimated for \code{z_name} and \code{target},
 respectively, instead of the risk; see \code{years_lost} in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
-\item{output_eic}{Logical. If \code{TRUE}, include the influence curves in the
-output.}
-
 \item{cores}{Positive integer. Number of cores used by
 \code{\link[parallel:mclapply]{parallel::mclapply()}} for the per-individual computations.}
 
@@ -65,8 +61,8 @@ columns \code{alpha}, \code{exposure_est}, \code{exposure_se}, \code{target_est}
 targets).
 \item \code{checks}: per value of \code{alpha_grid}, the estimated derivatives of the
 exposure and target estimates with respect to \code{alpha}.
-\item \code{eics}: per value of \code{alpha_grid}, the influence curves if
-\code{output_eic = TRUE}, otherwise \code{NULL}.
+\item \code{eics}: per value of \code{alpha_grid}, the influence curves \code{alpha_eic},
+\code{calibration_eic}, \code{target_eic} and \code{eic}.
 }
 }
 \description{

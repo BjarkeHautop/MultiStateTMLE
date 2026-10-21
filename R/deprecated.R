@@ -209,13 +209,16 @@ prepare.initial <- function(
 #' @param initial.fit See `initial_fit` in [tmle_alpha()]. If `NULL`, it is
 #'   computed by `prepare.initial(tau = tau, a = a, verbose = verbose, ...)`.
 #' @param target,alpha,a,verbose See [tmle_alpha()].
-#' @param z.name,alpha.list,years.lost,target.only.in.state,target.by.state,conv.const,one.step,max.iter,min.iter,truncate.weights,output.convergence,output.eic,output.weights,output.a.weights
+#' @param z.name,alpha.list,years.lost,target.only.in.state,target.by.state,conv.const,one.step,max.iter,min.iter,truncate.weights
 #'   See the snake_case equivalents in [tmle_alpha()].
 #' @param only.first See `only_first` in [tmle_alpha()]; `NULL` means
 #'   `FALSE`.
 #' @param use.cores See `cores` in [tmle_alpha()].
 #' @param tau Only used when `initial.fit` is `NULL`; the horizon is that of
 #'   `initial.fit`.
+#' @param output.convergence,output.eic,output.weights,output.a.weights
+#'   Ignored; [tmle_alpha()] always returns the convergence diagnostics,
+#'   influence curve and weight summaries.
 #' @param dt,browse,verbose.exponential Ignored.
 #' @param ... Passed on to `prepare.initial()` when `initial.fit` is `NULL`.
 #'
@@ -260,9 +263,6 @@ tmle.alpha.fun <- function(
       ...
     )
   }
-  if (is.logical(output.weights)) {
-    output.weights <- as.numeric(output.weights)
-  }
   tmle_alpha(
     initial_fit = initial.fit,
     target = target,
@@ -279,10 +279,6 @@ tmle.alpha.fun <- function(
     max_iter = max.iter,
     min_iter = min.iter,
     truncate_weights = truncate.weights,
-    output_convergence = output.convergence,
-    output_eic = output.eic,
-    output_weights = output.weights,
-    output_a_weights = output.a.weights,
     cores = use.cores,
     verbose = verbose
   )
@@ -296,8 +292,9 @@ tmle.alpha.fun <- function(
 #' @param initial.fit See `initial_fit` in [calibrate_alpha()].
 #' @param target,a,theta,rho,delta,verbose See [calibrate_alpha()]. `theta`
 #'   is ignored if `rho`, `delta` or `rho.1a` is given.
-#' @param z.name,rho.1a,output.eic See the snake_case equivalents in
-#'   [calibrate_alpha()].
+#' @param z.name,rho.1a See the snake_case equivalents in [calibrate_alpha()].
+#' @param output.eic Ignored; [calibrate_alpha()] always returns the
+#'   influence curves.
 #' @param use.cores See `cores` in [calibrate_alpha()].
 #' @param tau,tau.z,browse Ignored; the horizon is that of `initial.fit`.
 #' @param ... Passed on to [tmle_alpha()], with dotted argument names
@@ -339,7 +336,6 @@ calibration.fun <- function(
         delta = delta,
         rho_1a = rho.1a,
         a = a,
-        output_eic = output.eic,
         cores = use.cores,
         verbose = verbose
       ),
@@ -355,8 +351,10 @@ calibration.fun <- function(
 #'
 #' @param initial.fit See `initial_fit` in [calibration_curve()].
 #' @param target,a,verbose See [calibration_curve()].
-#' @param z.name,alpha.grid,min.iter,target.by.state,block.size.z,block.size.target,output.eic
+#' @param z.name,alpha.grid,min.iter,target.by.state,block.size.z,block.size.target
 #'   See the snake_case equivalents in [calibration_curve()].
+#' @param output.eic Ignored; [calibration_curve()] always returns the
+#'   influence curves.
 #' @param use.cores See `cores` in [calibration_curve()].
 #' @param tau,tau.z,browse Ignored; the horizon is that of `initial.fit`.
 #' @param ... Passed on to [tmle_alpha()], with dotted argument names
@@ -401,7 +399,6 @@ calibration.curve.fun <- function(
         target_by_state = target.by.state,
         block_size_z = block.size.z,
         block_size_target = block.size.target,
-        output_eic = output.eic,
         cores = use.cores,
         verbose = verbose
       ),
@@ -589,5 +586,15 @@ compute.Q.clever.per.id <- function(
   nms[nms == "use.cores"] <- "cores"
   nms <- gsub(".", "_", nms, fixed = TRUE)
   names(args) <- nms
-  args[!(nms %in% c("tau", "dt", "browse", "verbose_exponential"))]
+  dropped <- c(
+    "tau",
+    "dt",
+    "browse",
+    "verbose_exponential",
+    "output_convergence",
+    "output_eic",
+    "output_weights",
+    "output_a_weights"
+  )
+  args[!(nms %in% dropped)]
 }

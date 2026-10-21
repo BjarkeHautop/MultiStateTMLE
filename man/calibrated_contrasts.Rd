@@ -14,10 +14,10 @@ calibrated_contrasts(
 }
 \arguments{
 \item{treatment_fit, placebo_fit}{Fits for the treatment and placebo arms,
-as returned by \code{\link[=tmle_alpha]{tmle_alpha()}} with \code{output_eic = TRUE}.}
+as returned by \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{calibrated_fit}{Fit for the calibrated intervention, as returned by
-\code{\link[=calibrate_alpha]{calibrate_alpha()}} with \code{output_eic = TRUE}.}
+\code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
 
 \item{target}{Optional string. If \code{calibrated_fit} contains estimates for
 several targets, the name of the one to use.}

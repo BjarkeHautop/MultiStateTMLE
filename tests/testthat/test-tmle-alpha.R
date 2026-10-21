@@ -1,25 +1,32 @@
-test_that("tmle_alpha() returns the estimate and requested extras", {
+test_that("tmle_alpha() returns the estimate and diagnostics", {
   fit <- fit_initial(
     illness_death,
     fit_types = illness.death.fit.types,
     tau = 1
   )
 
-  est <- tmle_alpha(
-    fit,
-    target = "death",
-    alpha = 0.5,
-    output_eic = TRUE,
-    output_convergence = TRUE,
-    output_weights = c(0.5, 1)
-  )
+  est <- tmle_alpha(fit, target = "death", alpha = 0.5)
 
   expect_named(est$estimate, c("tmle_est", "se", "g_est"))
   expect_true(est$estimate[["tmle_est"]] > 0 && est$estimate[["tmle_est"]] < 1)
   expect_length(est$eic, length(unique(illness_death$id)))
   expect_named(est$convergence, c("iter", "eic_solved_at", "converged"))
-  expect_named(est$weights, c("q50", "q100"))
-  expect_named(est$cens_weights, c("q50", "q100"))
+  expect_equal(
+    dimnames(est$weights),
+    list(
+      c("intervention", "censoring", "treatment", "total"),
+      c("q50", "q90", "q99", "q100")
+    )
+  )
+  expect_true(all(est$weights >= 0))
+  # Without a baseline intervention, the treatment weights are 1.
+  expect_equal(unname(est$weights["treatment", ]), rep(1, 4))
+  expect_equal(est$n_truncated, 0)
+  # The maximum of a product is at most the product of the maxima.
+  expect_lte(
+    est$weights["total", "q100"],
+    prod(est$weights[c("intervention", "censoring"), "q100"]) + 1e-8
+  )
 
   one_step <- tmle_alpha(fit, target = "death", alpha = 0.5, one_step = TRUE)
   expect_named(one_step$estimate, c("one_step_est", "se", "g_est"))
@@ -81,12 +88,11 @@ test_that("tmle_alpha() truncates clever weights", {
     fixture.fit(30),
     target = "death",
     alpha = 3,
-    truncate_weights = 1.5,
-    output_weights = 0.5
+    truncate_weights = 1.5
   )
 
-  expect_lte(est$weights[["q50"]], 1.5 + 1e-8)
-  expect_true("n_truncated" %in% names(est$weights))
+  expect_lte(est$weights["intervention", "q100"], 1.5 + 1e-8)
+  expect_gt(est$n_truncated, 0)
 })
 
 test_that("tmle_alpha() estimates under a baseline intervention 'a'", {
@@ -98,8 +104,14 @@ test_that("tmle_alpha() estimates under a baseline intervention 'a'", {
     a = 0:1
   )
 
-  est <- tmle_alpha(fit, target = "death", a = 1, output_a_weights = 0.5)
-  expect_named(est$a_weights, "q50")
+  est <- tmle_alpha(fit, target = "death", a = 1)
+  # The treatment weights are 1 / P(A0 = 1 | L0) > 1 for the treated, and
+  # separate from the censoring weights.
+  expect_gt(est$weights["treatment", "q100"], 1)
+  expect_equal(
+    est$weights["censoring", ],
+    tmle_alpha(fit, target = "death", a = 0)$weights["censoring", ]
+  )
   expect_true(
     est$estimate[["tmle_est"]] >= 0 && est$estimate[["tmle_est"]] <= 1
   )

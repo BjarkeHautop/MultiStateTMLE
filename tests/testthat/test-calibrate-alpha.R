@@ -6,7 +6,7 @@ test_that("calibrate_alpha() hits the calibration target", {
   )
   n <- length(unique(illness_death$id))
 
-  cal <- calibrate_alpha(fit, target = "death", rho = 0.8, output_eic = TRUE)
+  cal <- calibrate_alpha(fit, target = "death", rho = 0.8)
 
   expect_named(
     cal$estimate,
@@ -65,12 +65,7 @@ test_that("calibrate_alpha() handles several targets", {
   fit <- fixture.fit(100)
 
   single <- calibrate_alpha(fit, target = "death", theta = 0.2)
-  both <- calibrate_alpha(
-    fit,
-    target = c("death", "z"),
-    theta = 0.2,
-    output_eic = TRUE
-  )
+  both <- calibrate_alpha(fit, target = c("death", "z"), theta = 0.2)
 
   expect_equal(
     both$estimate[["target_est_death"]],

@@ -8,9 +8,9 @@
 #' intervals based on the influence curves.
 #'
 #' @param treatment_fit,placebo_fit Fits for the treatment and placebo arms,
-#'   as returned by [tmle_alpha()] with `output_eic = TRUE`.
+#'   as returned by [tmle_alpha()].
 #' @param calibrated_fit Fit for the calibrated intervention, as returned by
-#'   [calibrate_alpha()] with `output_eic = TRUE`.
+#'   [calibrate_alpha()].
 #' @param target Optional string. If `calibrated_fit` contains estimates for
 #'   several targets, the name of the one to use.
 #' @param conf_level Number between 0 and 1. Confidence level of the

@@ -26,13 +26,16 @@ calibration.curve.fun(
 \arguments{
 \item{initial.fit}{See \code{initial_fit} in \code{\link[=calibration_curve]{calibration_curve()}}.}
 
+\item{output.eic}{Ignored; \code{\link[=calibration_curve]{calibration_curve()}} always returns the
+influence curves.}
+
 \item{tau, tau.z, browse}{Ignored; the horizon is that of \code{initial.fit}.}
 
 \item{use.cores}{See \code{cores} in \code{\link[=calibration_curve]{calibration_curve()}}.}
 
 \item{target, a, verbose}{See \code{\link[=calibration_curve]{calibration_curve()}}.}
 
-\item{z.name, alpha.grid, min.iter, target.by.state, block.size.z, block.size.target, output.eic}{See the snake_case equivalents in \code{\link[=calibration_curve]{calibration_curve()}}.}
+\item{z.name, alpha.grid, min.iter, target.by.state, block.size.z, block.size.target}{See the snake_case equivalents in \code{\link[=calibration_curve]{calibration_curve()}}.}
 
 \item{...}{Passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}, with dotted argument names
 translated to their snake_case equivalents.}

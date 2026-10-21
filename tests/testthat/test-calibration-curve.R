@@ -5,12 +5,7 @@ test_that("calibration_curve() returns one row per alpha", {
     tau = 1
   )
 
-  curve <- calibration_curve(
-    fit,
-    target = "death",
-    alpha_grid = c(0, 1),
-    output_eic = TRUE
-  )
+  curve <- calibration_curve(fit, target = "death", alpha_grid = c(0, 1))
 
   expect_equal(curve$estimate$alpha, c(0, 1))
   expect_named(

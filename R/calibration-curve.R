@@ -17,8 +17,6 @@
 #' @param block_size_z,block_size_target Optional positive integers. If
 #'   given, the expected time lost is estimated for `z_name` and `target`,
 #'   respectively, instead of the risk; see `years_lost` in [tmle_alpha()].
-#' @param output_eic Logical. If `TRUE`, include the influence curves in the
-#'   output.
 #' @param ... Further arguments passed on to [tmle_alpha()].
 #'
 #' @return A list with elements:
@@ -28,8 +26,8 @@
 #'     targets).
 #'   * `checks`: per value of `alpha_grid`, the estimated derivatives of the
 #'     exposure and target estimates with respect to `alpha`.
-#'   * `eics`: per value of `alpha_grid`, the influence curves if
-#'     `output_eic = TRUE`, otherwise `NULL`.
+#'   * `eics`: per value of `alpha_grid`, the influence curves `alpha_eic`,
+#'     `calibration_eic`, `target_eic` and `eic`.
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -63,7 +61,6 @@ calibration_curve <- function(
   target_by_state = FALSE,
   block_size_z = NULL,
   block_size_target = NULL,
-  output_eic = FALSE,
   cores = 1,
   verbose = FALSE,
   ...
@@ -83,7 +80,6 @@ calibration_curve <- function(
   checkmate::assert_flag(target_by_state)
   checkmate::assert_count(block_size_z, positive = TRUE, null.ok = TRUE)
   checkmate::assert_count(block_size_target, positive = TRUE, null.ok = TRUE)
-  checkmate::assert_flag(output_eic)
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
@@ -99,7 +95,6 @@ calibration_curve <- function(
       years_lost = block_size,
       min_iter = min_iter,
       target_by_state = target_by_state,
-      output_eic = TRUE,
       cores = cores,
       verbose = verbose,
       ...
@@ -190,10 +185,6 @@ calibration_curve <- function(
       )
     )
 
-    if (!output_eic) {
-      return(list(estimate = out.estimate, checks = out.checks))
-    }
-
     target.eic <- lapply(out.target, function(x) x[["target.est"]][["eic"]])
     eic <- lapply(out.target, function(x) {
       if (alpha > 0) {
@@ -225,12 +216,9 @@ calibration_curve <- function(
 
   checks.list <- lapply(alpha.out, function(x) x$checks)
 
-  eic.list <- NULL
-  if (output_eic) {
-    eic.list <- lapply(alpha.out, function(x) {
-      x[c("alpha_eic", "calibration_eic", "target_eic", "eic")]
-    })
-  }
+  eic.list <- lapply(alpha.out, function(x) {
+    x[c("alpha_eic", "calibration_eic", "target_eic", "eic")]
+  })
 
   list(estimate = estimate.table, checks = checks.list, eics = eic.list)
 }

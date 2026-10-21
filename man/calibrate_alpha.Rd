@@ -13,7 +13,6 @@ calibrate_alpha(
   delta = NULL,
   rho_1a = NULL,
   a = NULL,
-  output_eic = FALSE,
   cores = 1,
   verbose = FALSE,
   ...
@@ -35,9 +34,6 @@ see Description. Give exactly one.}
 \item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on.
 Must be one of the values of \code{a} given to \code{\link[=fit_initial]{fit_initial()}}.}
 
-\item{output_eic}{Logical. If \code{TRUE}, include the influence curves in the
-output.}
-
 \item{cores}{Positive integer. Number of cores used by
 \code{\link[parallel:mclapply]{parallel::mclapply()}} for the per-individual computations.}
 
@@ -54,8 +50,7 @@ A list with elements:
 \code{target_se_crude} (treating alpha as known), and the calibration
 target \code{theta} with standard error \code{theta_se}.
 \item \code{checks}: diagnostics of the alpha search and derivative estimates.
-\item \code{alpha_eic}, \code{target_eic} and \code{eic} (if \code{output_eic = TRUE}): the
-influence curves of the calibrated alpha, of the risk of \code{target}
+\item \code{alpha_eic}, \code{target_eic} and \code{eic}: the influence curves of the calibrated alpha, of the risk of \code{target}
 treating alpha as known, and of the risk of \code{target}.
 }
 

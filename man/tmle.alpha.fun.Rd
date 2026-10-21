@@ -39,7 +39,7 @@ tmle.alpha.fun(
 \item{tau}{Only used when \code{initial.fit} is \code{NULL}; the horizon is that of
 \code{initial.fit}.}
 
-\item{z.name, alpha.list, years.lost, target.only.in.state, target.by.state, conv.const, one.step, max.iter, min.iter, truncate.weights, output.convergence, output.eic, output.weights, output.a.weights}{See the snake_case equivalents in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+\item{z.name, alpha.list, years.lost, target.only.in.state, target.by.state, conv.const, one.step, max.iter, min.iter, truncate.weights}{See the snake_case equivalents in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{initial.fit}{See \code{initial_fit} in \code{\link[=tmle_alpha]{tmle_alpha()}}. If \code{NULL}, it is
 computed by \code{prepare.initial(tau = tau, a = a, verbose = verbose, ...)}.}
@@ -50,6 +50,9 @@ computed by \code{prepare.initial(tau = tau, a = a, verbose = verbose, ...)}.}
 \code{FALSE}.}
 
 \item{use.cores}{See \code{cores} in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+
+\item{output.convergence, output.eic, output.weights, output.a.weights}{Ignored; \code{\link[=tmle_alpha]{tmle_alpha()}} always returns the convergence diagnostics,
+influence curve and weight summaries.}
 
 \item{...}{Passed on to \code{prepare.initial()} when \code{initial.fit} is \code{NULL}.}
 }

@@ -45,24 +45,27 @@
 #'   before checking convergence.
 #' @param truncate_weights Non-negative number. If positive, the clever
 #'   weights of the intervention are truncated at this value.
-#' @param output_convergence Logical. If `TRUE`, include convergence
-#'   diagnostics in the output.
-#' @param output_eic Logical. If `TRUE`, include the efficient influence
-#'   curve in the output.
-#' @param output_weights Optional numeric vector of probabilities at which to
-#'   report quantiles of the per-individual maximal intervention and
-#'   censoring weights.
-#' @param output_a_weights Optional numeric vector of probabilities at which
-#'   to report quantiles of the per-individual maximal treatment weights.
 #' @param cores Positive integer. Number of cores used by
 #'   [parallel::mclapply()] for the per-individual computations.
 #' @param verbose Logical. If `TRUE`, print progress.
 #'
-#' @return A list with element `estimate`, a named vector with the estimate
-#'   (`tmle_est`, or `one_step_est` if `one_step = TRUE`), its standard
-#'   error `se`, and the initial plug-in estimate `g_est`. Depending on the
-#'   arguments, the list also contains `convergence`, `weights`,
-#'   `cens_weights`, `a_weights` and `eic`.
+#' @return A list with elements:
+#'   * `estimate`: a named vector with the estimate (`tmle_est`, or
+#'     `one_step_est` if `one_step = TRUE`), its standard error `se`, and the
+#'     initial plug-in estimate `g_est`.
+#'   * `eic`: the efficient influence curve, one value per individual.
+#'   * `convergence`: a named vector with the number of iterations `iter`,
+#'     the absolute mean of the efficient influence curve `eic_solved_at`,
+#'     and whether the iterations `converged`. A warning is given if they
+#'     did not.
+#'   * `weights`: a matrix with the quantiles (columns `q50`, `q90`, `q99`
+#'     and `q100`) over individuals of each individual's maximal
+#'     `intervention`, `censoring` and `treatment` weight, and of their
+#'     product `total`, the weight entering the targeting step (rows), as a
+#'     positivity diagnostic. The intervention weights are those after
+#'     truncation, and the treatment weights are 1 when `a` is not given.
+#'   * `n_truncated`: the number of individuals whose intervention weight
+#'     was truncated (0 if `truncate_weights = 0`).
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -98,10 +101,6 @@ tmle_alpha <- function(
   max_iter = 10,
   min_iter = 0,
   truncate_weights = 0,
-  output_convergence = FALSE,
-  output_eic = FALSE,
-  output_weights = NULL,
-  output_a_weights = NULL,
   cores = 1,
   verbose = FALSE
 ) {
@@ -125,22 +124,6 @@ tmle_alpha <- function(
   checkmate::assert_count(max_iter, positive = TRUE)
   checkmate::assert_count(min_iter)
   checkmate::assert_number(truncate_weights, lower = 0, finite = TRUE)
-  checkmate::assert_flag(output_convergence)
-  checkmate::assert_flag(output_eic)
-  checkmate::assert_numeric(
-    output_weights,
-    lower = 0,
-    upper = 1,
-    any.missing = FALSE,
-    null.ok = TRUE
-  )
-  checkmate::assert_numeric(
-    output_a_weights,
-    lower = 0,
-    upper = 1,
-    any.missing = FALSE,
-    null.ok = TRUE
-  )
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
@@ -237,6 +220,7 @@ tmle_alpha <- function(
   #--------------------------------
   #-- compute clever weights:
 
+  n.truncated <- 0
   if (z.present) {
     if (length(alpha_list) > 0) {
       .update_alpha_list_weights(tmp.long, alpha_list)
@@ -244,7 +228,7 @@ tmle_alpha <- function(
       .update_alpha_weights(tmp.long, alpha, z.name)
     }
     if (truncate_weights > 0) {
-      no.truncated <- tmp.long[
+      n.truncated <- tmp.long[
         time <= final.time & clever.weight.alpha > truncate_weights,
         length(unique(id))
       ]
@@ -257,6 +241,18 @@ tmle_alpha <- function(
     tmp.long[, clever.weight.alpha := 1]
   }
 
+  # Quantiles over individuals of each individual's maximal weight up to
+  # their final time, as a positivity diagnostic.
+  weight_quantiles <- function(w) {
+    keep <- tmp.long[["time"]] <= tmp.long[["final.time"]]
+    per_id <- tapply(w[keep], tmp.long[["id"]][keep], max)
+    quantile(per_id, c(0.5, 0.9, 0.99, 1), names = FALSE)
+  }
+
+  # Taken before clever.weight is overwritten by the combined censoring and
+  # treatment weight below.
+  cens.weights <- weight_quantiles(tmp.long[["clever.weight"]])
+
   if (length(a) > 0) {
     a.weight.col <- paste0("clever.weight.a", a)
     if (!(a.weight.col %in% names(tmp.long))) {
@@ -267,35 +263,23 @@ tmle_alpha <- function(
         "of a given to fit_initial()."
       )
     }
+    a.weights <- weight_quantiles(tmp.long[,
+      (A0.obs == a) / (pi.A0.1^(A0.obs == 1) * (1 - pi.A0.1)^(A0.obs == 0))
+    ])
     tmp.long[, clever.weight := tmp.long[[a.weight.col]]]
+  } else {
+    a.weights <- rep(1, 4)
   }
 
-  quantiles <- function(x, probs) {
-    out <- vapply(probs, function(p) as.numeric(quantile(x, p)), numeric(1))
-    names(out) <- paste0("q", probs * 100)
-    out
-  }
-
-  if (length(output_weights) > 0) {
-    out.weights <- quantiles(
-      tmp.long[time <= final.time, max(clever.weight.alpha), by = "id"][[2]],
-      output_weights
+  weights <- rbind(
+    intervention = weight_quantiles(tmp.long[["clever.weight.alpha"]]),
+    censoring = cens.weights,
+    treatment = a.weights,
+    total = weight_quantiles(
+      tmp.long[["clever.weight"]] * tmp.long[["clever.weight.alpha"]]
     )
-    if (truncate_weights > 0) {
-      out.weights <- c(out.weights, n_truncated = no.truncated)
-    }
-    out.cens.weights <- quantiles(
-      tmp.long[time <= final.time, max(clever.weight), by = "id"][[2]],
-      output_weights
-    )
-  }
-
-  if (length(output_a_weights) > 0) {
-    out.a.weights <- quantiles(
-      tmp.long[time <= final.time, max(clever.weight), by = "id"][[2]],
-      output_a_weights
-    )
-  }
+  )
+  colnames(weights) <- c("q50", "q90", "q99", "q100")
 
   #--------------------------------
   #-- counterfactual hazards of the intervened processes:
@@ -496,38 +480,33 @@ tmle_alpha <- function(
     }
   }
 
-  if (one_step) {
-    out <- list(
-      estimate = c(one_step_est = one.step.est, se = target.se, g_est = g.est)
-    )
-  } else {
-    out <- list(
-      estimate = c(tmle_est = target.est, se = target.se, g_est = g.est)
+  if (!one_step && !converged) {
+    warning(
+      "TMLE did not converge in max_iter = ",
+      max_iter,
+      " iterations; the mean of the efficient influence curve is ",
+      signif(abs(mean(eic)), 3),
+      "."
     )
   }
 
-  if (output_convergence) {
-    out$convergence <- c(
+  estimate <- if (one_step) {
+    c(one_step_est = one.step.est, se = target.se, g_est = g.est)
+  } else {
+    c(tmle_est = target.est, se = target.se, g_est = g.est)
+  }
+
+  list(
+    estimate = estimate,
+    eic = eic,
+    convergence = c(
       iter = iter,
       eic_solved_at = abs(mean(eic)),
       converged = converged
-    )
-  }
-
-  if (length(output_weights) > 0) {
-    out$weights <- out.weights
-    out$cens_weights <- out.cens.weights
-  }
-
-  if (length(output_a_weights) > 0) {
-    out$a_weights <- out.a.weights
-  }
-
-  if (output_eic) {
-    out$eic <- eic
-  }
-
-  out
+    ),
+    weights = weights,
+    n_truncated = n.truncated
+  )
 }
 
 # Clever weight of the intervention alpha on process z.name:

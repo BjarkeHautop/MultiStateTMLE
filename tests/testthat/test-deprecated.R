@@ -117,7 +117,7 @@ test_that("dotted tmle.alpha.fun() arguments are translated for tmle_alpha()", {
       tau = 3,
       output.weights = 0.5
     )),
-    list(min_iter = 2, cores = 1, output_weights = 0.5)
+    list(min_iter = 2, cores = 1)
   )
   expect_equal(.snake_case_args(list()), list())
 })
