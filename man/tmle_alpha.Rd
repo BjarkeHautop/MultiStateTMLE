@@ -124,13 +124,13 @@ fit <- fit_initial(
       model = "Surv(tstart, tstop, delta == 2) ~ L0",
       at_risk = function(dt) dt[["z"]] == 0
     ),
-    outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
+    death = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
     censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
   ),
   tau = 1
 )
 
-# Risk of outcome1 by tau = 1 if the intensity of z were halved.
-est <- tmle_alpha(fit, target = "outcome1", alpha = 0.5, z_name = "z")
+# Risk of death by tau = 1 if the intensity of z were halved.
+est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
 est$estimate
 }

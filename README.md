@@ -48,9 +48,8 @@ The pipeline has three main steps:
   contrasts.
 
 For example, with the simulated illness-death data `illness_death`,
-where an illness `z` raises the risk of death `outcome1`, the risk of
-death by time 1 if the intensity of the illness were halved is estimated
-by:
+where an illness `z` raises the risk of `death`, the risk of death by
+time 1 if the intensity of the illness were halved is estimated by:
 
 ``` r
 fit <- fit_initial(
@@ -60,13 +59,13 @@ fit <- fit_initial(
       model = "Surv(tstart, tstop, delta == 2) ~ L0",
       at_risk = function(dt) dt[["z"]] == 0
     ),
-    outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
+    death = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
     censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
   ),
   tau = 1
 )
 
-est <- tmle_alpha(fit, target = "outcome1", alpha = 0.5, z_name = "z")
+est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
 est$estimate
 #>   tmle.est         se      g.est 
 #> 0.30405495 0.03853505 0.31239982

@@ -39,7 +39,7 @@
 #'       model = "Surv(tstart, tstop, delta == 2) ~ L0",
 #'       at_risk = function(dt) dt[["z"]] == 0
 #'     ),
-#'     outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
+#'     death = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
 #'     censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
 #'   ),
 #'   tau = 1
@@ -47,7 +47,7 @@
 #'
 #' curve <- calibration_curve(
 #'   fit,
-#'   target = "outcome1",
+#'   target = "death",
 #'   z_name = "z",
 #'   alpha_grid = c(0, 0.5, 1)
 #' )

@@ -1,11 +1,11 @@
 # Shared helpers for simulation-based recovery tests: simulate from a
-# known illness-death DGP (L0 -> z -> outcome1, z one-jump, outcome1
+# known illness-death DGP (L0 -> z -> death, z one-jump, death
 # terminal, both Weibull(nu=1) i.e. exponential hazards) and compute
-# the true P(outcome1 by tau) in closed form.
+# the true P(death by tau) in closed form.
 #
 # Truth is:
-# P(outcome1 by tau) = P(direct, from z=0) + P(via a
-# jump to z=1 at some u<=tau, then outcome1 by tau), integrated over
+# P(death by tau) = P(direct, from z=0) + P(via a
+# jump to z=1 at some u<=tau, then death by tau), integrated over
 # L0 ~ N(0,1) numerically.
 analytic.truth <- function(
   alpha,
@@ -34,15 +34,15 @@ simulate.illness.death <- function(n, seed) {
   model <- simevent::sim_model(
     L0 = simevent::sim_covariate(function(N) rnorm(N)),
     z = simevent::sim_process("transient", limit = 1, eta = 0.2, nu = 1),
-    outcome1 = simevent::sim_process("terminal", eta = 0.3, nu = 1),
+    death = simevent::sim_process("terminal", eta = 0.3, nu = 1),
     censoring = simevent::sim_process("censoring", eta = 0.1, nu = 1),
     effects = list(
       simevent::sim_effect("L0", "z", 0.5),
-      simevent::sim_effect("z", "outcome1", 0.7)
+      simevent::sim_effect("z", "death", 0.7)
     )
   )
   sim <- simevent::sim_events(model, n = n)
-  codes <- c(censoring = 0L, outcome1 = 1L, z = 2L)
+  codes <- c(censoring = 0L, death = 1L, z = 2L)
   data.frame(
     id = sim$id,
     time = sim$time,
@@ -56,7 +56,7 @@ illness.death.fit.types <- list(
     model = "Surv(tstart, tstop, delta == 2) ~ L0",
     at_risk = function(dt) dt[["z"]] == 0
   ),
-  outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
+  death = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
   censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
 )
 
@@ -66,7 +66,7 @@ simulate.recovery.fit <- function(alpha, n, seed) {
     fit_types = illness.death.fit.types,
     tau = 1
   )
-  tmle_alpha(initial_fit, target = "outcome1", alpha = alpha)
+  tmle_alpha(initial_fit, target = "death", alpha = alpha)
 }
 
 # The first n individuals of illness_death, for fast unit tests.

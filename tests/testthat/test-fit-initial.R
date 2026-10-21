@@ -5,11 +5,11 @@ test_that("fit_initial() fits the illness-death example", {
     tau = 1
   )
 
-  expect_equal(fit$process.names, c("z", "outcome1", "censoring"))
+  expect_equal(fit$process.names, c("z", "death", "censoring"))
   expect_equal(fit$process.deltas, c(2, 1, 0))
   expect_equal(
     fit$process.types,
-    list(z = "one.jump", outcome1 = "terminal", censoring = "terminal")
+    list(z = "one.jump", death = "terminal", censoring = "terminal")
   )
   expect_equal(fit$cens.process.id, 3)
   expect_named(fit$at.risks, "z")
@@ -17,7 +17,7 @@ test_that("fit_initial() fits the illness-death example", {
   expect_equal(fit$depend.matrix$z, c(0, 1))
   expect_true(all(fit$tmp.long$time <= 1))
   expect_true(all(
-    c("P.z.1", "P.z.2", "P.outcome1.1", "P.outcome1.2") %in%
+    c("P.z.1", "P.z.2", "P.death.1", "P.death.2") %in%
       names(fit$tmp.long)
   ))
 })
@@ -28,7 +28,7 @@ test_that("fit_initial() accepts model strings with or without whitespace", {
       model = "Surv(tstart,tstop,delta==2)~L0",
       at_risk = function(dt) dt[["z"]] == 0
     ),
-    outcome1 = "Surv(tstart,tstop,delta==1)~L0+z",
+    death = "Surv(tstart,tstop,delta==1)~L0+z",
     censoring = "Surv(tstart,tstop,delta==0)~L0"
   )
 
@@ -51,7 +51,7 @@ test_that("fit_initial() validates its arguments", {
   )
   expect_error(fit_initial(illness_death, fit_types = ft, tau = -1), "tau")
   expect_error(
-    fit_initial(illness_death, fit_types = ft[c("z", "outcome1")], tau = 1),
+    fit_initial(illness_death, fit_types = ft[c("z", "death")], tau = 1),
     "censoring"
   )
   expect_error(

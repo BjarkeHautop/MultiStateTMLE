@@ -9,7 +9,7 @@ A data frame with one row per event and columns:
 \describe{
 \item{id}{Individual identifier.}
 \item{time}{Event time.}
-\item{delta}{Event type: \code{0} censoring, \code{1} death (\code{outcome1}), \code{2}
+\item{delta}{Event type: \code{0} censoring, \code{1} death, \code{2}
 illness (\code{z}).}
 \item{L0}{Baseline covariate.}
 }
@@ -19,7 +19,7 @@ illness_death
 }
 \description{
 Simulated event history data for 150 individuals at risk of an illness
-\code{z}, which can occur at most once, and of death \code{outcome1}. Both have
+\code{z}, which can occur at most once, and \code{death}. Both have
 exponential hazards that depend on a standard normal baseline covariate
 \code{L0}, the illness raises the hazard of death, and follow-up is subject to
 independent censoring. Simulated with \code{\link[simevent:sim_events]{simevent::sim_events()}}, see

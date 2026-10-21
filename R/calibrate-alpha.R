@@ -35,7 +35,7 @@
 #'     treating alpha as known, and of the risk of `target`.
 #'
 #'   With several targets, the `target.*` entries of `estimate` and `checks`
-#'   are suffixed by the target name (e.g. `target.est.outcome1`), and
+#'   are suffixed by the target name (e.g. `target.est.death`), and
 #'   `target.eic` and `eic` are lists named by target.
 #'
 #' @examples
@@ -46,15 +46,15 @@
 #'       model = "Surv(tstart, tstop, delta == 2) ~ L0",
 #'       at_risk = function(dt) dt[["z"]] == 0
 #'     ),
-#'     outcome1 = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
+#'     death = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
 #'     censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
 #'   ),
 #'   tau = 1
 #' )
 #'
-#' # Risk of outcome1 under the intervention on z that brings the risk of z
+#' # Risk of death under the intervention on z that brings the risk of z
 #' # down to 80% of its observed value.
-#' cal <- calibrate_alpha(fit, target = "outcome1", z_name = "z", rho = 0.8)
+#' cal <- calibrate_alpha(fit, target = "death", z_name = "z", rho = 0.8)
 #' cal$estimate
 #' @export
 calibrate_alpha <- function(

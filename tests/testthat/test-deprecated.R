@@ -7,7 +7,7 @@ test_that("deprecated estimation functions warn and match their replacements", {
       fit = "cox",
       at.risk = function(dt) (dt[["z"]] == 0)
     ),
-    outcome1 = list(
+    death = list(
       model = "Surv(tstart, tstop, delta == 1)~L0+z",
       fit = "cox"
     ),
@@ -33,7 +33,7 @@ test_that("deprecated estimation functions warn and match their replacements", {
   expect_warning(
     old_est <- tmle.alpha.fun(
       initial.fit = old_fit,
-      target = "outcome1",
+      target = "death",
       alpha = 0.5,
       use.cores = 1
     ),
@@ -42,7 +42,7 @@ test_that("deprecated estimation functions warn and match their replacements", {
   )
   expect_equal(
     old_est,
-    tmle_alpha(new_fit, target = "outcome1", alpha = 0.5)
+    tmle_alpha(new_fit, target = "death", alpha = 0.5)
   )
 
   expect_error(
@@ -132,13 +132,13 @@ test_that("deprecated tmle.alpha.fun() builds the initial fit from dt", {
         model = "Surv(tstart, tstop, delta == 2)~L0",
         at.risk = function(dt) (dt[["z"]] == 0)
       ),
-      outcome1 = "Surv(tstart, tstop, delta == 1)~L0+z",
+      death = "Surv(tstart, tstop, delta == 1)~L0+z",
       censoring = "Surv(tstart, tstop, delta == 0)~L0"
     ),
-    target = "outcome1",
+    target = "death",
     tau = 1,
     use.cores = 1
   )
 
-  expect_equal(est, tmle_alpha(fixture.fit(30), target = "outcome1"))
+  expect_equal(est, tmle_alpha(fixture.fit(30), target = "death"))
 })

@@ -29,9 +29,11 @@ Imports:
     survival,
     utils
 Suggests:
+    quarto,
     simevent,
     testthat (>= 3.0.0),
     withr
+VignetteBuilder: quarto
 Remotes:
     BjarkeHautop/simevent
 LazyData: true
