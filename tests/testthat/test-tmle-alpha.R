@@ -100,7 +100,7 @@ test_that("tmle_alpha() estimates under a baseline intervention 'a'", {
     fixture.data.treated(),
     fit_types = illness.death.fit.types,
     tau = 1,
-    treatment_model = "A0 ~ L0",
+    treatment_model = A0 ~ L0,
     a = 0:1
   )
 

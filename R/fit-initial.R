@@ -11,11 +11,12 @@
 #'   with one row per event and columns `id`, `time` and `delta` (the
 #'   integer code of the process that jumped, with `0` reserved for
 #'   censoring), plus any baseline covariates used in `fit_types`.
-#' @param fit_types A named list with one entry per event process, each
-#'   either a model formula string or a list with elements:
-#'   * `model`: a formula string of the form
-#'     `"Surv(tstart, tstop, delta == k) ~ covariates"`, where `k` is the
-#'     process's `delta` code. Other processes can be used as covariates by
+#' @param fit_types A named list with one entry per event process, named by
+#'   the process. Each entry is a list with elements:
+#'   * `delta`: the process's integer code in the `delta` column of `data`.
+#'     Exactly one process must have code `0` (censoring).
+#'   * `model`: a one-sided formula of the covariates of its hazard model,
+#'     such as `~ L0 + z`. Other processes can be used as covariates by
 #'     name, in which case their counting process (lagged by one event) is
 #'     used.
 #'   * `fit`: `"cox"` (default) or `"hal"`.
@@ -23,13 +24,11 @@
 #'     vector, marking the rows at risk of the process (e.g.
 #'     `function(dt) dt[["z"]] == 0` for a process that can jump at most
 #'     once).
-#'
-#'   Exactly one process must have `delta` code `0` (censoring).
 #' @param tau Positive number. Follow-up horizon; the target parameters are
 #'   evaluated at `tau`.
-#' @param treatment_model Optional model for the baseline treatment `A0`,
-#'   either a formula string such as `"A0 ~ L0"` or a list with elements
-#'   `model` and `fit` (only `"glm"` is supported). Required when `a` is
+#' @param treatment_model Optional model for the baseline treatment, either
+#'   a formula such as `A0 ~ L0` or a list with elements `model` (such a
+#'   formula) and `fit` (only `"glm"` is supported). Required when `a` is
 #'   given.
 #' @param a Optional integer vector of baseline treatment values (`0`/`1`)
 #'   to compute interventional hazards and clever weights for. Each value
@@ -77,11 +76,12 @@
 #'   illness_death,
 #'   fit_types = list(
 #'     z = list(
-#'       model = "Surv(tstart, tstop, delta == 2) ~ L0",
+#'       delta = 2,
+#'       model = ~ L0,
 #'       at_risk = function(dt) dt[["z"]] == 0
 #'     ),
-#'     death = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
-#'     censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
+#'     death = list(delta = 1, model = ~ L0 + z),
+#'     censoring = list(delta = 0, model = ~ L0)
 #'   ),
 #'   tau = 1
 #' )
@@ -133,8 +133,21 @@ fit_initial <- function(
     treatment_model <- list(model = treatment_model, fit = "glm")
   }
   if (length(treatment_model[["model"]]) > 0) {
-    checkmate::assert_string(treatment_model[["model"]])
-    treatment_model[["model"]] <- gsub("\\s+", "", treatment_model[["model"]])
+    checkmate::assert_formula(
+      treatment_model[["model"]],
+      .var.name = "treatment_model"
+    )
+    if (length(treatment_model[["model"]]) != 3) {
+      stop("treatment_model must be a two-sided formula, e.g. A0 ~ L0.")
+    }
+    treatment_model[["model"]] <- gsub(
+      "\\s+",
+      "",
+      paste(
+        deparse(treatment_model[["model"]], width.cutoff = 500L),
+        collapse = ""
+      )
+    )
     if (!identical(treatment_model[["fit"]], "glm")) {
       stop("Only fit = \"glm\" is supported for treatment_model.")
     }
@@ -217,10 +230,13 @@ fit_initial <- function(
   #-- corresponding delta values:
   process.deltas <- vapply(
     fit_types,
-    function(fit.type) .process_delta(fit.type[["model"]]),
+    function(fit.type) fit.type[["delta"]],
     numeric(1),
     USE.NAMES = FALSE
   )
+  if (anyDuplicated(process.deltas)) {
+    stop("Each process in fit_types must have its own delta code.")
+  }
   if (sum(process.deltas == 0) != 1) {
     stop("Exactly one process in fit_types must have delta == 0 (censoring).")
   }
@@ -615,7 +631,7 @@ fit_initial <- function(
 
     deltas.hal <- vapply(
       fit_types[which.hal],
-      function(fit.type) .process_delta(fit.type$model),
+      function(fit.type) fit.type[["delta"]],
       numeric(1)
     )
 

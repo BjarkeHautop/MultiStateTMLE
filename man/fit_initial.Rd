@@ -26,12 +26,13 @@ with one row per event and columns \code{id}, \code{time} and \code{delta} (the
 integer code of the process that jumped, with \code{0} reserved for
 censoring), plus any baseline covariates used in \code{fit_types}.}
 
-\item{fit_types}{A named list with one entry per event process, each
-either a model formula string or a list with elements:
+\item{fit_types}{A named list with one entry per event process, named by
+the process. Each entry is a list with elements:
 \itemize{
-\item \code{model}: a formula string of the form
-\code{"Surv(tstart, tstop, delta == k) ~ covariates"}, where \code{k} is the
-process's \code{delta} code. Other processes can be used as covariates by
+\item \code{delta}: the process's integer code in the \code{delta} column of \code{data}.
+Exactly one process must have code \code{0} (censoring).
+\item \code{model}: a one-sided formula of the covariates of its hazard model,
+such as \code{~ L0 + z}. Other processes can be used as covariates by
 name, in which case their counting process (lagged by one event) is
 used.
 \item \code{fit}: \code{"cox"} (default) or \code{"hal"}.
@@ -39,16 +40,14 @@ used.
 vector, marking the rows at risk of the process (e.g.
 \code{function(dt) dt[["z"]] == 0} for a process that can jump at most
 once).
-}
-
-Exactly one process must have \code{delta} code \code{0} (censoring).}
+}}
 
 \item{tau}{Positive number. Follow-up horizon; the target parameters are
 evaluated at \code{tau}.}
 
-\item{treatment_model}{Optional model for the baseline treatment \code{A0},
-either a formula string such as \code{"A0 ~ L0"} or a list with elements
-\code{model} and \code{fit} (only \code{"glm"} is supported). Required when \code{a} is
+\item{treatment_model}{Optional model for the baseline treatment, either
+a formula such as \code{A0 ~ L0} or a list with elements \code{model} (such a
+formula) and \code{fit} (only \code{"glm"} is supported). Required when \code{a} is
 given.}
 
 \item{a}{Optional integer vector of baseline treatment values (\code{0}/\code{1})
@@ -114,11 +113,12 @@ fit <- fit_initial(
   illness_death,
   fit_types = list(
     z = list(
-      model = "Surv(tstart, tstop, delta == 2) ~ L0",
+      delta = 2,
+      model = ~ L0,
       at_risk = function(dt) dt[["z"]] == 0
     ),
-    death = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
-    censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
+    death = list(delta = 1, model = ~ L0 + z),
+    censoring = list(delta = 0, model = ~ L0)
   ),
   tau = 1
 )

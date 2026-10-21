@@ -22,17 +22,41 @@
   verbose = FALSE
 )
 
-# Bring one entry of fit_initial()'s `fit_types` to the internal form
-# list(model, fit, at.risk), with whitespace stripped from the model so the
-# string manipulations on it in fit_initial() see a canonical form.
+# Bring one entry of fit_initial()'s `fit_types`,
+# list(delta, model, fit, at_risk), to the internal form
+# list(delta, model, fit, at.risk), where `model` is the string
+# "Surv(tstart,tstop,delta==<delta>)~<covariates>" without whitespace, as
+# the string manipulations on it in fit_initial() expect.
 .normalize_fit_type <- function(spec, name) {
-  if (is.character(spec)) {
-    spec <- list(model = spec)
-  }
   var_name <- paste0("fit_types[[\"", name, "\"]]")
   checkmate::assert_list(spec, names = "unique", .var.name = var_name)
-  checkmate::assert_string(spec$model, .var.name = paste0(var_name, "$model"))
-  spec$model <- gsub("\\s+", "", spec$model)
+  checkmate::assert_subset(
+    names(spec),
+    c("delta", "model", "fit", "at_risk"),
+    .var.name = paste0("names(", var_name, ")")
+  )
+  checkmate::assert_int(
+    spec$delta,
+    lower = 0,
+    .var.name = paste0(var_name, "$delta")
+  )
+  checkmate::assert_formula(spec$model, .var.name = paste0(var_name, "$model"))
+  if (length(spec$model) != 2) {
+    stop(
+      var_name,
+      "$model must be a one-sided formula of the covariates, e.g. ~ L0; ",
+      "the response is built from `delta`."
+    )
+  }
+  covariates <- paste(
+    deparse(spec$model[[2]], width.cutoff = 500L),
+    collapse = ""
+  )
+  spec$model <- gsub(
+    "\\s+",
+    "",
+    paste0("Surv(tstart,tstop,delta==", spec$delta, ")~", covariates)
+  )
   if (is.null(spec$fit)) {
     spec$fit <- "cox"
   }
@@ -42,30 +66,14 @@
     .var.name = paste0(var_name, "$fit")
   )
   if (!is.null(spec$at_risk)) {
+    checkmate::assert_function(
+      spec$at_risk,
+      .var.name = paste0(var_name, "$at_risk")
+    )
     spec$at.risk <- spec$at_risk
     spec$at_risk <- NULL
   }
-  if (!is.null(spec$at.risk)) {
-    checkmate::assert_function(
-      spec$at.risk,
-      .var.name = paste0(var_name, "$at_risk")
-    )
-  }
   spec
-}
-
-# The `delta` code k of a model string "Surv(tstart, tstop, delta == k) ~ ...".
-.process_delta <- function(model) {
-  lhs <- strsplit(model, "~", fixed = TRUE)[[1]][1]
-  m <- regmatches(lhs, regexec("delta\\s*==\\s*([0-9]+)", lhs))[[1]]
-  if (length(m) < 2) {
-    stop(
-      "Could not find `delta == <code>` in the response of model '",
-      model,
-      "'."
-    )
-  }
-  as.numeric(m[2])
 }
 
 # Number of cores to hand to parallel::mclapply(), which does not support

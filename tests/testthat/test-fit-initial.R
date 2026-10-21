@@ -22,29 +22,9 @@ test_that("fit_initial() fits the illness-death example", {
   ))
 })
 
-test_that("fit_initial() accepts model strings with or without whitespace", {
-  compact <- list(
-    z = list(
-      model = "Surv(tstart,tstop,delta==2)~L0",
-      at_risk = function(dt) dt[["z"]] == 0
-    ),
-    death = "Surv(tstart,tstop,delta==1)~L0+z",
-    censoring = "Surv(tstart,tstop,delta==0)~L0"
-  )
-
-  expect_equal(
-    fit_initial(illness_death, fit_types = compact, tau = 1)$tmp_long,
-    fit_initial(
-      illness_death,
-      fit_types = illness.death.fit.types,
-      tau = 1
-    )$tmp_long
-  )
-})
-
 test_that("fit_initial() accepts transformed covariates in models", {
   transformed <- illness.death.fit.types
-  transformed$death <- "Surv(tstart, tstop, delta == 1) ~ log(exp(L0)) + z"
+  transformed$death$model <- ~ log(exp(L0)) + z
 
   expect_equal(
     fit_initial(illness_death, fit_types = transformed, tau = 1)$tmp_long,
@@ -71,17 +51,39 @@ test_that("fit_initial() validates its arguments", {
   expect_error(
     fit_initial(
       illness_death,
-      fit_types = c(ft, list(other = "Surv(tstart, tstop, event) ~ L0")),
+      fit_types = c(ft, list(other = list(model = ~L0))),
       tau = 1
     ),
-    "delta == <code>"
+    "delta"
   )
   expect_error(
     fit_initial(
       illness_death,
-      fit_types = list(
-        z = list(model = "Surv(tstart, tstop, delta == 2) ~ L0", fit = "glm")
-      ),
+      fit_types = c(ft, list(other = list(delta = 1, model = ~L0))),
+      tau = 1
+    ),
+    "own delta code"
+  )
+  expect_error(
+    fit_initial(
+      illness_death,
+      fit_types = c(ft, list(other = list(delta = 3, model = event ~ L0))),
+      tau = 1
+    ),
+    "one-sided"
+  )
+  expect_error(
+    fit_initial(
+      illness_death,
+      fit_types = c(ft, list(other = list(delta = 3, model = ~L0, foo = 1))),
+      tau = 1
+    ),
+    "foo"
+  )
+  expect_error(
+    fit_initial(
+      illness_death,
+      fit_types = list(z = list(delta = 2, model = ~L0, fit = "glm")),
       tau = 1
     ),
     "fit"
@@ -118,9 +120,19 @@ test_that("fit_initial() rejects invalid inputs", {
       fixture.data.treated(),
       fit_types = ft,
       tau = 1,
-      treatment_model = list(model = "A0 ~ L0", fit = "other")
+      treatment_model = list(model = A0 ~ L0, fit = "other")
     ),
     "glm"
+  )
+  expect_error(
+    fit_initial(
+      fixture.data.treated(),
+      fit_types = ft,
+      tau = 1,
+      treatment_model = ~L0,
+      a = 1
+    ),
+    "two-sided"
   )
 })
 
@@ -140,7 +152,7 @@ test_that("fit_initial() fits a treatment model and propensities under 'a'", {
     fixture.data.treated(),
     fit_types = illness.death.fit.types,
     tau = 1,
-    treatment_model = "A0 ~ L0",
+    treatment_model = A0 ~ L0,
     a = 0:1
   )
 

@@ -169,9 +169,9 @@ prepare.initial <- function(
   }
   fit_initial(
     data = dt,
-    fit_types = fit.types,
+    fit_types = .legacy_fit_types(fit.types),
     tau = tau,
-    treatment_model = fit.treatment,
+    treatment_model = .legacy_treatment_model(fit.treatment),
     a = a,
     max_count = max.count,
     derived_vars = derived.vars,
@@ -573,6 +573,51 @@ compute.Q.clever.per.id <- function(
     years_lost_block_size = years.lost.block.size,
     clever_by_state = clever.by.state
   )
+}
+
+# Translate prepare.initial()'s `fit.types`, whose entries are model strings
+# "Surv(tstart, tstop, delta == k) ~ covariates" or lists of such a `model`,
+# `fit` and `at.risk`, to fit_initial()'s list(delta, model, fit, at_risk).
+.legacy_fit_types <- function(fit.types) {
+  lapply(fit.types, function(spec) {
+    if (is.character(spec)) {
+      spec <- list(model = spec)
+    }
+    rhs <- strsplit(spec$model, "~", fixed = TRUE)[[1]][2]
+    out <- list(
+      delta = .process_delta(spec$model),
+      model = stats::as.formula(paste("~", rhs)),
+      fit = spec$fit,
+      at_risk = if (is.null(spec$at.risk)) spec$at_risk else spec$at.risk
+    )
+    out[!vapply(out, is.null, logical(1))]
+  })
+}
+
+# Translate prepare.initial()'s `fit.treatment`, a model string or a list of
+# such a `model` and `fit`, to fit_initial()'s formula-based form.
+.legacy_treatment_model <- function(fit.treatment) {
+  if (is.character(fit.treatment)) {
+    return(stats::as.formula(fit.treatment))
+  }
+  if (is.character(fit.treatment[["model"]])) {
+    fit.treatment[["model"]] <- stats::as.formula(fit.treatment[["model"]])
+  }
+  fit.treatment
+}
+
+# The `delta` code k of a model string "Surv(tstart, tstop, delta == k) ~ ...".
+.process_delta <- function(model) {
+  lhs <- strsplit(model, "~", fixed = TRUE)[[1]][1]
+  m <- regmatches(lhs, regexec("delta\\s*==\\s*([0-9]+)", lhs))[[1]]
+  if (length(m) < 2) {
+    stop(
+      "Could not find `delta == <code>` in the response of model '",
+      model,
+      "'."
+    )
+  }
+  as.integer(m[2])
 }
 
 # Translate the dotted argument names that the deprecated functions passed

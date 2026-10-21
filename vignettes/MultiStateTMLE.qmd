@@ -68,22 +68,23 @@ illness_death[illness_death$id %in% c(3, 4), ]
 the grid of observed event times up to the horizon `tau`, and builds the
 discrete state space that the targeting step works on.
 
-Each process is specified in `fit_types` by a `Surv()` formula string, where
-`delta == k` selects the process with code `k`. Other processes can be used
-as covariates by name, here the death hazard depends on whether the
+Each process is specified in `fit_types` by its code in the `delta` column
+and a one-sided formula of the covariates of its hazard. Other processes can
+be used as covariates by name, here the death hazard depends on whether the
 individual has fallen ill (`z`). Because the illness can occur at most once,
 we say that individuals are only at risk of `z` while `z == 0`. Exactly one
-process must be the censoring process (`delta == 0`).
+process must be the censoring process (`delta = 0`).
 
 ```{r}
 #| label: fit-initial
 fit_types <- list(
   z = list(
-    model = "Surv(tstart, tstop, delta == 2) ~ L0",
+    delta = 2,
+    model = ~L0,
     at_risk = function(dt) dt[["z"]] == 0
   ),
-  death = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
-  censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
+  death = list(delta = 1, model = ~ L0 + z),
+  censoring = list(delta = 0, model = ~L0)
 )
 
 fit <- fit_initial(illness_death, fit_types = fit_types, tau = 1)
@@ -226,14 +227,15 @@ fit_treated <- fit_initial(
   treated,
   fit_types = list(
     z = list(
-      model = "Surv(tstart, tstop, delta == 2) ~ L0 + A0",
+      delta = 2,
+      model = ~ L0 + A0,
       at_risk = function(dt) dt[["z"]] == 0
     ),
-    death = "Surv(tstart, tstop, delta == 1) ~ L0 + A0 + z",
-    censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
+    death = list(delta = 1, model = ~ L0 + A0 + z),
+    censoring = list(delta = 0, model = ~L0)
   ),
   tau = 1,
-  treatment_model = "A0 ~ L0",
+  treatment_model = A0 ~ L0,
   a = 0:1
 )
 ```

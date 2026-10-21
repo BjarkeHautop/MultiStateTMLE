@@ -34,11 +34,12 @@
 #'   illness_death,
 #'   fit_types = list(
 #'     z = list(
-#'       model = "Surv(tstart, tstop, delta == 2) ~ L0",
+#'       delta = 2,
+#'       model = ~ L0,
 #'       at_risk = function(dt) dt[["z"]] == 0
 #'     ),
-#'     death = "Surv(tstart, tstop, delta == 1) ~ L0 + z",
-#'     censoring = "Surv(tstart, tstop, delta == 0) ~ L0"
+#'     death = list(delta = 1, model = ~ L0 + z),
+#'     censoring = list(delta = 0, model = ~ L0)
 #'   ),
 #'   tau = 1
 #' )
