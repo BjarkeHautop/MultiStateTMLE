@@ -11,22 +11,22 @@ test_that("calibrate_alpha() hits the calibration target", {
   expect_named(
     cal$estimate,
     c(
-      "alpha.est",
-      "alpha.se",
-      "target.est",
-      "target.se",
-      "target.se.crude",
+      "alpha_est",
+      "alpha_se",
+      "target_est",
+      "target_se",
+      "target_se_crude",
       "theta",
-      "theta.se"
+      "theta_se"
     )
   )
   # Decreasing the risk of z requires decreasing its intensity.
-  expect_lt(cal$estimate[["alpha.est"]], 1)
+  expect_lt(cal$estimate[["alpha_est"]], 1)
 
   # solve_alpha() stops once within c_n = n^(-1/2) / log(n) of theta.
-  z_risk <- tmle_alpha(fit, target = "z", alpha = cal$estimate[["alpha.est"]])
+  z_risk <- tmle_alpha(fit, target = "z", alpha = cal$estimate[["alpha_est"]])
   expect_lt(
-    abs(z_risk$estimate[["tmle.est"]] - cal$estimate[["theta"]]),
+    abs(z_risk$estimate[["tmle_est"]] - cal$estimate[["theta"]]),
     n^(-1 / 2) / log(n)
   )
   expect_length(cal$eic, n)
@@ -56,9 +56,9 @@ test_that("calibrate_alpha() calibrates to theta directly", {
   cal <- calibrate_alpha(fit, target = "death", theta = 0.2)
 
   expect_equal(cal$estimate[["theta"]], 0.2)
-  expect_equal(cal$checks[["est.alpha.converged"]], 1)
-  z_risk <- tmle_alpha(fit, target = "z", alpha = cal$estimate[["alpha.est"]])
-  expect_lt(abs(z_risk$estimate[["tmle.est"]] - 0.2), 0.02)
+  expect_equal(cal$checks[["est_alpha_converged"]], 1)
+  z_risk <- tmle_alpha(fit, target = "z", alpha = cal$estimate[["alpha_est"]])
+  expect_lt(abs(z_risk$estimate[["tmle_est"]] - 0.2), 0.02)
 })
 
 test_that("calibrate_alpha() handles several targets", {
@@ -73,10 +73,10 @@ test_that("calibrate_alpha() handles several targets", {
   )
 
   expect_equal(
-    both$estimate[["target.est.death"]],
-    single$estimate[["target.est"]]
+    both$estimate[["target_est_death"]],
+    single$estimate[["target_est"]]
   )
-  expect_equal(both$estimate[["target.est.z"]], 0.2, tolerance = 0.1)
+  expect_equal(both$estimate[["target_est_z"]], 0.2, tolerance = 0.1)
   expect_named(both$eic, c("death", "z"))
 })
 

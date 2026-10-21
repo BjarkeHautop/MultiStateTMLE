@@ -60,8 +60,8 @@ output.}
 A list with elements:
 \itemize{
 \item \code{estimate}: a \code{data.table} with one row per value of \code{alpha_grid} and
-columns \code{alpha}, \code{exposure.est}, \code{exposure.se}, \code{target.est} and
-\code{target.se} (suffixed by the target name when there are several
+columns \code{alpha}, \code{exposure_est}, \code{exposure_se}, \code{target_est} and
+\code{target_se} (suffixed by \verb{_<target>} when there are several
 targets).
 \item \code{checks}: per value of \code{alpha_grid}, the estimated derivatives of the
 exposure and target estimates with respect to \code{alpha}.

@@ -20,7 +20,7 @@ solve_alpha(
 }
 \arguments{
 \item{fun}{A function of \code{alpha} returning a list with elements
-\code{estimate} (a named vector containing \code{tmle.est} or \code{one.step.est}, and
+\code{estimate} (a named vector containing \code{tmle_est} or \code{one_step_est}, and
 \code{se}) and \code{eic}, such as a call to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{theta}{Number. The target value of the estimate.}
@@ -49,10 +49,10 @@ evaluations.}
 \code{verbose = TRUE}.}
 }
 \value{
-A list with elements \code{alpha.hat} (the best \code{alpha} found),
+A list with elements \code{alpha_hat} (the best \code{alpha} found),
 \code{converged} (whether it is within \code{c_n} of \code{theta}), \code{dist} (its
-distance to \code{theta}), \code{c.n}, \code{grid} (a data frame of all evaluated
-\code{alpha}, \code{psi} and \code{se}) and \code{eic} (the influence curve at \code{alpha.hat}).
+distance to \code{theta}), \code{c_n}, \code{grid} (a data frame of all evaluated
+\code{alpha}, \code{psi} and \code{se}) and \code{eic} (the influence curve at \code{alpha_hat}).
 }
 \description{
 Finds the intensity intervention \code{alpha} at which the estimate returned
@@ -70,9 +70,9 @@ used by \code{\link[=calibrate_alpha]{calibrate_alpha()}}.
 # solve_alpha() should recover alpha = -log(1 - 0.3 / 0.6).
 fun <- function(alpha) {
   psi <- 0.6 * (1 - exp(-alpha))
-  list(estimate = c(tmle.est = psi, se = 0.01), eic = rep(0, 10))
+  list(estimate = c(tmle_est = psi, se = 0.01), eic = rep(0, 10))
 }
 res <- solve_alpha(fun, theta = 0.3, c_n = 1e-6)
-res$alpha.hat
+res$alpha_hat
 -log(1 - 0.3 / 0.6)
 }

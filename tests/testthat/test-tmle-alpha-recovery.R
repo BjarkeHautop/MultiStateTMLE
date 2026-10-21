@@ -6,7 +6,7 @@ test_that("tmle_alpha() recovers the true risk with no intervention (alpha=1)", 
   truth <- analytic.truth(alpha = 1)
 
   expect_lt(
-    abs(fit$estimate[["tmle.est"]] - truth) / fit$estimate[["se"]],
+    abs(fit$estimate[["tmle_est"]] - truth) / fit$estimate[["se"]],
     4
   )
 })
@@ -19,7 +19,7 @@ test_that("tmle_alpha() recovers the true risk under a shape intervention (alpha
   truth <- analytic.truth(alpha = 0.5)
 
   expect_lt(
-    abs(fit$estimate[["tmle.est"]] - truth) / fit$estimate[["se"]],
+    abs(fit$estimate[["tmle_est"]] - truth) / fit$estimate[["se"]],
     4
   )
 })

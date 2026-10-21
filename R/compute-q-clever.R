@@ -174,10 +174,10 @@
     } else if (target_name %in% stateful_in_states) {
       "recurrent"
     } else {
-      "one.jump"
+      "one_jump"
     }
   }
-  target_one_jump <- identical(target_type, "one.jump")
+  target_one_jump <- identical(target_type, "one_jump")
   target_terminal <- identical(target_type, "terminal")
   target_recurrent <- identical(target_type, "recurrent")
   target_terminal_or_recurrent <- target_terminal | target_recurrent

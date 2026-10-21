@@ -8,8 +8,8 @@ estimate_derivative(fun, alpha, h, ...)
 }
 \arguments{
 \item{fun}{A function of \code{alpha} (and \code{...}) returning a list with an
-element \code{estimate}, a named vector containing \code{tmle.est} or
-\code{one.step.est}, such as a call to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+element \code{estimate}, a named vector containing \code{tmle_est} or
+\code{one_step_est}, such as a call to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{alpha}{Positive number. The point at which to estimate the
 derivative.}
@@ -29,6 +29,6 @@ returned by \code{fun}, by a symmetric finite difference at \code{alpha}.
 }
 \examples{
 # The derivative of alpha^2 at alpha = 3 is 6.
-fun <- function(alpha) list(estimate = c(tmle.est = alpha^2))
+fun <- function(alpha) list(estimate = c(tmle_est = alpha^2))
 estimate_derivative(fun, alpha = 3, h = 0.01)
 }

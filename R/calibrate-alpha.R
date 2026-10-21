@@ -24,19 +24,19 @@
 #' @param ... Further arguments passed on to [tmle_alpha()].
 #'
 #' @return A list with elements:
-#'   * `estimate`: a named vector with the calibrated `alpha.est` and its
-#'     `alpha.se`, the risk of `target` (`target.est`) with standard error
-#'     `target.se` (accounting for the estimation of alpha) and
-#'     `target.se.crude` (treating alpha as known), and the calibration
-#'     target `theta` with standard error `theta.se`.
+#'   * `estimate`: a named vector with the calibrated `alpha_est` and its
+#'     `alpha_se`, the risk of `target` (`target_est`) with standard error
+#'     `target_se` (accounting for the estimation of alpha) and
+#'     `target_se_crude` (treating alpha as known), and the calibration
+#'     target `theta` with standard error `theta_se`.
 #'   * `checks`: diagnostics of the alpha search and derivative estimates.
-#'   * `alpha.eic`, `target.eic` and `eic` (if `output_eic = TRUE`): the
+#'   * `alpha_eic`, `target_eic` and `eic` (if `output_eic = TRUE`): the
 #'     influence curves of the calibrated alpha, of the risk of `target`
 #'     treating alpha as known, and of the risk of `target`.
 #'
-#'   With several targets, the `target.*` entries of `estimate` and `checks`
-#'   are suffixed by the target name (e.g. `target.est.death`), and
-#'   `target.eic` and `eic` are lists named by target.
+#'   With several targets, the per-target entries of `estimate` and `checks`
+#'   are suffixed by the target name (e.g. `target_est_death`), and
+#'   `target_eic` and `eic` are lists named by target.
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -90,7 +90,7 @@ calibrate_alpha <- function(
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
-  n <- length(unique(initial_fit[["tmp.long"]][["id"]]))
+  n <- length(unique(initial_fit[["tmp_long"]][["id"]]))
   a_fixed <- a
 
   fit_at <- function(alpha, parameter = z_name, a = a_fixed) {
@@ -153,7 +153,7 @@ calibrate_alpha <- function(
 
     est.deriv.auxiliary <- estimate_derivative(
       fit_at,
-      alpha = est.alpha$alpha.hat,
+      alpha = est.alpha$alpha_hat,
       h = h,
       parameter = z_name
     )
@@ -161,11 +161,11 @@ calibrate_alpha <- function(
     alpha.eic <- (1 / est.deriv.auxiliary) * (theta.eic - est.alpha$eic)
   } else {
     est.alpha <- list(
-      alpha.hat = 0,
+      alpha_hat = 0,
       eic = 0,
       converged = TRUE,
       dist = 0,
-      c.n = 0,
+      c_n = 0,
       grid = data.frame(alpha = 0, psi = 0)
     )
     alpha.eic <- 0
@@ -175,11 +175,11 @@ calibrate_alpha <- function(
   alpha.se <- sqrt(mean(alpha.eic^2) / n)
 
   out.target <- lapply(target, function(target1) {
-    target.est <- fit_at(alpha = est.alpha$alpha.hat, parameter = target1)
+    target.est <- fit_at(alpha = est.alpha$alpha_hat, parameter = target1)
     if (theta > 0) {
       est.deriv.target <- estimate_derivative(
         fit_at,
-        alpha = est.alpha$alpha.hat,
+        alpha = est.alpha$alpha_hat,
         h = h,
         parameter = target1
       )
@@ -200,22 +200,32 @@ calibrate_alpha <- function(
 
   out <- list(
     estimate = c(
-      alpha.est = est.alpha$alpha.hat,
-      alpha.se = alpha.se,
-      target.est = per_target(function(x) .point_estimate(x$target.est)),
-      target.se = per_target(function(x) sqrt(mean(x$eic^2) / n)),
-      target.se.crude = per_target(function(x) {
-        as.numeric(x$target.est[["estimate"]][["se"]])
-      }),
+      alpha_est = est.alpha$alpha_hat,
+      alpha_se = alpha.se,
+      .target_names(
+        per_target(function(x) .point_estimate(x$target.est)),
+        "target_est"
+      ),
+      .target_names(
+        per_target(function(x) sqrt(mean(x$eic^2) / n)),
+        "target_se"
+      ),
+      .target_names(
+        per_target(function(x) as.numeric(x$target.est[["estimate"]][["se"]])),
+        "target_se_crude"
+      ),
       theta = theta,
-      theta.se = theta.se
+      theta_se = theta.se
     ),
     checks = c(
-      est.deriv.auxiliary = est.deriv.auxiliary,
-      est.alpha.converged = est.alpha$converged,
-      est.alpha.dist = est.alpha$dist,
-      est.alpha.cn = est.alpha$c.n,
-      est.deriv.target = per_target(function(x) x$est.deriv.target)
+      est_deriv_auxiliary = est.deriv.auxiliary,
+      est_alpha_converged = est.alpha$converged,
+      est_alpha_dist = est.alpha$dist,
+      est_alpha_c_n = est.alpha$c_n,
+      .target_names(
+        per_target(function(x) x$est.deriv.target),
+        "est_deriv_target"
+      )
     )
   )
 
@@ -226,8 +236,8 @@ calibrate_alpha <- function(
       target.eic <- target.eic[[1]]
       eic <- eic[[1]]
     }
-    out$alpha.eic <- alpha.eic
-    out$target.eic <- target.eic
+    out$alpha_eic <- alpha.eic
+    out$target_eic <- target.eic
     out$eic <- eic
   }
 

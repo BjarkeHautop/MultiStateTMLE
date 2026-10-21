@@ -5,7 +5,7 @@
 # assumption the code here relies on.
 
 test_that("solve_alpha() validates its arguments", {
-  fun <- function(alpha) list(estimate = c(tmle.est = alpha), eic = alpha)
+  fun <- function(alpha) list(estimate = c(tmle_est = alpha), eic = alpha)
 
   expect_error(
     solve_alpha(theta = 1, fun = fun),
@@ -33,7 +33,7 @@ test_that("solve_alpha() returns immediately when alpha_init already matches the
   n_calls <- 0
   fun <- function(alpha) {
     n_calls <<- n_calls + 1
-    list(estimate = c(tmle.est = alpha, se = 0.1), eic = rep(alpha, 10))
+    list(estimate = c(tmle_est = alpha, se = 0.1), eic = rep(alpha, 10))
   }
 
   res <- solve_alpha(
@@ -44,14 +44,14 @@ test_that("solve_alpha() returns immediately when alpha_init already matches the
   )
 
   expect_true(res$converged)
-  expect_equal(res$alpha.hat, 1)
+  expect_equal(res$alpha_hat, 1)
   expect_equal(n_calls, 1)
 })
 
 test_that("solve_alpha() finds alpha for a monotone increasing estimand", {
   # psi(alpha) = alpha, so the root at theta is alpha = theta
   fun <- function(alpha) {
-    list(estimate = c(tmle.est = alpha, se = 0.1), eic = rep(alpha - 3, 20))
+    list(estimate = c(tmle_est = alpha, se = 0.1), eic = rep(alpha - 3, 20))
   }
 
   res <- solve_alpha(
@@ -62,13 +62,13 @@ test_that("solve_alpha() finds alpha for a monotone increasing estimand", {
   )
 
   expect_true(res$converged)
-  expect_equal(res$alpha.hat, 3)
-  expect_equal(res$eic, rep(res$alpha.hat - 3, 20))
+  expect_equal(res$alpha_hat, 3)
+  expect_equal(res$eic, rep(res$alpha_hat - 3, 20))
 })
 
 test_that("solve_alpha() searches downward when starting above theta", {
   fun <- function(alpha) {
-    list(estimate = c(tmle.est = alpha, se = 0.1), eic = rep(0, 5))
+    list(estimate = c(tmle_est = alpha, se = 0.1), eic = rep(0, 5))
   }
 
   res <- solve_alpha(
@@ -79,14 +79,14 @@ test_that("solve_alpha() searches downward when starting above theta", {
   )
 
   expect_true(res$converged)
-  expect_equal(res$alpha.hat, 2)
+  expect_equal(res$alpha_hat, 2)
 })
 
 test_that("solve_alpha() caches evaluations: every fun call is recorded exactly once", {
   n_calls <- 0
   fun <- function(alpha) {
     n_calls <<- n_calls + 1
-    list(estimate = c(tmle.est = alpha, se = 0.1), eic = rep(0, 5))
+    list(estimate = c(tmle_est = alpha, se = 0.1), eic = rep(0, 5))
   }
 
   res <- solve_alpha(
@@ -107,7 +107,7 @@ test_that("solve_alpha() solves the calibration equation for a Psi_z-shaped curv
   L <- 0.6
   fun <- function(alpha) {
     psi <- L * (1 - exp(-alpha))
-    list(estimate = c(tmle.est = psi, se = 0.05), eic = rep(psi, 10))
+    list(estimate = c(tmle_est = psi, se = 0.05), eic = rep(psi, 10))
   }
 
   theta <- 0.3
@@ -121,13 +121,13 @@ test_that("solve_alpha() solves the calibration equation for a Psi_z-shaped curv
   expected_alpha <- -log(1 - theta / L)
 
   expect_true(res$converged)
-  expect_equal(res$alpha.hat, expected_alpha, tolerance = 1e-3)
+  expect_equal(res$alpha_hat, expected_alpha, tolerance = 1e-3)
 })
 
 test_that("solve_alpha() reports no bracket found when the estimand is out of range", {
   # psi is constant, so it can never bracket a theta above it
   fun <- function(alpha) {
-    list(estimate = c(tmle.est = 1, se = 0.1), eic = rep(0, 5))
+    list(estimate = c(tmle_est = 1, se = 0.1), eic = rep(0, 5))
   }
 
   res <- solve_alpha(
@@ -140,7 +140,7 @@ test_that("solve_alpha() reports no bracket found when the estimand is out of ra
 
   expect_false(res$converged)
   expect_equal(
-    res$alpha.hat,
+    res$alpha_hat,
     res$grid$alpha[which.min(abs(res$grid$psi - 100))]
   )
 })

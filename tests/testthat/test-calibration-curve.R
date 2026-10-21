@@ -15,14 +15,14 @@ test_that("calibration_curve() returns one row per alpha", {
   expect_equal(curve$estimate$alpha, c(0, 1))
   expect_named(
     curve$estimate,
-    c("alpha", "exposure.est", "exposure.se", "target.est", "target.se")
+    c("alpha", "exposure_est", "exposure_se", "target_est", "target_se")
   )
   # Without any z events, the exposure risk is zero.
-  expect_equal(curve$estimate$exposure.est[1], 0)
+  expect_equal(curve$estimate$exposure_est[1], 0)
   # alpha = 1 is no intervention.
   expect_equal(
-    curve$estimate$target.est[2],
-    tmle_alpha(fit, target = "death", min_iter = 1)$estimate[["tmle.est"]]
+    curve$estimate$target_est[2],
+    tmle_alpha(fit, target = "death", min_iter = 1)$estimate[["tmle_est"]]
   )
   expect_named(curve$eics, c("alpha = 0", "alpha = 1"))
   expect_false(anyNA(curve$eics[["alpha = 0"]]$eic))

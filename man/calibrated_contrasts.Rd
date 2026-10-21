@@ -28,7 +28,7 @@ intervals.}
 \value{
 A \code{data.table} with one row per contrast (\code{total}, \code{mediated}
 and \code{calibrated}) and columns \code{estimate}, \code{se}, \code{lower} and \code{upper}.
-The attributes \code{decomposition.error} and \code{eic.decomposition.error} give
+The attributes \code{decomposition_error} and \code{eic_decomposition_error} give
 how far the estimates and influence curves are from satisfying
 total = mediated + calibrated, which should be zero up to numerical
 error.
@@ -43,9 +43,9 @@ intervals based on the influence curves.
 }
 \examples{
 set.seed(1405)
-treatment_fit <- list(estimate = c(tmle.est = 0.7), eic = rnorm(200, sd = 0.1))
-placebo_fit <- list(estimate = c(tmle.est = 0.3), eic = rnorm(200, sd = 0.1))
-calibrated_fit <- list(estimate = c(target.est = 0.5), eic = rnorm(200, sd = 0.1))
+treatment_fit <- list(estimate = c(tmle_est = 0.7), eic = rnorm(200, sd = 0.1))
+placebo_fit <- list(estimate = c(tmle_est = 0.3), eic = rnorm(200, sd = 0.1))
+calibrated_fit <- list(estimate = c(target_est = 0.5), eic = rnorm(200, sd = 0.1))
 
 calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
 }

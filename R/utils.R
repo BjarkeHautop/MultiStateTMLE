@@ -77,9 +77,20 @@
   as.integer(max(1L, min(cores, parallel::detectCores(), na.rm = TRUE)))
 }
 
+# Name the per-target values `x` (named by target, or "" for a single target)
+# as `prefix`, suffixed by `_<target>` when there are several targets.
+.target_names <- function(x, prefix) {
+  names(x) <- if (identical(names(x), "")) {
+    prefix
+  } else {
+    paste0(prefix, "_", names(x))
+  }
+  x
+}
+
 # The point estimate of a tmle_alpha() fit (TMLE or one-step).
 .point_estimate <- function(fit) {
   est <- fit[["estimate"]]
-  nm <- intersect(c("tmle.est", "one.step.est"), names(est))
+  nm <- intersect(c("tmle_est", "one_step_est"), names(est))
   as.numeric(est[[nm[1]]])
 }

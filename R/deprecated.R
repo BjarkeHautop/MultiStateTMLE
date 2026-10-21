@@ -561,6 +561,9 @@ compute.Q.clever.per.id <- function(
     "compute.Q.clever.per.id()",
     details = "It is now internal to tmle_alpha()."
   )
+  if (!is.null(process.types)) {
+    process.types[process.types == "one.jump"] <- "one_jump"
+  }
   .compute_q_clever(
     dt_id = dt_id,
     states = states,

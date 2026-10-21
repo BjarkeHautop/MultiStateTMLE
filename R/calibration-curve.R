@@ -23,8 +23,8 @@
 #'
 #' @return A list with elements:
 #'   * `estimate`: a `data.table` with one row per value of `alpha_grid` and
-#'     columns `alpha`, `exposure.est`, `exposure.se`, `target.est` and
-#'     `target.se` (suffixed by the target name when there are several
+#'     columns `alpha`, `exposure_est`, `exposure_se`, `target_est` and
+#'     `target_se` (suffixed by `_<target>` when there are several
 #'     targets).
 #'   * `checks`: per value of `alpha_grid`, the estimated derivatives of the
 #'     exposure and target estimates with respect to `alpha`.
@@ -87,7 +87,7 @@ calibration_curve <- function(
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
-  n <- length(unique(initial_fit[["tmp.long"]][["id"]]))
+  n <- length(unique(initial_fit[["tmp_long"]][["id"]]))
 
   fit_at <- function(alpha, parameter = z_name, block_size = NULL) {
     tmle_alpha(
@@ -126,7 +126,7 @@ calibration_curve <- function(
 
       alpha.eic <- (1 / est.deriv.auxiliary) * (0 - calibration.est$eic)
     } else {
-      calibration.est <- list(estimate = c(tmle.est = 0, se = 0), eic = 0)
+      calibration.est <- list(estimate = c(tmle_est = 0, se = 0), eic = 0)
       alpha.eic <- 0
       est.deriv.auxiliary <- Inf
     }
@@ -166,22 +166,27 @@ calibration_curve <- function(
 
     out.estimate <- c(
       alpha = alpha,
-      exposure.est = .point_estimate(calibration.est),
-      exposure.se = calibration.est$estimate[["se"]],
-      target.est = vapply(
-        out.target,
-        function(x) .point_estimate(x[["target.est"]]),
-        numeric(1)
+      exposure_est = .point_estimate(calibration.est),
+      exposure_se = calibration.est$estimate[["se"]],
+      .target_names(
+        vapply(
+          out.target,
+          function(x) .point_estimate(x[["target.est"]]),
+          numeric(1)
+        ),
+        "target_est"
       ),
-      target.se = vapply(out.target, function(x) x[["target.se"]], numeric(1))
+      .target_names(
+        vapply(out.target, function(x) x[["target.se"]], numeric(1)),
+        "target_se"
+      )
     )
 
     out.checks <- c(
-      est.deriv.auxiliary = est.deriv.auxiliary,
-      est.deriv.target = vapply(
-        out.target,
-        function(x) x[["est.deriv.target"]],
-        numeric(1)
+      est_deriv_auxiliary = est.deriv.auxiliary,
+      .target_names(
+        vapply(out.target, function(x) x[["est.deriv.target"]], numeric(1)),
+        "est_deriv_target"
       )
     )
 
@@ -204,9 +209,9 @@ calibration_curve <- function(
     list(
       estimate = out.estimate,
       checks = out.checks,
-      alpha.eic = alpha.eic,
-      calibration.eic = calibration.est$eic,
-      target.eic = target.eic,
+      alpha_eic = alpha.eic,
+      calibration_eic = calibration.est$eic,
+      target_eic = target.eic,
       eic = eic
     )
   })
@@ -223,7 +228,7 @@ calibration_curve <- function(
   eic.list <- NULL
   if (output_eic) {
     eic.list <- lapply(alpha.out, function(x) {
-      x[c("alpha.eic", "calibration.eic", "target.eic", "eic")]
+      x[c("alpha_eic", "calibration_eic", "target_eic", "eic")]
     })
   }
 

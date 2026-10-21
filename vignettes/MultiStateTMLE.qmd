@@ -87,7 +87,7 @@ fit_types <- list(
 )
 
 fit <- fit_initial(illness_death, fit_types = fit_types, tau = 1)
-fit$process.types
+fit$process_types
 ```
 
 By default the hazards are fitted with Cox models. Setting `fit = "hal"` in a
@@ -106,8 +106,8 @@ observed <- tmle_alpha(fit, target = "death", alpha = 1, z_name = "z")
 observed$estimate
 ```
 
-The estimate contains the targeted estimate `tmle.est`, its standard error
-`se`, and the initial plug-in estimate `g.est`. Halving the intensity of the
+The estimate contains the targeted estimate `tmle_est`, its standard error
+`se`, and the initial plug-in estimate `g_est`. Halving the intensity of the
 illness gives:
 
 ```{r}
@@ -121,7 +121,7 @@ A 95% confidence interval follows from the standard error:
 ```{r}
 #| label: tmle-ci
 est <- halved$estimate
-est[["tmle.est"]] + c(-1, 1) * qnorm(0.975) * est[["se"]]
+est[["tmle_est"]] + c(-1, 1) * qnorm(0.975) * est[["se"]]
 ```
 
 Setting `alpha = 0` removes the illness altogether, while `alpha > 1`
@@ -156,19 +156,19 @@ calibration curve:
 #|   across interventions on the illness intensity, with 95% confidence
 #|   bands. The risk of death increases with the risk of illness.
 ce <- curve$estimate
-lower <- ce$target.est - qnorm(0.975) * ce$target.se
-upper <- ce$target.est + qnorm(0.975) * ce$target.se
+lower <- ce$target_est - qnorm(0.975) * ce$target_se
+upper <- ce$target_est + qnorm(0.975) * ce$target_se
 
 plot(
-  ce$exposure.est,
-  ce$target.est,
+  ce$exposure_est,
+  ce$target_est,
   type = "b",
   pch = 19,
   ylim = range(lower, upper),
   xlab = "Risk of illness by time 1",
   ylab = "Risk of death by time 1"
 )
-arrows(ce$exposure.est, lower, ce$exposure.est, upper,
+arrows(ce$exposure_est, lower, ce$exposure_est, upper,
   angle = 90, code = 3, length = 0.04
 )
 ```
@@ -194,10 +194,10 @@ cal <- calibrate_alpha(fit, target = "death", z_name = "z", rho = 0.8)
 cal$estimate
 ```
 
-Here `alpha.est` is the calibrated intervention, `theta` is the exposure risk
-it achieves, and `target.est` is the risk of death under it. The standard
-error `target.se` accounts for `alpha` being estimated, whereas
-`target.se.crude` treats it as known.
+Here `alpha_est` is the calibrated intervention, `theta` is the exposure risk
+it achieves, and `target_est` is the risk of death under it. The standard
+error `target_se` accounts for `alpha` being estimated, whereas
+`target_se_crude` treats it as known.
 
 ## Step 5: Decompose a treatment effect
 

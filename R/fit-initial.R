@@ -63,10 +63,10 @@
 #' `penalize_time` (`FALSE`) and `verbose` (`FALSE`), with defaults in
 #' parentheses.
 #'
-#' @return A list containing, among others, `tmp.long` (the expanded data
-#'   with fitted hazards and clever weights), `depend.matrix` (the product
-#'   state space), `process.names`, `process.types`, `process.deltas`,
-#'   `cens.process.id` and `at.risks`.
+#' @return A list containing, among others, `tmp_long` (the expanded data
+#'   with fitted hazards and clever weights), `depend_matrix` (the product
+#'   state space), `process_names`, `process_types`, `process_deltas`,
+#'   `cens_process_id` and `at_risks`.
 #'
 #' @examples
 #' # Illness-death data: z is an illness that can occur once, death is
@@ -85,7 +85,7 @@
 #'   ),
 #'   tau = 1
 #' )
-#' fit$process.types
+#' fit$process_types
 #' @export
 fit_initial <- function(
   data,
@@ -242,7 +242,7 @@ fit_initial <- function(
     return(ifelse(
       is.terminal,
       "terminal",
-      ifelse(is.recurrent, "recurrent", "one.jump")
+      ifelse(is.recurrent, "recurrent", "one_jump")
     ))
   })
   names(process.types) <- process.names
@@ -2871,13 +2871,13 @@ fit_initial <- function(
   ]
 
   return(list(
-    tmp.long = tmp.long,
-    depend.matrix = depend.matrix,
-    process.names = process.names,
-    process.deltas = process.deltas,
-    process.types = process.types,
-    cens.process.id = cens.process.id,
-    at.risks = at.risks
+    tmp_long = tmp.long,
+    depend_matrix = depend.matrix,
+    process_names = process.names,
+    process_deltas = process.deltas,
+    process_types = process.types,
+    cens_process_id = cens.process.id,
+    at_risks = at.risks
   ))
 }
 

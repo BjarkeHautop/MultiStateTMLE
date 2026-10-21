@@ -48,20 +48,20 @@ output.}
 \value{
 A list with elements:
 \itemize{
-\item \code{estimate}: a named vector with the calibrated \code{alpha.est} and its
-\code{alpha.se}, the risk of \code{target} (\code{target.est}) with standard error
-\code{target.se} (accounting for the estimation of alpha) and
-\code{target.se.crude} (treating alpha as known), and the calibration
-target \code{theta} with standard error \code{theta.se}.
+\item \code{estimate}: a named vector with the calibrated \code{alpha_est} and its
+\code{alpha_se}, the risk of \code{target} (\code{target_est}) with standard error
+\code{target_se} (accounting for the estimation of alpha) and
+\code{target_se_crude} (treating alpha as known), and the calibration
+target \code{theta} with standard error \code{theta_se}.
 \item \code{checks}: diagnostics of the alpha search and derivative estimates.
-\item \code{alpha.eic}, \code{target.eic} and \code{eic} (if \code{output_eic = TRUE}): the
+\item \code{alpha_eic}, \code{target_eic} and \code{eic} (if \code{output_eic = TRUE}): the
 influence curves of the calibrated alpha, of the risk of \code{target}
 treating alpha as known, and of the risk of \code{target}.
 }
 
-With several targets, the \verb{target.*} entries of \code{estimate} and \code{checks}
-are suffixed by the target name (e.g. \code{target.est.death}), and
-\code{target.eic} and \code{eic} are lists named by target.
+With several targets, the per-target entries of \code{estimate} and \code{checks}
+are suffixed by the target name (e.g. \code{target_est_death}), and
+\code{target_eic} and \code{eic} are lists named by target.
 }
 \description{
 Finds the intervention \code{alpha} on the intensity of the process \code{z_name}

@@ -80,10 +80,10 @@ done if some increments exceed 1.}
 \item{verbose}{Logical. If \code{TRUE}, print model fits and progress.}
 }
 \value{
-A list containing, among others, \code{tmp.long} (the expanded data
-with fitted hazards and clever weights), \code{depend.matrix} (the product
-state space), \code{process.names}, \code{process.types}, \code{process.deltas},
-\code{cens.process.id} and \code{at.risks}.
+A list containing, among others, \code{tmp_long} (the expanded data
+with fitted hazards and clever weights), \code{depend_matrix} (the product
+state space), \code{process_names}, \code{process_types}, \code{process_deltas},
+\code{cens_process_id} and \code{at_risks}.
 }
 \description{
 Fits the initial (nuisance) hazard model for each event process (Cox
@@ -122,5 +122,5 @@ fit <- fit_initial(
   ),
   tau = 1
 )
-fit$process.types
+fit$process_types
 }

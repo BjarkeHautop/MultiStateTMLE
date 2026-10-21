@@ -43,7 +43,7 @@ warning.}
 
 \item{alpha_list}{Experimental. Optional named list of functions, one per
 process, giving a time-varying intervention on that process's intensity.
-Each function's arguments name the columns of \code{initial_fit$tmp.long} it
+Each function's arguments name the columns of \code{initial_fit$tmp_long} it
 depends on. Supersedes \code{alpha} and \code{z_name}.}
 
 \item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on.
@@ -58,7 +58,7 @@ approximated with blocks of \code{years_lost} time points.}
 counts, and only the first jump of \code{z_name} is intervened on.}
 
 \item{target_only_in_state}{Optional function of the state space
-(\code{initial_fit$depend.matrix}) returning a logical vector, marking the
+(\code{initial_fit$depend_matrix}) returning a logical vector, marking the
 states in which \code{target} events count.}
 
 \item{target_by_state}{Logical. If \code{TRUE}, use state-specific clever
@@ -99,10 +99,10 @@ to report quantiles of the per-individual maximal treatment weights.}
 }
 \value{
 A list with element \code{estimate}, a named vector with the estimate
-(\code{tmle.est}, or \code{one.step.est} if \code{one_step = TRUE}), its standard
-error \code{se}, and the initial plug-in estimate \code{g.est}. Depending on the
+(\code{tmle_est}, or \code{one_step_est} if \code{one_step = TRUE}), its standard
+error \code{se}, and the initial plug-in estimate \code{g_est}. Depending on the
 arguments, the list also contains \code{convergence}, \code{weights},
-\code{cens.weights}, \code{a.weights} and \code{eic}.
+\code{cens_weights}, \code{a_weights} and \code{eic}.
 }
 \description{
 Estimates a target parameter under a stochastic intensity intervention

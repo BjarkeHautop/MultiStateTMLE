@@ -20,7 +20,7 @@
 #'   warning.
 #' @param alpha_list Experimental. Optional named list of functions, one per
 #'   process, giving a time-varying intervention on that process's intensity.
-#'   Each function's arguments name the columns of `initial_fit$tmp.long` it
+#'   Each function's arguments name the columns of `initial_fit$tmp_long` it
 #'   depends on. Supersedes `alpha` and `z_name`.
 #' @param a Optional baseline treatment value (`0` or `1`) to intervene on.
 #'   Must be one of the values of `a` given to [fit_initial()].
@@ -31,7 +31,7 @@
 #' @param only_first Logical. If `TRUE`, only the first `target` event
 #'   counts, and only the first jump of `z_name` is intervened on.
 #' @param target_only_in_state Optional function of the state space
-#'   (`initial_fit$depend.matrix`) returning a logical vector, marking the
+#'   (`initial_fit$depend_matrix`) returning a logical vector, marking the
 #'   states in which `target` events count.
 #' @param target_by_state Logical. If `TRUE`, use state-specific clever
 #'   covariates in the targeting step.
@@ -59,10 +59,10 @@
 #' @param verbose Logical. If `TRUE`, print progress.
 #'
 #' @return A list with element `estimate`, a named vector with the estimate
-#'   (`tmle.est`, or `one.step.est` if `one_step = TRUE`), its standard
-#'   error `se`, and the initial plug-in estimate `g.est`. Depending on the
+#'   (`tmle_est`, or `one_step_est` if `one_step = TRUE`), its standard
+#'   error `se`, and the initial plug-in estimate `g_est`. Depending on the
 #'   arguments, the list also contains `convergence`, `weights`,
-#'   `cens.weights`, `a.weights` and `eic`.
+#'   `cens_weights`, `a_weights` and `eic`.
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -144,16 +144,16 @@ tmle_alpha <- function(
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
-  tmp.long <- copy(initial_fit$tmp.long)
-  depend.matrix <- copy(initial_fit$depend.matrix)
+  tmp.long <- copy(initial_fit$tmp_long)
+  depend.matrix <- copy(initial_fit$depend_matrix)
 
   n <- length(unique(tmp.long[["id"]]))
 
-  process.names <- initial_fit$process.names
-  process.deltas <- initial_fit$process.deltas
-  process.types <- initial_fit$process.types
+  process.names <- initial_fit$process_names
+  process.deltas <- initial_fit$process_deltas
+  process.types <- initial_fit$process_types
 
-  at.risks <- initial_fit$at.risks
+  at.risks <- initial_fit$at_risks
 
   target.id <- which(tolower(process.names) == tolower(target))
   if (length(target.id) != 1) {
@@ -194,14 +194,14 @@ tmle_alpha <- function(
   setkeyv(states, c("state", state.names[state.names %in% process.names]))
 
   if (only_first) {
-    process.types[[target.name]] <- "one.jump"
+    process.types[[target.name]] <- "one_jump"
     tmp.long <- tmp.long[tmp.long[[target.name]] <= 1]
   }
 
   tmp.long[, at.risk := (time <= final.time)]
 
   if (target.name %in% names(at.risks)) {
-    if (process.types[target.name] == "one.jump") {
+    if (process.types[target.name] == "one_jump") {
       tmp.long[, at.risk := at.risk * (at.risks[[target.name]](tmp.long))]
     }
     states[, at.risk := at.risks[[target.name]](depend.matrix)]
@@ -263,7 +263,7 @@ tmle_alpha <- function(
       stop(
         "Column '",
         a.weight.col,
-        "' not found in initial_fit$tmp.long; a must be one of the values ",
+        "' not found in initial_fit$tmp_long; a must be one of the values ",
         "of a given to fit_initial()."
       )
     }
@@ -282,7 +282,7 @@ tmle_alpha <- function(
       output_weights
     )
     if (truncate_weights > 0) {
-      out.weights <- c(out.weights, no.truncated = no.truncated)
+      out.weights <- c(out.weights, n_truncated = no.truncated)
     }
     out.cens.weights <- quantiles(
       tmp.long[time <= final.time, max(clever.weight), by = "id"][[2]],
@@ -498,29 +498,29 @@ tmle_alpha <- function(
 
   if (one_step) {
     out <- list(
-      estimate = c(one.step.est = one.step.est, se = target.se, g.est = g.est)
+      estimate = c(one_step_est = one.step.est, se = target.se, g_est = g.est)
     )
   } else {
     out <- list(
-      estimate = c(tmle.est = target.est, se = target.se, g.est = g.est)
+      estimate = c(tmle_est = target.est, se = target.se, g_est = g.est)
     )
   }
 
   if (output_convergence) {
     out$convergence <- c(
       iter = iter,
-      eic.solved.at = abs(mean(eic)),
+      eic_solved_at = abs(mean(eic)),
       converged = converged
     )
   }
 
   if (length(output_weights) > 0) {
     out$weights <- out.weights
-    out$cens.weights <- out.cens.weights
+    out$cens_weights <- out.cens.weights
   }
 
   if (length(output_a_weights) > 0) {
-    out$a.weights <- out.a.weights
+    out$a_weights <- out.a.weights
   }
 
   if (output_eic) {
@@ -574,13 +574,13 @@ tmle_alpha <- function(
   checkmate::assert_names(
     names(initial_fit),
     must.include = c(
-      "tmp.long",
-      "depend.matrix",
-      "process.names",
-      "process.deltas",
-      "process.types",
-      "cens.process.id",
-      "at.risks"
+      "tmp_long",
+      "depend_matrix",
+      "process_names",
+      "process_deltas",
+      "process_types",
+      "cens_process_id",
+      "at_risks"
     ),
     .var.name = "names(initial_fit)"
   )

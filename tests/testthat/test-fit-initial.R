@@ -5,20 +5,20 @@ test_that("fit_initial() fits the illness-death example", {
     tau = 1
   )
 
-  expect_equal(fit$process.names, c("z", "death", "censoring"))
-  expect_equal(fit$process.deltas, c(2, 1, 0))
+  expect_equal(fit$process_names, c("z", "death", "censoring"))
+  expect_equal(fit$process_deltas, c(2, 1, 0))
   expect_equal(
-    fit$process.types,
-    list(z = "one.jump", death = "terminal", censoring = "terminal")
+    fit$process_types,
+    list(z = "one_jump", death = "terminal", censoring = "terminal")
   )
-  expect_equal(fit$cens.process.id, 3)
-  expect_named(fit$at.risks, "z")
+  expect_equal(fit$cens_process_id, 3)
+  expect_named(fit$at_risks, "z")
   # z is a state variable, with states z = 0 and z = 1.
-  expect_equal(fit$depend.matrix$z, c(0, 1))
-  expect_true(all(fit$tmp.long$time <= 1))
+  expect_equal(fit$depend_matrix$z, c(0, 1))
+  expect_true(all(fit$tmp_long$time <= 1))
   expect_true(all(
     c("P.z.1", "P.z.2", "P.death.1", "P.death.2") %in%
-      names(fit$tmp.long)
+      names(fit$tmp_long)
   ))
 })
 
@@ -33,12 +33,12 @@ test_that("fit_initial() accepts model strings with or without whitespace", {
   )
 
   expect_equal(
-    fit_initial(illness_death, fit_types = compact, tau = 1)$tmp.long,
+    fit_initial(illness_death, fit_types = compact, tau = 1)$tmp_long,
     fit_initial(
       illness_death,
       fit_types = illness.death.fit.types,
       tau = 1
-    )$tmp.long
+    )$tmp_long
   )
 })
 
@@ -118,7 +118,7 @@ test_that("fit_initial() converts a non-numeric time column with a warning", {
     fit <- fit_initial(data, fit_types = illness.death.fit.types, tau = 1),
     "not numeric"
   )
-  expect_true(is.numeric(fit$tmp.long$time))
+  expect_true(is.numeric(fit$tmp_long$time))
 })
 
 test_that("fit_initial() fits a treatment model and propensities under 'a'", {
@@ -130,11 +130,11 @@ test_that("fit_initial() fits a treatment model and propensities under 'a'", {
     a = 0:1
   )
 
-  expect_true(data.table::is.data.table(fit$tmp.long))
-  expect_true(all(fit$tmp.long$pi.A0.1 >= 0 & fit$tmp.long$pi.A0.1 <= 1))
+  expect_true(data.table::is.data.table(fit$tmp_long))
+  expect_true(all(fit$tmp_long$pi.A0.1 >= 0 & fit$tmp_long$pi.A0.1 <= 1))
   expect_true(all(
     c("clever.weight.a0", "clever.weight.a1") %in%
-      names(fit$tmp.long)
+      names(fit$tmp_long)
   ))
 })
 

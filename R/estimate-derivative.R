@@ -4,8 +4,8 @@
 #' returned by `fun`, by a symmetric finite difference at `alpha`.
 #'
 #' @param fun A function of `alpha` (and `...`) returning a list with an
-#'   element `estimate`, a named vector containing `tmle.est` or
-#'   `one.step.est`, such as a call to [tmle_alpha()].
+#'   element `estimate`, a named vector containing `tmle_est` or
+#'   `one_step_est`, such as a call to [tmle_alpha()].
 #' @param alpha Positive number. The point at which to estimate the
 #'   derivative.
 #' @param h Positive number. Step size of the finite difference. It is
@@ -17,7 +17,7 @@
 #'
 #' @examples
 #' # The derivative of alpha^2 at alpha = 3 is 6.
-#' fun <- function(alpha) list(estimate = c(tmle.est = alpha^2))
+#' fun <- function(alpha) list(estimate = c(tmle_est = alpha^2))
 #' estimate_derivative(fun, alpha = 3, h = 0.01)
 #' @export
 estimate_derivative <- function(fun, alpha, h, ...) {

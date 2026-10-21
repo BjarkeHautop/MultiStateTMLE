@@ -18,16 +18,16 @@
 #'
 #' @return A `data.table` with one row per contrast (`total`, `mediated`
 #'   and `calibrated`) and columns `estimate`, `se`, `lower` and `upper`.
-#'   The attributes `decomposition.error` and `eic.decomposition.error` give
+#'   The attributes `decomposition_error` and `eic_decomposition_error` give
 #'   how far the estimates and influence curves are from satisfying
 #'   total = mediated + calibrated, which should be zero up to numerical
 #'   error.
 #'
 #' @examples
 #' set.seed(1405)
-#' treatment_fit <- list(estimate = c(tmle.est = 0.7), eic = rnorm(200, sd = 0.1))
-#' placebo_fit <- list(estimate = c(tmle.est = 0.3), eic = rnorm(200, sd = 0.1))
-#' calibrated_fit <- list(estimate = c(target.est = 0.5), eic = rnorm(200, sd = 0.1))
+#' treatment_fit <- list(estimate = c(tmle_est = 0.7), eic = rnorm(200, sd = 0.1))
+#' placebo_fit <- list(estimate = c(tmle_est = 0.3), eic = rnorm(200, sd = 0.1))
+#' calibrated_fit <- list(estimate = c(target_est = 0.5), eic = rnorm(200, sd = 0.1))
 #'
 #' calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
 #' @export
@@ -45,16 +45,16 @@ calibrated_contrasts <- function(
   checkmate::assert_number(conf_level, lower = 0, upper = 1)
 
   treatment.est <-
-    treatment_fit$estimate[["tmle.est"]]
+    treatment_fit$estimate[["tmle_est"]]
 
   placebo.est <-
-    placebo_fit$estimate[["tmle.est"]]
+    placebo_fit$estimate[["tmle_est"]]
 
   calibrated.est <-
     calibrated_fit$estimate[[ifelse(
       length(target) > 0,
-      paste0("target.est.", target),
-      "target.est"
+      paste0("target_est_", target),
+      "target_est"
     )]]
 
   treatment.eic <- treatment_fit$eic
@@ -132,10 +132,10 @@ calibrated_contrasts <- function(
         (calibrated.eic - placebo.eic)
     ))
 
-  attr(out, "decomposition.error") <-
+  attr(out, "decomposition_error") <-
     decomposition.error
 
-  attr(out, "eic.decomposition.error") <-
+  attr(out, "eic_decomposition_error") <-
     eic.decomposition.error
 
   out
