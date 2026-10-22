@@ -9,7 +9,7 @@ fit_initial(
   fit_types,
   tau,
   treatment_model = NULL,
-  a = NULL,
+  arms = NULL,
   max_count = 1,
   derived_vars = list(),
   depend_time = list(),
@@ -44,12 +44,11 @@ once).
 \item{tau}{Positive number. Follow-up horizon; the target parameters are
 evaluated at \code{tau}.}
 
-\item{treatment_model}{Optional model for the baseline treatment, either
-a formula such as \code{A0 ~ L0} or a list with elements \code{model} (such a
-formula) and \code{fit} (only \code{"glm"} is supported). Required when \code{a} is
-given.}
+\item{treatment_model}{Optional logistic regression model for the
+baseline treatment, a two-sided formula such as \code{A0 ~ L0}. Required when
+\code{arms} is given.}
 
-\item{a}{Integer vector of the baseline treatment values (\code{0}/\code{1}) to
+\item{arms}{Integer vector of the baseline treatment values (\code{0}/\code{1}) to
 prepare interventional hazards and clever weights for. Each value can
 then be passed as \code{a} to \code{\link[=tmle_alpha]{tmle_alpha()}}, \code{\link[=calibrate_alpha]{calibrate_alpha()}} and
 \code{\link[=calibration_curve]{calibration_curve()}}. Defaults to both values, \code{0:1}, when
@@ -58,11 +57,16 @@ then be passed as \code{a} to \code{\link[=tmle_alpha]{tmle_alpha()}}, \code{\li
 \item{max_count}{Positive integer. Maximum number of jumps tracked per
 recurrent process in the state space.}
 
-\item{derived_vars}{Named list of functions of the data deriving
-additional state variables.}
+\item{derived_vars}{Named list of functions of the data, each deriving an
+additional state variable, named by the list, that can be used in the
+\code{model}s of \code{fit_types}.}
 
-\item{depend_time}{Named list of functions describing dependence on the
-time since a jump of a process, keyed by process name.}
+\item{depend_time}{Experimental, and may change. Named list of functions
+making hazards depend on the time of a jump. Each is named by a state
+variable: a process \code{z} that jumps once, or \code{z.k} for the \code{k}th jump of
+a recurrent process \code{z}. It adds the covariate \verb{T.<name>}, \code{0} before
+that jump and the function applied to the time of the jump after it,
+which can be used (as a factor) in the \code{model}s of \code{fit_types}.}
 
 \item{control}{A named list of tuning settings:
 \itemize{
@@ -85,7 +89,8 @@ only done if some increments exceed 1.
 An object of class \code{initial_fit}, a list with elements:
 \itemize{
 \item \code{n}: the number of individuals.
-\item \code{tau}, \code{treatment_model} and \code{a}: as given.
+\item \code{tau}, \code{treatment_model} and \code{arms}: as given (\code{arms} with its
+default filled in).
 \item \code{processes}: a \code{data.table} with one row per process and columns
 \code{name}, \code{delta}, \code{type} (\code{"terminal"}, \code{"recurrent"} or
 \code{"one_jump"}, inferred from the data), \code{model} and \code{at_risk}
@@ -134,5 +139,5 @@ fit <- fit_initial(
   ),
   tau = 1
 )
-fit$process_types
+fit
 }

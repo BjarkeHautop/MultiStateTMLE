@@ -4,7 +4,8 @@
 #' [fit_initial()] instead.
 #'
 #' @param dt Observed data, see `data` in [fit_initial()].
-#' @param tau,a,verbose See [fit_initial()].
+#' @param tau,verbose See [fit_initial()].
+#' @param a See `arms` in [fit_initial()].
 #' @param fit.types,max.count,derived.vars,depend.time,prune.states,use.exponential
 #'   See the snake_case equivalents in [fit_initial()]. Use `at.risk` for the
 #'   at-risk functions of `fit.types`.
@@ -172,7 +173,7 @@ prepare.initial <- function(
     fit_types = .legacy_fit_types(fit.types),
     tau = tau,
     treatment_model = .legacy_treatment_model(fit.treatment),
-    a = a,
+    arms = a,
     max_count = max.count,
     derived_vars = derived.vars,
     depend_time = depend.time,
@@ -214,9 +215,10 @@ prepare.initial <- function(
 #' @param z.name See `z_name` in [tmle_alpha()]. If `initial.fit` has no
 #'   such process, `z.name` is ignored, as is `alpha` with a warning.
 #' @param alpha.list,target.only.in.state,target.by.state,conv.const,one.step,max.iter,min.iter,truncate.weights
-#'   See the snake_case equivalents in [tmle_alpha()].
+#'   See the snake_case equivalents in [tmle_alpha()] and its `control`;
+#'   `truncate.weights = 0` is no truncation.
 #' @param years.lost If given, `estimand = "years_lost"` with
-#'   `block_size = years.lost` in [tmle_alpha()].
+#'   `control$block_size = years.lost` in [tmle_alpha()].
 #' @param only.first See `only_first` in [tmle_alpha()]; `NULL` means
 #'   `FALSE`.
 #' @param use.cores See `cores` in [tmle_alpha()].
@@ -281,6 +283,20 @@ tmle.alpha.fun <- function(
     z.name <- NULL
     alpha <- 1
   }
+  # alpha.list superseded alpha and z.name, and names matched in any case.
+  if (length(alpha.list) > 0) {
+    z.name <- NULL
+    alpha <- 1
+  }
+  canonical <- function(name) {
+    process.names <- initial.fit$process_names
+    hit <- match(tolower(name), tolower(process.names))
+    if (is.na(hit)) name else process.names[hit]
+  }
+  target <- canonical(target)
+  if (!is.null(z.name)) {
+    z.name <- canonical(z.name)
+  }
   tmle_alpha(
     initial_fit = initial.fit,
     target = target,
@@ -289,15 +305,17 @@ tmle.alpha.fun <- function(
     alpha_list = alpha.list,
     a = a,
     estimand = if (is.null(years.lost)) "risk" else "years_lost",
-    block_size = if (is.null(years.lost)) 10 else years.lost,
     only_first = isTRUE(only.first),
     target_only_in_state = target.only.in.state,
-    target_by_state = target.by.state,
-    conv_const = conv.const,
-    one_step = one.step,
-    max_iter = max.iter,
-    min_iter = min.iter,
-    truncate_weights = truncate.weights,
+    control = list(
+      one_step = one.step,
+      block_size = if (is.null(years.lost)) 10 else years.lost,
+      target_by_state = target.by.state,
+      conv_const = conv.const,
+      max_iter = max.iter,
+      min_iter = min.iter,
+      truncate_weights = if (truncate.weights == 0) Inf else truncate.weights
+    ),
     cores = use.cores,
     verbose = verbose
   )
@@ -384,7 +402,7 @@ calibration.fun <- function(
         cores = use.cores,
         verbose = verbose
       ),
-      args
+      .split_control(args)
     )
   )
 }
@@ -396,12 +414,14 @@ calibration.fun <- function(
 #'
 #' @param initial.fit See `initial_fit` in [calibration_curve()].
 #' @param target,a,verbose See [calibration_curve()].
-#' @param z.name,alpha.grid,min.iter,target.by.state See the snake_case
-#'   equivalents in [calibration_curve()].
+#' @param z.name,alpha.grid See the snake_case equivalents in
+#'   [calibration_curve()].
+#' @param min.iter,target.by.state See the snake_case equivalents in the
+#'   `control` of [tmle_alpha()].
 #' @param block.size.z,block.size.target If given,
 #'   `exposure_estimand = "years_lost"` and `estimand = "years_lost"`,
-#'   respectively, in [calibration_curve()], with this `block_size`. If both
-#'   are given, they must be equal.
+#'   respectively, in [calibration_curve()], with this `control$block_size`.
+#'   If both are given, they must be equal.
 #' @param output.eic Ignored; [calibration_curve()] always returns the
 #'   influence curves.
 #' @param use.cores See `cores` in [calibration_curve()].
@@ -448,19 +468,23 @@ calibration.curve.fun <- function(
         z_name = z.name,
         alpha_grid = alpha.grid,
         a = a,
-        min_iter = min.iter,
-        target_by_state = target.by.state,
         estimand = if (is.null(block.size.target)) "risk" else "years_lost",
         exposure_estimand = if (is.null(block.size.z)) {
           "risk"
         } else {
           "years_lost"
         },
-        block_size = if (length(block.sizes) == 0) 10 else block.sizes,
         cores = use.cores,
         verbose = verbose
       ),
-      .snake_case_args(list(...))
+      .split_control(c(
+        list(
+          min_iter = min.iter,
+          target_by_state = target.by.state,
+          block_size = if (length(block.sizes) == 0) 10 else block.sizes
+        ),
+        .snake_case_args(list(...))
+      ))
     )
   )
 }
@@ -510,9 +534,11 @@ estimate.derivative <- function(...) {
 #' `make.calibrated.contrasts()` is deprecated as of MultiStateTMLE 0.1.0.
 #' Use [calibrated_contrasts()] instead.
 #'
-#' @param target See [calibrated_contrasts()].
-#' @param treatment.fit,placebo.fit,calibrated.fit,conf.level See the
-#'   snake_case equivalents in [calibrated_contrasts()].
+#' @param target If given, must be the target of `treatment.fit`, which
+#'   [calibrated_contrasts()] always uses.
+#' @param treatment.fit,placebo.fit,calibrated.fit See the snake_case
+#'   equivalents in [calibrated_contrasts()].
+#' @param conf.level See `level` in [calibrated_contrasts()].
 #'
 #' @return See [calibrated_contrasts()].
 #' @keywords internal
@@ -529,12 +555,14 @@ make.calibrated.contrasts <- function(
     "make.calibrated.contrasts()",
     "calibrated_contrasts()"
   )
+  if (!is.null(target) && !identical(target, treatment.fit$estimate$target)) {
+    stop("target must be the target of treatment.fit.")
+  }
   calibrated_contrasts(
     treatment_fit = treatment.fit,
     placebo_fit = placebo.fit,
     calibrated_fit = calibrated.fit,
-    target = target,
-    conf_level = conf.level
+    level = conf.level
   )
 }
 
@@ -621,15 +649,27 @@ compute.Q.clever.per.id <- function(
 }
 
 # Translate prepare.initial()'s `fit.treatment`, a model string or a list of
-# such a `model` and `fit`, to fit_initial()'s formula-based form.
+# such a `model` and `fit`, to fit_initial()'s formula.
 .legacy_treatment_model <- function(fit.treatment) {
-  if (is.character(fit.treatment)) {
-    return(stats::as.formula(fit.treatment))
+  if (is.list(fit.treatment)) {
+    if (!is.null(fit.treatment$fit) && !identical(fit.treatment$fit, "glm")) {
+      stop("Only fit = \"glm\" is supported for fit.treatment.")
+    }
+    fit.treatment <- fit.treatment$model
   }
-  if (is.character(fit.treatment[["model"]])) {
-    fit.treatment[["model"]] <- stats::as.formula(fit.treatment[["model"]])
+  if (is.character(fit.treatment)) {
+    fit.treatment <- stats::as.formula(fit.treatment)
   }
   fit.treatment
+}
+
+# Move the settings in `args` that tmle_alpha() takes in `control` there.
+.split_control <- function(args) {
+  in.control <- names(args) %in% names(.tmle_control_defaults)
+  if (!any(in.control)) {
+    return(args)
+  }
+  c(args[!in.control], list(control = args[in.control]))
 }
 
 # The `delta` code k of a model string "Surv(tstart, tstop, delta == k) ~ ...".

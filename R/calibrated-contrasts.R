@@ -8,22 +8,21 @@
 #' intervals based on the influence curves.
 #'
 #' @param treatment_fit,placebo_fit Fits for the treatment and placebo arms,
-#'   as returned by [tmle_alpha()].
+#'   as returned by [tmle_alpha()] with different baseline treatments `a`.
 #' @param calibrated_fit Fit for the calibrated intervention, as returned by
-#'   [calibrate_alpha()].
-#' @param target Optional string. The target to use from `calibrated_fit`,
-#'   which may contain estimates for several targets. Defaults to the
-#'   target of `treatment_fit`.
-#' @param conf_level Number between 0 and 1. Confidence level of the
-#'   intervals.
+#'   [calibrate_alpha()] with the `a` of `treatment_fit`. It may contain
+#'   estimates for several targets; the one of `treatment_fit` is used.
+#' @param level Number between 0 and 1. Confidence level of the intervals.
 #'
-#' @return A `data.table` with one row per contrast (`total`, `mediated`
-#'   and `calibrated`) and columns `target`, `contrast`, `estimate`, `se`,
-#'   `lower` and `upper`.
-#'   The attributes `decomposition_error` and `eic_decomposition_error` give
-#'   how far the estimates and influence curves are from satisfying
-#'   total = mediated + calibrated, which should be zero up to numerical
-#'   error.
+#' @return An object of class `calibrated_contrasts`, a list with elements:
+#'   * `estimate`: a `data.table` with one row per contrast (`total`,
+#'     `mediated` and `calibrated`) and columns `target`, `contrast`,
+#'     `estimate`, `se`, `lower` and `upper`.
+#'   * `target` and `level`: the target and the confidence level.
+#'   * `checks`: a list with `decomposition_error` and
+#'     `eic_decomposition_error`, how far the estimates and influence curves
+#'     are from satisfying total = mediated + calibrated, which should be
+#'     zero up to numerical error.
 #'
 #' @examples
 #' # illness_death with a randomised treatment A0 added, for illustration.
@@ -66,24 +65,52 @@ calibrated_contrasts <- function(
   treatment_fit,
   placebo_fit,
   calibrated_fit,
-  target = NULL,
-  conf_level = 0.95
+  level = 0.95
 ) {
   checkmate::assert_class(treatment_fit, "tmle_alpha")
   checkmate::assert_class(placebo_fit, "tmle_alpha")
   checkmate::assert_class(calibrated_fit, "calibrate_alpha")
-  checkmate::assert_string(target, null.ok = TRUE)
-  checkmate::assert_number(conf_level, lower = 0, upper = 1)
+  checkmate::assert_number(level, lower = 0, upper = 1)
 
-  if (is.null(target)) {
-    target <- treatment_fit$estimate$target
+  target <- treatment_fit$estimate$target
+  if (!identical(placebo_fit$estimate$target, target)) {
+    stop("treatment_fit and placebo_fit must have the same target.")
+  }
+  if (
+    is.null(treatment_fit$a) ||
+      is.null(placebo_fit$a) ||
+      treatment_fit$a == placebo_fit$a
+  ) {
+    stop(
+      "treatment_fit and placebo_fit must be under different baseline ",
+      "treatments a."
+    )
+  }
+  if (!identical(calibrated_fit$a, treatment_fit$a)) {
+    stop(
+      "calibrated_fit must be under the baseline treatment of ",
+      "treatment_fit, a = ",
+      treatment_fit$a,
+      "."
+    )
+  }
+  estimands <- c(
+    treatment_fit$estimand,
+    placebo_fit$estimand,
+    calibrated_fit$estimand
+  )
+  if (length(unique(estimands)) != 1) {
+    stop(
+      "treatment_fit, placebo_fit and calibrated_fit must have the same ",
+      "estimand."
+    )
   }
   calibrated.row <- match(target, calibrated_fit$estimate$target)
   if (is.na(calibrated.row)) {
     stop(
-      "target '",
+      "The target of treatment_fit, '",
       target,
-      "' is not among the targets of calibrated_fit: ",
+      "', is not among the targets of calibrated_fit: ",
       paste(calibrated_fit$estimate$target, collapse = ", "),
       "."
     )
@@ -118,7 +145,7 @@ calibrated_contrasts <- function(
     se <- sqrt(mean(eic^2 / n))
 
     critical.value <-
-      stats::qnorm(1 - (1 - conf_level) / 2)
+      stats::qnorm(1 - (1 - level) / 2)
 
     c(
       estimate = estimate,
@@ -164,11 +191,16 @@ calibrated_contrasts <- function(
         (calibrated.eic - placebo.eic)
     ))
 
-  attr(out, "decomposition_error") <-
-    decomposition.error
-
-  attr(out, "eic_decomposition_error") <-
-    eic.decomposition.error
-
-  out
+  structure(
+    list(
+      estimate = out,
+      target = target,
+      level = level,
+      checks = list(
+        decomposition_error = decomposition.error,
+        eic_decomposition_error = eic.decomposition.error
+      )
+    ),
+    class = "calibrated_contrasts"
+  )
 }

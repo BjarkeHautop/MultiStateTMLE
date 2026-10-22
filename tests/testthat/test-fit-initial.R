@@ -103,8 +103,18 @@ test_that("fit_initial() validates its arguments", {
     "fit"
   )
   expect_error(
-    fit_initial(illness_death, fit_types = ft, tau = 1, a = 1),
+    fit_initial(illness_death, fit_types = ft, tau = 1, arms = 1),
     "treatment_model"
+  )
+  expect_error(fit_initial(illness_death, fit_types = ft, tau = 0), "tau")
+  expect_error(
+    fit_initial(
+      illness_death,
+      fit_types = ft,
+      tau = 1,
+      derived_vars = list(function(dt) dt[["z"]])
+    ),
+    "derived_vars"
   )
   expect_error(
     fit_initial(
@@ -134,9 +144,9 @@ test_that("fit_initial() rejects invalid inputs", {
       fixture.data.treated(),
       fit_types = ft,
       tau = 1,
-      treatment_model = list(model = A0 ~ L0, fit = "other")
+      treatment_model = list(model = A0 ~ L0, fit = "glm")
     ),
-    "glm"
+    "treatment_model"
   )
   expect_error(
     fit_initial(
@@ -144,7 +154,7 @@ test_that("fit_initial() rejects invalid inputs", {
       fit_types = ft,
       tau = 1,
       treatment_model = ~L0,
-      a = 1
+      arms = 1
     ),
     "two-sided"
   )
@@ -169,8 +179,8 @@ test_that("fit_initial() fits a treatment model and propensities under 'a'", {
     treatment_model = A0 ~ L0
   )
 
-  # a defaults to both arms when a treatment model is given.
-  expect_equal(fit$a, 0:1)
+  # arms defaults to both arms when a treatment model is given.
+  expect_equal(fit$arms, 0:1)
   expect_true(data.table::is.data.table(fit$tmp_long))
   expect_true(all(fit$tmp_long$pi.A0.1 >= 0 & fit$tmp_long$pi.A0.1 <= 1))
   expect_true(all(

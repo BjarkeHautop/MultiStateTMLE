@@ -4,36 +4,30 @@
 \alias{calibrated_contrasts}
 \title{Decompose a treatment effect into mediated and calibrated contrasts}
 \usage{
-calibrated_contrasts(
-  treatment_fit,
-  placebo_fit,
-  calibrated_fit,
-  target = NULL,
-  conf_level = 0.95
-)
+calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit, level = 0.95)
 }
 \arguments{
 \item{treatment_fit, placebo_fit}{Fits for the treatment and placebo arms,
-as returned by \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+as returned by \code{\link[=tmle_alpha]{tmle_alpha()}} with different baseline treatments \code{a}.}
 
 \item{calibrated_fit}{Fit for the calibrated intervention, as returned by
-\code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
+\code{\link[=calibrate_alpha]{calibrate_alpha()}} with the \code{a} of \code{treatment_fit}. It may contain
+estimates for several targets; the one of \code{treatment_fit} is used.}
 
-\item{target}{Optional string. The target to use from \code{calibrated_fit},
-which may contain estimates for several targets. Defaults to the
-target of \code{treatment_fit}.}
-
-\item{conf_level}{Number between 0 and 1. Confidence level of the
-intervals.}
+\item{level}{Number between 0 and 1. Confidence level of the intervals.}
 }
 \value{
-A \code{data.table} with one row per contrast (\code{total}, \code{mediated}
-and \code{calibrated}) and columns \code{target}, \code{contrast}, \code{estimate}, \code{se},
-\code{lower} and \code{upper}.
-The attributes \code{decomposition_error} and \code{eic_decomposition_error} give
-how far the estimates and influence curves are from satisfying
-total = mediated + calibrated, which should be zero up to numerical
-error.
+An object of class \code{calibrated_contrasts}, a list with elements:
+\itemize{
+\item \code{estimate}: a \code{data.table} with one row per contrast (\code{total},
+\code{mediated} and \code{calibrated}) and columns \code{target}, \code{contrast},
+\code{estimate}, \code{se}, \code{lower} and \code{upper}.
+\item \code{target} and \code{level}: the target and the confidence level.
+\item \code{checks}: a list with \code{decomposition_error} and
+\code{eic_decomposition_error}, how far the estimates and influence curves
+are from satisfying total = mediated + calibrated, which should be
+zero up to numerical error.
+}
 }
 \description{
 Given estimates of the risk of an outcome under treatment, under placebo,

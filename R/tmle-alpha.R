@@ -12,12 +12,11 @@
 #'
 #' @param initial_fit An initial fit, as returned by [fit_initial()].
 #' @param target String. Name of the target process.
-#' @param alpha Non-negative number. Multiplicative intervention on the
-#'   intensity of `z_name`. `alpha = 1` is no intervention. Ignored if
-#'   `alpha_list` is given.
 #' @param z_name String. Name of the process in `initial_fit` whose
 #'   intensity `alpha` scales. Required unless `alpha = 1` or `alpha_list`
 #'   is given.
+#' @param alpha Non-negative number. Multiplicative intervention on the
+#'   intensity of `z_name`. `alpha = 1` is no intervention.
 #' @param alpha_list Experimental, and may change. Optional named list of
 #'   functions, one per process, giving a time-varying multiplicative
 #'   intervention on that process's intensity. Each function is called with
@@ -25,19 +24,14 @@
 #'   `time`, a baseline covariate such as `L0`, or a process such as `z`
 #'   (its number of jumps so far), and must return one non-negative factor
 #'   per row. For example, `list(z = function(time) ifelse(time < 0.5, 0.5,
-#'   1))` halves the intensity of `z` before time 0.5. Supersedes `alpha`
-#'   and `z_name`.
+#'   1))` halves the intensity of `z` before time 0.5. Cannot be combined
+#'   with `alpha` and `z_name`.
 #' @param a Optional baseline treatment value (`0` or `1`) to intervene on.
-#'   Must be one of the values prepared by [fit_initial()], `initial_fit$a`.
+#'   Must be one of the `arms` prepared by [fit_initial()].
 #' @param estimand The target parameter: `"risk"`, the risk of `target` by
 #'   `tau` (or the expected number of events for a recurrent `target`), or
 #'   `"years_lost"`, the expected time lost, i.e. the integral of the risk
 #'   of `target` up to `tau`.
-#' @param block_size Positive integer. For `estimand = "years_lost"`, the
-#'   integral is approximated by evaluating the risk once per block of
-#'   `block_size` consecutive time points. `1` gives the exact integral of
-#'   the estimated risk; the computation time is roughly proportional to
-#'   `1 / block_size`.
 #' @param only_first Logical. If `TRUE`, only the first `target` event
 #'   counts, and only the first jump of `z_name` is intervened on.
 #' @param target_only_in_state Experimental, and may change. Optional
@@ -47,18 +41,25 @@
 #'   states in which `target` events count. For example,
 #'   `function(states) states[["z"]] == 0` counts only deaths before
 #'   illness.
-#' @param target_by_state Logical. If `TRUE`, use state-specific clever
-#'   covariates in the targeting step.
-#' @param conv_const Positive number. The TMLE iterations stop when the
-#'   absolute mean of the efficient influence curve falls below
-#'   `conv_const * se / log(n)`.
-#' @param one_step Logical. If `TRUE`, return the one-step estimator instead
-#'   of iterating the TMLE update.
-#' @param max_iter Positive integer. Maximum number of TMLE iterations.
-#' @param min_iter Non-negative integer. Minimum number of TMLE iterations
-#'   before checking convergence.
-#' @param truncate_weights Non-negative number. If positive, the clever
-#'   weights of the intervention are truncated at this value.
+#' @param control A named list of settings for how the estimate is
+#'   computed:
+#'   * `one_step` (`FALSE`): if `TRUE`, return the one-step estimator
+#'     instead of iterating the TMLE update.
+#'   * `block_size` (`10`): positive integer. For `estimand = "years_lost"`,
+#'     the integral is approximated by evaluating the risk once per block of
+#'     `block_size` consecutive time points. `1` gives the exact integral of
+#'     the estimated risk; the computation time is roughly proportional to
+#'     `1 / block_size`.
+#'   * `target_by_state` (`FALSE`): if `TRUE`, use state-specific clever
+#'     covariates in the targeting step.
+#'   * `conv_const` (`1`): positive number. The TMLE iterations stop when the
+#'     absolute mean of the efficient influence curve falls below
+#'     `conv_const * se / log(n)`.
+#'   * `max_iter` (`10`): maximum number of TMLE iterations.
+#'   * `min_iter` (`0`): minimum number of TMLE iterations before checking
+#'     convergence.
+#'   * `truncate_weights` (`Inf`): positive number at which the clever
+#'     weights of the intervention are truncated. `Inf` is no truncation.
 #' @param cores Positive integer. Number of cores used by
 #'   [parallel::mclapply()] for the per-individual computations.
 #' @param verbose Logical. If `TRUE`, print progress.
@@ -68,24 +69,25 @@
 #'     standard error `se`, and the bounds `lower` and `upper` of a 95% Wald
 #'     confidence interval.
 #'   * `initial_estimate`: the initial plug-in estimate, before targeting.
-#'   * `method`: `"tmle"`, or `"one_step"` if `one_step = TRUE`.
+#'   * `method`: `"tmle"`, or `"one_step"` if `control$one_step = TRUE`.
 #'   * `estimand`: as given.
 #'   * `alpha`, `z_name` and `a`: the intervention (`alpha` is `NULL` if
 #'     `alpha_list` is given).
 #'   * `eic`: a list, named by `target`, with the efficient influence curve,
 #'     one value per individual.
-#'   * `convergence`: a named vector with the number of iterations `iter`,
-#'     the absolute mean of the efficient influence curve `eic_solved_at`,
-#'     and whether the iterations `converged`. A warning is given if they
-#'     did not.
-#'   * `weights`: a matrix with the quantiles (columns `q50`, `q90`, `q99`
-#'     and `q100`) over individuals of each individual's maximal
-#'     `intervention`, `censoring` and `treatment` weight, and of their
-#'     product `total`, the weight entering the targeting step (rows), as a
-#'     positivity diagnostic. The intervention weights are those after
-#'     truncation, and the treatment weights are 1 when `a` is not given.
-#'   * `n_truncated`: the number of individuals whose initial intervention
-#'     weight was truncated (0 if `truncate_weights = 0`).
+#'   * `checks`: a list of diagnostics:
+#'     * `iter`: the number of iterations.
+#'     * `eic_solved_at`: the absolute mean of the efficient influence curve.
+#'     * `converged`: whether the iterations converged. A warning is given
+#'       if they did not.
+#'     * `weights`: a matrix with the quantiles (columns `q50`, `q90`, `q99`
+#'       and `q100`) over individuals of each individual's maximal
+#'       `intervention`, `censoring` and `treatment` weight, and of their
+#'       product `total`, the weight entering the targeting step (rows), as
+#'       a positivity diagnostic. The intervention weights are those after
+#'       truncation, and the treatment weights are 1 when `a` is not given.
+#'     * `n_truncated`: the number of individuals whose initial intervention
+#'       weight was truncated (0 if `control$truncate_weights = Inf`).
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -103,52 +105,51 @@
 #' )
 #'
 #' # Risk of death by tau = 1 if the intensity of z were halved.
-#' est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
+#' est <- tmle_alpha(fit, target = "death", z_name = "z", alpha = 0.5)
 #' est$estimate
 #' @export
 tmle_alpha <- function(
   initial_fit,
   target,
-  alpha = 1,
   z_name = NULL,
+  alpha = 1,
   alpha_list = NULL,
   a = NULL,
   estimand = c("risk", "years_lost"),
-  block_size = 10,
   only_first = FALSE,
   target_only_in_state = NULL,
-  target_by_state = FALSE,
-  conv_const = 1,
-  one_step = FALSE,
-  max_iter = 10,
-  min_iter = 0,
-  truncate_weights = 0,
+  control = list(),
   cores = 1,
   verbose = FALSE
 ) {
   .assert_initial_fit(initial_fit)
   .assert_a(a, initial_fit)
   checkmate::assert_string(target)
-  checkmate::assert_number(alpha, lower = 0, finite = TRUE)
   checkmate::assert_string(z_name, null.ok = TRUE)
+  checkmate::assert_number(alpha, lower = 0, finite = TRUE)
   checkmate::assert_list(
     alpha_list,
     types = "function",
     names = "unique",
     null.ok = TRUE
   )
+  if (length(alpha_list) > 0 && (alpha != 1 || !is.null(z_name))) {
+    stop("Give either alpha_list, or alpha and z_name, not both.")
+  }
   estimand <- match.arg(estimand)
-  checkmate::assert_count(block_size, positive = TRUE)
   checkmate::assert_flag(only_first)
   checkmate::assert_function(target_only_in_state, null.ok = TRUE)
-  checkmate::assert_flag(target_by_state)
-  checkmate::assert_number(conv_const, lower = 0, finite = TRUE)
-  checkmate::assert_flag(one_step)
-  checkmate::assert_count(max_iter, positive = TRUE)
-  checkmate::assert_count(min_iter)
-  checkmate::assert_number(truncate_weights, lower = 0, finite = TRUE)
+  control <- .tmle_control(control)
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
+
+  one_step <- control$one_step
+  block_size <- control$block_size
+  target_by_state <- control$target_by_state
+  conv_const <- control$conv_const
+  max_iter <- control$max_iter
+  min_iter <- control$min_iter
+  truncate_weights <- control$truncate_weights
 
   tmp.long <- copy(initial_fit$tmp_long)
   depend.matrix <- copy(initial_fit$depend_matrix)
@@ -161,8 +162,8 @@ tmle_alpha <- function(
 
   at.risks <- initial_fit$at_risks
 
-  target.id <- which(tolower(process.names) == tolower(target))
-  if (length(target.id) != 1) {
+  target.id <- match(target, process.names)
+  if (is.na(target.id)) {
     stop(
       "target must be one of the processes in initial_fit: ",
       paste(process.names, collapse = ", "),
@@ -177,8 +178,8 @@ tmle_alpha <- function(
     }
     z.process.id <- integer(0)
   } else {
-    z.process.id <- which(tolower(process.names) == tolower(z_name))
-    if (length(z.process.id) != 1) {
+    z.process.id <- match(z_name, process.names)
+    if (is.na(z.process.id)) {
       stop(
         "z_name must be one of the processes in initial_fit: ",
         paste(process.names, collapse = ", "),
@@ -255,7 +256,7 @@ tmle_alpha <- function(
     } else {
       .update_alpha_weights(tmp.long, alpha, z.name)
     }
-    if (truncate_weights == 0) {
+    if (is.infinite(truncate_weights)) {
       return(0)
     }
     truncated <- tmp.long[["time"]] <= tmp.long[["final.time"]] &
@@ -504,7 +505,7 @@ tmle_alpha <- function(
 
   if (!one_step && !converged) {
     warning(
-      "TMLE did not converge in max_iter = ",
+      "TMLE did not converge in control$max_iter = ",
       max_iter,
       " iterations; the mean of the efficient influence curve is ",
       signif(abs(mean(eic)), 3),
@@ -526,13 +527,13 @@ tmle_alpha <- function(
       z_name = if (is.finite(z.process.id)) z.name else NULL,
       a = a,
       eic = stats::setNames(list(eic), target.name),
-      convergence = c(
+      checks = list(
         iter = iter,
         eic_solved_at = abs(mean(eic)),
-        converged = converged
-      ),
-      weights = weights,
-      n_truncated = n.truncated
+        converged = converged,
+        weights = weights,
+        n_truncated = n.truncated
+      )
     ),
     class = "tmle_alpha"
   )
@@ -590,10 +591,10 @@ tmle_alpha <- function(
     null.ok = TRUE,
     .var.name = var_name
   )
-  if (is.null(a) || a %in% initial_fit$a) {
+  if (is.null(a) || a %in% initial_fit$arms) {
     return(invisible(a))
   }
-  if (length(initial_fit$a) == 0) {
+  if (length(initial_fit$arms) == 0) {
     stop(
       var_name,
       " requires a treatment_model in fit_initial().",
@@ -603,7 +604,7 @@ tmle_alpha <- function(
   stop(
     var_name,
     " must be one of the values prepared by fit_initial(): ",
-    paste(initial_fit$a, collapse = ", "),
+    paste(initial_fit$arms, collapse = ", "),
     ".",
     call. = FALSE
   )

@@ -6,6 +6,7 @@
 \alias{print.tmle_alpha}
 \alias{print.calibrate_alpha}
 \alias{print.calibration_curve}
+\alias{print.calibrated_contrasts}
 \alias{coef.tmle_alpha}
 \alias{coef.calibrate_alpha}
 \alias{confint.tmle_alpha}
@@ -19,6 +20,8 @@
 \method{print}{calibrate_alpha}(x, ...)
 
 \method{print}{calibration_curve}(x, ...)
+
+\method{print}{calibrated_contrasts}(x, ...)
 
 \method{coef}{tmle_alpha}(object, ...)
 
@@ -45,8 +48,8 @@ confidence intervals with one row per target.
 }
 \description{
 Print, extract the estimates of, and compute confidence intervals for the
-objects returned by \code{\link[=fit_initial]{fit_initial()}}, \code{\link[=tmle_alpha]{tmle_alpha()}}, \code{\link[=calibrate_alpha]{calibrate_alpha()}}
-and \code{\link[=calibration_curve]{calibration_curve()}}.
+objects returned by \code{\link[=fit_initial]{fit_initial()}}, \code{\link[=tmle_alpha]{tmle_alpha()}}, \code{\link[=calibrate_alpha]{calibrate_alpha()}},
+\code{\link[=calibration_curve]{calibration_curve()}} and \code{\link[=calibrated_contrasts]{calibrated_contrasts()}}.
 }
 \examples{
 fit <- fit_initial(

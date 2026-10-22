@@ -14,12 +14,10 @@
 #'   estimated.
 #' @param alpha_grid Non-negative numeric vector. The interventions to
 #'   evaluate.
-#' @param min_iter Non-negative integer. Minimum number of TMLE iterations,
-#'   passed on to [tmle_alpha()].
 #' @param estimand The target parameter for `target`, as in [tmle_alpha()].
 #' @param exposure_estimand The target parameter for the exposure `z_name`,
 #'   as in [tmle_alpha()].
-#' @param ... Further arguments passed on to [tmle_alpha()].
+#' @param control Settings for the estimates, passed on to [tmle_alpha()].
 #'
 #' @return An object of class `calibration_curve`, a list with elements:
 #'   * `estimate`: a `data.table` with one row per value of `alpha_grid` and
@@ -32,10 +30,10 @@
 #'     to `alpha` of the exposure (`derivative_exposure`) and target
 #'     (`derivative_target`) estimates, per `alpha` and `target`.
 #'   * `eic`: a list with, per value of `alpha_grid`, the influence curves of
-#'     the exposure estimate (`exposure`), of `alpha` calibrated to it
-#'     (`alpha`), and lists named by target of the target estimates treating
-#'     `alpha` as known (`target`) and accounting for its calibration
-#'     (`eic`).
+#'     the exposure estimate (`exposure_eic`), of `alpha` calibrated to it
+#'     (`alpha_eic`), and lists named by target of the target estimates
+#'     accounting for its calibration (`eic`) and treating `alpha` as known
+#'     (`eic_alpha_known`), as in [calibrate_alpha()].
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -66,14 +64,11 @@ calibration_curve <- function(
   z_name,
   alpha_grid = seq(0, 5, length.out = 10),
   a = NULL,
-  min_iter = 1,
-  target_by_state = FALSE,
   estimand = c("risk", "years_lost"),
   exposure_estimand = c("risk", "years_lost"),
-  block_size = 10,
+  control = list(),
   cores = 1,
-  verbose = FALSE,
-  ...
+  verbose = FALSE
 ) {
   .assert_initial_fit(initial_fit)
   checkmate::assert_character(target, min.len = 1, any.missing = FALSE)
@@ -86,11 +81,9 @@ calibration_curve <- function(
     min.len = 1
   )
   .assert_a(a, initial_fit)
-  checkmate::assert_count(min_iter)
-  checkmate::assert_flag(target_by_state)
   estimand <- match.arg(estimand)
   exposure_estimand <- match.arg(exposure_estimand)
-  checkmate::assert_count(block_size, positive = TRUE)
+  .tmle_control(control)
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
@@ -104,12 +97,9 @@ calibration_curve <- function(
       z_name = z_name,
       a = a,
       estimand = estimand,
-      block_size = block_size,
-      min_iter = min_iter,
-      target_by_state = target_by_state,
+      control = control,
       cores = cores,
-      verbose = verbose,
-      ...
+      verbose = verbose
     )
   }
 
@@ -194,10 +184,10 @@ calibration_curve <- function(
     )
 
     eic <- list(
-      exposure = .eic(calibration.est),
-      alpha = alpha.eic,
-      target = lapply(out.target, function(x) .eic(x$target.est)),
-      eic = lapply(out.target, function(x) x$eic)
+      exposure_eic = .eic(calibration.est),
+      alpha_eic = alpha.eic,
+      eic = lapply(out.target, function(x) x$eic),
+      eic_alpha_known = lapply(out.target, function(x) .eic(x$target.est))
     )
 
     list(estimate = estimate, checks = checks, eic = eic)

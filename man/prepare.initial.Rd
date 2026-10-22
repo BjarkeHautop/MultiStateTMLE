@@ -51,12 +51,14 @@ prepare.initial(
 \arguments{
 \item{dt}{Observed data, see \code{data} in \code{\link[=fit_initial]{fit_initial()}}.}
 
-\item{tau, a, verbose}{See \code{\link[=fit_initial]{fit_initial()}}.}
+\item{tau, verbose}{See \code{\link[=fit_initial]{fit_initial()}}.}
 
 \item{fit.types, max.count, derived.vars, depend.time, prune.states, use.exponential}{See the snake_case equivalents in \code{\link[=fit_initial]{fit_initial()}}. Use \code{at.risk} for the
 at-risk functions of \code{fit.types}.}
 
 \item{verbose.exponential}{Merged into \code{verbose}.}
+
+\item{a}{See \code{arms} in \code{\link[=fit_initial]{fit_initial()}}.}
 
 \item{fit.treatment}{See \code{treatment_model} in \code{\link[=fit_initial]{fit_initial()}}.}
 

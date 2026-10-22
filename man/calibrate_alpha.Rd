@@ -14,10 +14,9 @@ calibrate_alpha(
   reference_a = a,
   estimand = c("risk", "years_lost"),
   exposure_estimand = c("risk", "years_lost"),
-  block_size = 10,
+  control = list(),
   cores = 1,
-  verbose = FALSE,
-  ...
+  verbose = FALSE
 )
 }
 \arguments{
@@ -30,7 +29,7 @@ estimated under the calibrated intervention.}
 intensity is intervened on and calibrated.}
 
 \item{value}{Number. The calibration target on the \code{scale}, see
-Description.}
+Description. Must be non-negative unless \code{scale = "difference"}.}
 
 \item{scale}{The scale of \code{value}: \code{"absolute"}, \code{"ratio"} or
 \code{"difference"}, see Description.}
@@ -48,18 +47,12 @@ the exposure under treatment to that under placebo.}
 \item{exposure_estimand}{The target parameter for the exposure \code{z_name},
 that \code{value} and the calibration refer to, as in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
-\item{block_size}{Positive integer. For \code{estimand = "years_lost"}, the
-integral is approximated by evaluating the risk once per block of
-\code{block_size} consecutive time points. \code{1} gives the exact integral of
-the estimated risk; the computation time is roughly proportional to
-\code{1 / block_size}.}
+\item{control}{Settings for the estimates, passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{cores}{Positive integer. Number of cores used by
 \code{\link[parallel:mclapply]{parallel::mclapply()}} for the per-individual computations.}
 
 \item{verbose}{Logical. If \code{TRUE}, print progress.}
-
-\item{...}{Further arguments passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 }
 \value{
 An object of class \code{calibrate_alpha}, a list with elements:
@@ -73,7 +66,8 @@ standard error \code{se_crude} treating alpha as known.
 calibration target \code{theta} (column \code{quantity}), with \code{estimate}, \code{se},
 \code{lower} and \code{upper}.
 \item \code{z_name}, \code{a}, \code{value}, \code{scale}, \code{reference_a}, \code{estimand} and
-\code{exposure_estimand}: as given.
+\code{exposure_estimand}: as given (\code{reference_a} is \code{NULL} for the
+\code{"absolute"} \code{scale}).
 \item \code{eic}, \code{eic_alpha_known}: lists, named by target, of the influence
 curves of the risk of \code{target}, accounting for the estimation of
 alpha and treating it as known.

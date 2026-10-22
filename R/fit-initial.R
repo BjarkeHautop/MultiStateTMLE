@@ -26,21 +26,25 @@
 #'     once).
 #' @param tau Positive number. Follow-up horizon; the target parameters are
 #'   evaluated at `tau`.
-#' @param treatment_model Optional model for the baseline treatment, either
-#'   a formula such as `A0 ~ L0` or a list with elements `model` (such a
-#'   formula) and `fit` (only `"glm"` is supported). Required when `a` is
-#'   given.
-#' @param a Integer vector of the baseline treatment values (`0`/`1`) to
+#' @param treatment_model Optional logistic regression model for the
+#'   baseline treatment, a two-sided formula such as `A0 ~ L0`. Required when
+#'   `arms` is given.
+#' @param arms Integer vector of the baseline treatment values (`0`/`1`) to
 #'   prepare interventional hazards and clever weights for. Each value can
 #'   then be passed as `a` to [tmle_alpha()], [calibrate_alpha()] and
 #'   [calibration_curve()]. Defaults to both values, `0:1`, when
 #'   `treatment_model` is given.
 #' @param max_count Positive integer. Maximum number of jumps tracked per
 #'   recurrent process in the state space.
-#' @param derived_vars Named list of functions of the data deriving
-#'   additional state variables.
-#' @param depend_time Named list of functions describing dependence on the
-#'   time since a jump of a process, keyed by process name.
+#' @param derived_vars Named list of functions of the data, each deriving an
+#'   additional state variable, named by the list, that can be used in the
+#'   `model`s of `fit_types`.
+#' @param depend_time Experimental, and may change. Named list of functions
+#'   making hazards depend on the time of a jump. Each is named by a state
+#'   variable: a process `z` that jumps once, or `z.k` for the `k`th jump of
+#'   a recurrent process `z`. It adds the covariate `T.<name>`, `0` before
+#'   that jump and the function applied to the time of the jump after it,
+#'   which can be used (as a factor) in the `model`s of `fit_types`.
 #' @param control A named list of tuning settings:
 #'   * `prune_states` (`FALSE`): if `TRUE`, prune states not admissible
 #'     under the `at_risk` functions of `fit_types`.
@@ -67,7 +71,8 @@
 #'
 #' @return An object of class `initial_fit`, a list with elements:
 #'   * `n`: the number of individuals.
-#'   * `tau`, `treatment_model` and `a`: as given.
+#'   * `tau`, `treatment_model` and `arms`: as given (`arms` with its
+#'     default filled in).
 #'   * `processes`: a `data.table` with one row per process and columns
 #'     `name`, `delta`, `type` (`"terminal"`, `"recurrent"` or
 #'     `"one_jump"`, inferred from the data), `model` and `at_risk`
@@ -95,14 +100,14 @@
 #'   ),
 #'   tau = 1
 #' )
-#' fit$process_types
+#' fit
 #' @export
 fit_initial <- function(
   data,
   fit_types,
   tau,
   treatment_model = NULL,
-  a = NULL,
+  arms = NULL,
   max_count = 1,
   derived_vars = list(),
   depend_time = list(),
@@ -117,9 +122,10 @@ fit_initial <- function(
     must.include = c("id", "time", "delta")
   )
   checkmate::assert_list(fit_types, names = "unique", min.len = 1)
-  checkmate::assert_number(tau, lower = 0, finite = TRUE)
+  checkmate::assert_number(tau, lower = .Machine$double.eps, finite = TRUE)
+  checkmate::assert_formula(treatment_model, null.ok = TRUE)
   checkmate::assert_integerish(
-    a,
+    arms,
     lower = 0,
     upper = 1,
     any.missing = FALSE,
@@ -127,11 +133,11 @@ fit_initial <- function(
     null.ok = TRUE
   )
   checkmate::assert_count(max_count, positive = TRUE)
-  checkmate::assert_list(derived_vars, types = "function")
-  checkmate::assert_list(depend_time, types = "function")
+  checkmate::assert_list(derived_vars, types = "function", names = "unique")
+  checkmate::assert_list(depend_time, types = "function", names = "unique")
   checkmate::assert_list(control, names = "unique")
-  checkmate::assert_subset(names(control), names(.control_defaults))
-  control <- utils::modifyList(.control_defaults, control)
+  checkmate::assert_subset(names(control), names(.fit_control_defaults))
+  control <- utils::modifyList(.fit_control_defaults, control)
   checkmate::assert_flag(
     control$prune_states,
     .var.name = "control$prune_states"
@@ -147,42 +153,31 @@ fit_initial <- function(
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
+  if (!is.null(treatment_model) && length(treatment_model) != 3) {
+    stop("treatment_model must be a two-sided formula, e.g. A0 ~ L0.")
+  }
+  if (length(arms) > 0 && is.null(treatment_model)) {
+    stop("A treatment_model is required when arms is given.")
+  }
+  if (length(arms) == 0 && !is.null(treatment_model)) {
+    arms <- 0:1
+  }
+
   # The inputs as given, to store in the result.
   inputs <- list(
     fit_types = fit_types,
     treatment_model = treatment_model,
-    a = a
+    arms = arms
   )
 
   fit_types <- Map(.normalize_fit_type, fit_types, names(fit_types))
 
-  if (!is.list(treatment_model)) {
-    treatment_model <- list(model = treatment_model, fit = "glm")
+  # The treatment model as a string without whitespace, as the string
+  # manipulations on it below expect.
+  if (!is.null(treatment_model)) {
+    treatment_model <- gsub("\\s+", "", .deparse_one_line(treatment_model))
   }
-  if (length(treatment_model[["model"]]) > 0) {
-    checkmate::assert_formula(
-      treatment_model[["model"]],
-      .var.name = "treatment_model"
-    )
-    if (length(treatment_model[["model"]]) != 3) {
-      stop("treatment_model must be a two-sided formula, e.g. A0 ~ L0.")
-    }
-    treatment_model[["model"]] <- gsub(
-      "\\s+",
-      "",
-      .deparse_one_line(treatment_model[["model"]])
-    )
-    if (!identical(treatment_model[["fit"]], "glm")) {
-      stop("Only fit = \"glm\" is supported for treatment_model.")
-    }
-  }
-  if (length(a) > 0 && length(treatment_model[["model"]]) == 0) {
-    stop("A treatment_model is required when a is given.")
-  }
-  if (length(a) == 0 && length(treatment_model[["model"]]) > 0) {
-    a <- 0:1
-    inputs$a <- a
-  }
+  a <- arms
 
   hal_control <- utils::modifyList(.hal_control_defaults, hal_control)
 
@@ -310,8 +305,8 @@ fit_initial <- function(
   )
 
   #-- name of baseline treatment variable:
-  if (length(treatment_model[["model"]]) > 0) {
-    A0.name <- strsplit(treatment_model[["model"]], "~")[[1]][1]
+  if (length(treatment_model) > 0) {
+    A0.name <- strsplit(treatment_model, "~")[[1]][1]
     varnames <- unique(c(varnames, A0.name))
   } else {
     A0.name <- NULL
@@ -408,9 +403,9 @@ fit_initial <- function(
   cens.process.id <- (1:length(process.deltas))[process.deltas == 0]
 
   dt[, idN := 1:.N, by = "id"]
-  if (length(treatment_model[["model"]]) > 0) {
+  if (length(treatment_model) > 0) {
     fit.A0 <- glm(
-      as.formula(treatment_model[["model"]]),
+      as.formula(treatment_model),
       data = dt[idN == 1],
       family = binomial
     )
@@ -2939,7 +2934,7 @@ fit_initial <- function(
       tau = tau,
       processes = processes,
       treatment_model = inputs$treatment_model,
-      a = inputs$a,
+      arms = inputs$arms,
       tmp_long = tmp.long,
       depend_matrix = depend.matrix,
       process_names = process.names,

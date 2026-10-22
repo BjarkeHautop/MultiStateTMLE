@@ -1,8 +1,54 @@
 # Defaults for the `control` argument of fit_initial().
-.control_defaults <- list(
+.fit_control_defaults <- list(
   prune_states = FALSE,
   use_exponential = FALSE
 )
+
+# Defaults for the `control` argument of tmle_alpha().
+.tmle_control_defaults <- list(
+  one_step = FALSE,
+  block_size = 10,
+  target_by_state = FALSE,
+  conv_const = 1,
+  max_iter = 10,
+  min_iter = 0,
+  truncate_weights = Inf
+)
+
+# Validate the `control` argument of tmle_alpha() and fill in its defaults.
+.tmle_control <- function(control) {
+  checkmate::assert_list(control, names = "unique")
+  checkmate::assert_subset(names(control), names(.tmle_control_defaults))
+  control <- utils::modifyList(.tmle_control_defaults, control)
+  checkmate::assert_flag(control$one_step, .var.name = "control$one_step")
+  checkmate::assert_count(
+    control$block_size,
+    positive = TRUE,
+    .var.name = "control$block_size"
+  )
+  checkmate::assert_flag(
+    control$target_by_state,
+    .var.name = "control$target_by_state"
+  )
+  checkmate::assert_number(
+    control$conv_const,
+    lower = .Machine$double.eps,
+    finite = TRUE,
+    .var.name = "control$conv_const"
+  )
+  checkmate::assert_count(
+    control$max_iter,
+    positive = TRUE,
+    .var.name = "control$max_iter"
+  )
+  checkmate::assert_count(control$min_iter, .var.name = "control$min_iter")
+  checkmate::assert_number(
+    control$truncate_weights,
+    lower = .Machine$double.eps,
+    .var.name = "control$truncate_weights"
+  )
+  control
+}
 
 # Defaults for the `hal_control` argument of fit_initial().
 .hal_control_defaults <- list(

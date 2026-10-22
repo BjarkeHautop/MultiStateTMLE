@@ -1,8 +1,8 @@
 #' Methods for the result objects
 #'
 #' Print, extract the estimates of, and compute confidence intervals for the
-#' objects returned by [fit_initial()], [tmle_alpha()], [calibrate_alpha()]
-#' and [calibration_curve()].
+#' objects returned by [fit_initial()], [tmle_alpha()], [calibrate_alpha()],
+#' [calibration_curve()] and [calibrated_contrasts()].
 #'
 #' @param x,object A result object.
 #' @param parm Optional character vector of targets to compute confidence
@@ -50,15 +50,11 @@ print.initial_fit <- function(x, ...) {
   )
   print(x$processes)
   if (!is.null(x$treatment_model)) {
-    model <- x$treatment_model
-    if (is.list(model)) {
-      model <- model$model
-    }
     cat(
       "\nTreatment model: ",
-      .deparse_one_line(model),
-      ", prepared for a = ",
-      paste(x$a, collapse = ", "),
+      .deparse_one_line(x$treatment_model),
+      ", prepared for arms a = ",
+      paste(x$arms, collapse = ", "),
       "\n",
       sep = ""
     )
@@ -81,8 +77,8 @@ print.tmle_alpha <- function(x, ...) {
   print(x$estimate)
   cat("\nInitial estimate:", format(x$initial_estimate, digits = 4))
   if (x$method == "tmle") {
-    iter <- x$convergence[["iter"]]
-    if (x$convergence[["converged"]] == 1) {
+    iter <- x$checks$iter
+    if (x$checks$converged) {
       cat("; converged after", iter, "iterations")
     } else {
       cat("; did not converge in", iter, "iterations")
@@ -118,6 +114,19 @@ print.calibration_curve <- function(x, ...) {
     x$z_name,
     if (!is.null(x$a)) paste0(" with a = ", x$a),
     "\n\n",
+    sep = ""
+  )
+  print(x$estimate)
+  invisible(x)
+}
+
+#' @rdname result-methods
+#' @export
+print.calibrated_contrasts <- function(x, ...) {
+  cat(
+    "Decomposition of the effect of a on ",
+    x$target,
+    " into mediated and calibrated contrasts\n\n",
     sep = ""
   )
   print(x$estimate)

@@ -149,10 +149,7 @@ solve_alpha <- function(
       msg <- paste0(msg, " [cache hit]")
     }
 
-    cat(msg, "\n")
-    if (interactive()) {
-      flush.console()
-    }
+    message(msg)
     invisible(NULL)
   }
 
@@ -294,8 +291,7 @@ solve_alpha <- function(
       if (abs(hi - lo) <= .Machine$double.eps * max(1, abs(lo), abs(hi))) break
     }
   } else if (verbose) {
-    cat("No bracket found; returning the best point seen.\n")
-    if (interactive()) flush.console()
+    message("No bracket found; returning the best point seen.")
   }
 
   # Best point seen

@@ -5,6 +5,7 @@ S3method(coef,tmle_alpha)
 S3method(confint,calibrate_alpha)
 S3method(confint,tmle_alpha)
 S3method(print,calibrate_alpha)
+S3method(print,calibrated_contrasts)
 S3method(print,calibration_curve)
 S3method(print,initial_fit)
 S3method(print,tmle_alpha)
@@ -48,7 +49,4 @@ importFrom(survival,
   coxph,
   coxph.control
 )
-importFrom(utils,
-  combn,
-  flush.console
-)
+importFrom(utils,combn)

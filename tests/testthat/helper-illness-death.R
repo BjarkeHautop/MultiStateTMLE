@@ -95,23 +95,39 @@ fixture.data.treated <- function(n = 40) {
 # Minimal tmle_alpha() and calibrate_alpha() results with the given
 # estimates and influence curves, for unit tests of calibrated_contrasts().
 # For calibrate_alpha(), `estimate` and `eic` have one entry per target.
-fake.tmle.fit <- function(estimate, eic, target = "death") {
+fake.tmle.fit <- function(
+  estimate,
+  eic,
+  target = "death",
+  a = 1,
+  estimand = "risk"
+) {
   structure(
     list(
       estimate = data.table::data.table(target = target, estimate = estimate),
+      estimand = estimand,
+      a = a,
       eic = stats::setNames(list(eic), target)
     ),
     class = "tmle_alpha"
   )
 }
 
-fake.calibrated.fit <- function(estimate, eic, target = "death") {
+fake.calibrated.fit <- function(
+  estimate,
+  eic,
+  target = "death",
+  a = 1,
+  estimand = "risk"
+) {
   if (!is.list(eic)) {
     eic <- list(eic)
   }
   structure(
     list(
       estimate = data.table::data.table(target = target, estimate = estimate),
+      a = a,
+      estimand = estimand,
       eic = stats::setNames(eic, target)
     ),
     class = "calibrate_alpha"

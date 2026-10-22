@@ -9,7 +9,7 @@
 #' @importFrom stats as.formula binomial coef confint formula glm lm median
 #'   model.matrix predict quantile sd setNames
 #' @importFrom survival basehaz coxph coxph.control
-#' @importFrom utils combn flush.console
+#' @importFrom utils combn
 ## usethis namespace: end
 NULL
 

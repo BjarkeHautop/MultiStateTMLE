@@ -20,7 +20,7 @@
 #' @param target Character vector. Names of the processes whose risks are
 #'   estimated under the calibrated intervention.
 #' @param value Number. The calibration target on the `scale`, see
-#'   Description.
+#'   Description. Must be non-negative unless `scale = "difference"`.
 #' @param scale The scale of `value`: `"absolute"`, `"ratio"` or
 #'   `"difference"`, see Description.
 #' @param a Optional baseline treatment value (`0` or `1`) to intervene on,
@@ -32,7 +32,7 @@
 #' @param estimand The target parameter for `target`, as in [tmle_alpha()].
 #' @param exposure_estimand The target parameter for the exposure `z_name`,
 #'   that `value` and the calibration refer to, as in [tmle_alpha()].
-#' @param ... Further arguments passed on to [tmle_alpha()].
+#' @param control Settings for the estimates, passed on to [tmle_alpha()].
 #'
 #' @return An object of class `calibrate_alpha`, a list with elements:
 #'   * `estimate`: a `data.table` with one row per `target` and columns
@@ -44,7 +44,8 @@
 #'     calibration target `theta` (column `quantity`), with `estimate`, `se`,
 #'     `lower` and `upper`.
 #'   * `z_name`, `a`, `value`, `scale`, `reference_a`, `estimand` and
-#'     `exposure_estimand`: as given.
+#'     `exposure_estimand`: as given (`reference_a` is `NULL` for the
+#'     `"absolute"` `scale`).
 #'   * `eic`, `eic_alpha_known`: lists, named by target, of the influence
 #'     curves of the risk of `target`, accounting for the estimation of
 #'     alpha and treating it as known.
@@ -90,23 +91,28 @@ calibrate_alpha <- function(
   reference_a = a,
   estimand = c("risk", "years_lost"),
   exposure_estimand = c("risk", "years_lost"),
-  block_size = 10,
+  control = list(),
   cores = 1,
-  verbose = FALSE,
-  ...
+  verbose = FALSE
 ) {
   .assert_initial_fit(initial_fit)
   checkmate::assert_character(target, min.len = 1, any.missing = FALSE)
   checkmate::assert_string(z_name)
-  checkmate::assert_number(value, finite = TRUE)
   scale <- match.arg(scale)
+  checkmate::assert_number(
+    value,
+    lower = if (scale == "difference") -Inf else 0,
+    finite = TRUE
+  )
   .assert_a(a, initial_fit)
-  if (scale != "absolute") {
+  if (scale == "absolute") {
+    reference_a <- NULL
+  } else {
     .assert_a(reference_a, initial_fit, "reference_a")
   }
   estimand <- match.arg(estimand)
   exposure_estimand <- match.arg(exposure_estimand)
-  checkmate::assert_count(block_size, positive = TRUE)
+  .tmle_control(control)
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
@@ -127,10 +133,9 @@ calibrate_alpha <- function(
       z_name = z_name,
       a = a,
       estimand = estimand,
-      block_size = block_size,
+      control = control,
       cores = cores,
-      verbose = verbose,
-      ...
+      verbose = verbose
     )
   }
 

@@ -82,6 +82,7 @@ test_that("calibrate_alpha() calibrates to theta directly", {
 
   cal <- calibrate_alpha(fit, z_name = "z", target = "death", value = 0.2)
 
+  expect_null(cal$reference_a)
   expect_equal(cal$calibration$estimate[2], 0.2)
   expect_true(cal$checks$converged)
   z_risk <- tmle_alpha(
@@ -135,6 +136,31 @@ test_that("calibrate_alpha() rejects invalid inputs", {
     ),
     "cores"
   )
+  expect_error(
+    calibrate_alpha(fit, z_name = "z", target = "death", value = -0.1),
+    "value"
+  )
+  expect_error(
+    calibrate_alpha(
+      fit,
+      z_name = "z",
+      target = "death",
+      value = 0.2,
+      control = list(max_iter = 0)
+    ),
+    "control\\$max_iter"
+  )
+  # The intervention is set by calibrate_alpha() itself.
+  expect_error(
+    calibrate_alpha(
+      fit,
+      z_name = "z",
+      target = "death",
+      value = 0.2,
+      alpha_list = list(z = function(time) time)
+    ),
+    "unused argument"
+  )
 })
 
 test_that("calibrate_alpha() calibrates relative to a reference", {
@@ -158,7 +184,7 @@ test_that("calibrate_alpha() calibrates to the risk under another arm", {
     fit_types = illness.death.fit.types,
     tau = 1,
     treatment_model = A0 ~ L0,
-    a = 0:1
+    arms = 0:1
   )
 
   cal <- calibrate_alpha(

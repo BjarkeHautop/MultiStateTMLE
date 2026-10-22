@@ -87,7 +87,7 @@ test_that("deprecated helper functions warn and match their replacements", {
   )
 
   treatment.fit <- fake.tmle.fit(0.7, c(0.1, -0.1))
-  placebo.fit <- fake.tmle.fit(0.3, c(0.2, -0.2))
+  placebo.fit <- fake.tmle.fit(0.3, c(0.2, -0.2), a = 0)
   calibrated.fit <- fake.calibrated.fit(0.5, c(0, 0))
   expect_warning(
     contrasts <- make.calibrated.contrasts(
@@ -117,6 +117,14 @@ test_that("deprecated helper functions warn and match their replacements", {
     ),
     class = "lifecycle_warning_deprecated"
   )
+})
+
+test_that(".split_control() moves tmle_alpha() settings into control", {
+  expect_equal(
+    .split_control(list(min_iter = 2, cores = 1)),
+    list(cores = 1, control = list(min_iter = 2))
+  )
+  expect_equal(.split_control(list(cores = 1)), list(cores = 1))
 })
 
 test_that("dotted tmle.alpha.fun() arguments are translated for tmle_alpha()", {
@@ -193,7 +201,7 @@ test_that("deprecated calibration functions translate their targets", {
       z_name = "z",
       alpha_grid = 1,
       estimand = "years_lost",
-      block_size = 5
+      control = list(min_iter = 1, block_size = 5)
     )
   )
   expect_error(

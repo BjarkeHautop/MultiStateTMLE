@@ -7,20 +7,14 @@
 tmle_alpha(
   initial_fit,
   target,
-  alpha = 1,
   z_name = NULL,
+  alpha = 1,
   alpha_list = NULL,
   a = NULL,
   estimand = c("risk", "years_lost"),
-  block_size = 10,
   only_first = FALSE,
   target_only_in_state = NULL,
-  target_by_state = FALSE,
-  conv_const = 1,
-  one_step = FALSE,
-  max_iter = 10,
-  min_iter = 0,
-  truncate_weights = 0,
+  control = list(),
   cores = 1,
   verbose = FALSE
 )
@@ -30,13 +24,12 @@ tmle_alpha(
 
 \item{target}{String. Name of the target process.}
 
-\item{alpha}{Non-negative number. Multiplicative intervention on the
-intensity of \code{z_name}. \code{alpha = 1} is no intervention. Ignored if
-\code{alpha_list} is given.}
-
 \item{z_name}{String. Name of the process in \code{initial_fit} whose
 intensity \code{alpha} scales. Required unless \code{alpha = 1} or \code{alpha_list}
 is given.}
+
+\item{alpha}{Non-negative number. Multiplicative intervention on the
+intensity of \code{z_name}. \code{alpha = 1} is no intervention.}
 
 \item{alpha_list}{Experimental, and may change. Optional named list of
 functions, one per process, giving a time-varying multiplicative
@@ -44,22 +37,16 @@ intervention on that process's intensity. Each function is called with
 the columns of \code{initial_fit$tmp_long} named by its arguments, e.g.
 \code{time}, a baseline covariate such as \code{L0}, or a process such as \code{z}
 (its number of jumps so far), and must return one non-negative factor
-per row. For example, \code{list(z = function(time) ifelse(time < 0.5, 0.5, 1))} halves the intensity of \code{z} before time 0.5. Supersedes \code{alpha}
-and \code{z_name}.}
+per row. For example, \code{list(z = function(time) ifelse(time < 0.5, 0.5, 1))} halves the intensity of \code{z} before time 0.5. Cannot be combined
+with \code{alpha} and \code{z_name}.}
 
 \item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on.
-Must be one of the values prepared by \code{\link[=fit_initial]{fit_initial()}}, \code{initial_fit$a}.}
+Must be one of the \code{arms} prepared by \code{\link[=fit_initial]{fit_initial()}}.}
 
 \item{estimand}{The target parameter: \code{"risk"}, the risk of \code{target} by
 \code{tau} (or the expected number of events for a recurrent \code{target}), or
 \code{"years_lost"}, the expected time lost, i.e. the integral of the risk
 of \code{target} up to \code{tau}.}
-
-\item{block_size}{Positive integer. For \code{estimand = "years_lost"}, the
-integral is approximated by evaluating the risk once per block of
-\code{block_size} consecutive time points. \code{1} gives the exact integral of
-the estimated risk; the computation time is roughly proportional to
-\code{1 / block_size}.}
 
 \item{only_first}{Logical. If \code{TRUE}, only the first \code{target} event
 counts, and only the first jump of \code{z_name} is intervened on.}
@@ -72,23 +59,27 @@ states in which \code{target} events count. For example,
 \code{function(states) states[["z"]] == 0} counts only deaths before
 illness.}
 
-\item{target_by_state}{Logical. If \code{TRUE}, use state-specific clever
-covariates in the targeting step.}
-
-\item{conv_const}{Positive number. The TMLE iterations stop when the
+\item{control}{A named list of settings for how the estimate is
+computed:
+\itemize{
+\item \code{one_step} (\code{FALSE}): if \code{TRUE}, return the one-step estimator
+instead of iterating the TMLE update.
+\item \code{block_size} (\code{10}): positive integer. For \code{estimand = "years_lost"},
+the integral is approximated by evaluating the risk once per block of
+\code{block_size} consecutive time points. \code{1} gives the exact integral of
+the estimated risk; the computation time is roughly proportional to
+\code{1 / block_size}.
+\item \code{target_by_state} (\code{FALSE}): if \code{TRUE}, use state-specific clever
+covariates in the targeting step.
+\item \code{conv_const} (\code{1}): positive number. The TMLE iterations stop when the
 absolute mean of the efficient influence curve falls below
-\code{conv_const * se / log(n)}.}
-
-\item{one_step}{Logical. If \code{TRUE}, return the one-step estimator instead
-of iterating the TMLE update.}
-
-\item{max_iter}{Positive integer. Maximum number of TMLE iterations.}
-
-\item{min_iter}{Non-negative integer. Minimum number of TMLE iterations
-before checking convergence.}
-
-\item{truncate_weights}{Non-negative number. If positive, the clever
-weights of the intervention are truncated at this value.}
+\code{conv_const * se / log(n)}.
+\item \code{max_iter} (\code{10}): maximum number of TMLE iterations.
+\item \code{min_iter} (\code{0}): minimum number of TMLE iterations before checking
+convergence.
+\item \code{truncate_weights} (\code{Inf}): positive number at which the clever
+weights of the intervention are truncated. \code{Inf} is no truncation.
+}}
 
 \item{cores}{Positive integer. Number of cores used by
 \code{\link[parallel:mclapply]{parallel::mclapply()}} for the per-individual computations.}
@@ -102,24 +93,27 @@ An object of class \code{tmle_alpha}, a list with elements:
 standard error \code{se}, and the bounds \code{lower} and \code{upper} of a 95\% Wald
 confidence interval.
 \item \code{initial_estimate}: the initial plug-in estimate, before targeting.
-\item \code{method}: \code{"tmle"}, or \code{"one_step"} if \code{one_step = TRUE}.
+\item \code{method}: \code{"tmle"}, or \code{"one_step"} if \code{control$one_step = TRUE}.
 \item \code{estimand}: as given.
 \item \code{alpha}, \code{z_name} and \code{a}: the intervention (\code{alpha} is \code{NULL} if
 \code{alpha_list} is given).
 \item \code{eic}: a list, named by \code{target}, with the efficient influence curve,
 one value per individual.
-\item \code{convergence}: a named vector with the number of iterations \code{iter},
-the absolute mean of the efficient influence curve \code{eic_solved_at},
-and whether the iterations \code{converged}. A warning is given if they
-did not.
+\item \code{checks}: a list of diagnostics:
+\itemize{
+\item \code{iter}: the number of iterations.
+\item \code{eic_solved_at}: the absolute mean of the efficient influence curve.
+\item \code{converged}: whether the iterations converged. A warning is given
+if they did not.
 \item \code{weights}: a matrix with the quantiles (columns \code{q50}, \code{q90}, \code{q99}
 and \code{q100}) over individuals of each individual's maximal
 \code{intervention}, \code{censoring} and \code{treatment} weight, and of their
-product \code{total}, the weight entering the targeting step (rows), as a
-positivity diagnostic. The intervention weights are those after
+product \code{total}, the weight entering the targeting step (rows), as
+a positivity diagnostic. The intervention weights are those after
 truncation, and the treatment weights are 1 when \code{a} is not given.
 \item \code{n_truncated}: the number of individuals whose initial intervention
-weight was truncated (0 if \code{truncate_weights = 0}).
+weight was truncated (0 if \code{control$truncate_weights = Inf}).
+}
 }
 }
 \description{
@@ -150,6 +144,6 @@ fit <- fit_initial(
 )
 
 # Risk of death by tau = 1 if the intensity of z were halved.
-est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
+est <- tmle_alpha(fit, target = "death", z_name = "z", alpha = 0.5)
 est$estimate
 }

@@ -20,22 +20,27 @@ test_that("tmle_alpha() returns the estimate and diagnostics", {
   expect_equal(est$z_name, "z")
   expect_named(est$eic, "death")
   expect_length(est$eic$death, length(unique(illness_death$id)))
-  expect_named(est$convergence, c("iter", "eic_solved_at", "converged"))
+  expect_named(
+    est$checks,
+    c("iter", "eic_solved_at", "converged", "weights", "n_truncated")
+  )
+  expect_true(est$checks$converged)
+  weights <- est$checks$weights
   expect_equal(
-    dimnames(est$weights),
+    dimnames(weights),
     list(
       c("intervention", "censoring", "treatment", "total"),
       c("q50", "q90", "q99", "q100")
     )
   )
-  expect_true(all(est$weights >= 0))
+  expect_true(all(weights >= 0))
   # Without a baseline intervention, the treatment weights are 1.
-  expect_equal(unname(est$weights["treatment", ]), rep(1, 4))
-  expect_equal(est$n_truncated, 0)
+  expect_equal(unname(weights["treatment", ]), rep(1, 4))
+  expect_equal(est$checks$n_truncated, 0)
   # The maximum of a product is at most the product of the maxima.
   expect_lte(
-    est$weights["total", "q100"],
-    prod(est$weights[c("intervention", "censoring"), "q100"]) + 1e-8
+    weights["total", "q100"],
+    prod(weights[c("intervention", "censoring"), "q100"]) + 1e-8
   )
 
   one_step <- tmle_alpha(
@@ -43,23 +48,20 @@ test_that("tmle_alpha() returns the estimate and diagnostics", {
     target = "death",
     alpha = 0.5,
     z_name = "z",
-    one_step = TRUE
+    control = list(one_step = TRUE)
   )
   expect_equal(one_step$method, "one_step")
   expect_named(one_step$estimate, names(est$estimate))
   expect_equal(one_step$initial_estimate, est$initial_estimate)
 })
 
-test_that("tmle_alpha() matches the target case-insensitively", {
-  fit <- fit_initial(
-    illness_death,
-    fit_types = illness.death.fit.types,
-    tau = 1
-  )
+test_that("tmle_alpha() matches process names exactly", {
+  fit <- fixture.fit(30)
 
-  expect_equal(
-    tmle_alpha(fit, target = "DEATH", alpha = 0.5, z_name = "z")$estimate,
-    tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")$estimate
+  expect_error(tmle_alpha(fit, target = "DEATH"), "target must be one of")
+  expect_error(
+    tmle_alpha(fit, target = "death", z_name = "Z", alpha = 0.5),
+    "z_name must be one of"
   )
 })
 
@@ -89,11 +91,32 @@ test_that("tmle_alpha() validates its arguments", {
   # z_name is optional without an intervention, but still validated.
   expect_equal(
     tmle_alpha(fit, target = "death")$estimate,
-    tmle_alpha(fit, target = "death", z_name = "Z")$estimate
+    tmle_alpha(fit, target = "death", z_name = "z")$estimate
   )
   expect_error(
     tmle_alpha(fit, target = "death", z_name = "w"),
     "z_name must be one of"
+  )
+  expect_error(
+    tmle_alpha(
+      fit,
+      target = "death",
+      alpha = 2,
+      alpha_list = list(z = function(time) rep(2, length(time)))
+    ),
+    "either alpha_list"
+  )
+  expect_error(
+    tmle_alpha(fit, target = "death", control = list(foo = 1)),
+    "control"
+  )
+  expect_error(
+    tmle_alpha(fit, target = "death", control = list(conv_const = 0)),
+    "control\\$conv_const"
+  )
+  expect_error(
+    tmle_alpha(fit, target = "death", control = list(truncate_weights = 0)),
+    "control\\$truncate_weights"
   )
 })
 
@@ -116,7 +139,11 @@ test_that("tmle_alpha() supports only_first, target_only_in_state, target_by_sta
     )$estimate$estimate
   ))
   expect_true(is.numeric(
-    tmle_alpha(fit, target = "death", target_by_state = TRUE)$estimate$estimate
+    tmle_alpha(
+      fit,
+      target = "death",
+      control = list(target_by_state = TRUE)
+    )$estimate$estimate
   ))
 })
 
@@ -126,11 +153,11 @@ test_that("tmle_alpha() truncates clever weights", {
     target = "death",
     alpha = 3,
     z_name = "z",
-    truncate_weights = 1.5
+    control = list(truncate_weights = 1.5)
   )
 
-  expect_lte(est$weights["intervention", "q100"], 1.5 + 1e-8)
-  expect_gt(est$n_truncated, 0)
+  expect_lte(est$checks$weights["intervention", "q100"], 1.5 + 1e-8)
+  expect_gt(est$checks$n_truncated, 0)
 })
 
 test_that("tmle_alpha() estimates under a baseline intervention 'a'", {
@@ -139,16 +166,16 @@ test_that("tmle_alpha() estimates under a baseline intervention 'a'", {
     fit_types = illness.death.fit.types,
     tau = 1,
     treatment_model = A0 ~ L0,
-    a = 0:1
+    arms = 0:1
   )
 
   est <- tmle_alpha(fit, target = "death", a = 1)
   # The treatment weights are 1 / P(A0 = 1 | L0) > 1 for the treated, and
   # separate from the censoring weights.
-  expect_gt(est$weights["treatment", "q100"], 1)
+  expect_gt(est$checks$weights["treatment", "q100"], 1)
   expect_equal(
-    est$weights["censoring", ],
-    tmle_alpha(fit, target = "death", a = 0)$weights["censoring", ]
+    est$checks$weights["censoring", ],
+    tmle_alpha(fit, target = "death", a = 0)$checks$weights["censoring", ]
   )
   expect_true(
     est$estimate$estimate >= 0 && est$estimate$estimate <= 1
@@ -171,7 +198,7 @@ test_that("tmle_alpha()'s alpha_list reproduces a constant scalar alpha", {
       fit,
       target = "death",
       alpha_list = constant,
-      target_by_state = TRUE
+      control = list(target_by_state = TRUE)
     )$estimate$estimate,
     scalar$estimate$estimate
   )
@@ -192,7 +219,10 @@ test_that("tmle_alpha() estimates the expected years lost", {
     tmle_alpha(fit, target = "death", estimand = "rate"),
     "should be one of"
   )
-  expect_error(tmle_alpha(fit, target = "death", block_size = 0), "block_size")
+  expect_error(
+    tmle_alpha(fit, target = "death", control = list(block_size = 0)),
+    "control\\$block_size"
+  )
 })
 
 test_that("tmle_alpha() only accepts a values prepared by fit_initial()", {
@@ -201,7 +231,7 @@ test_that("tmle_alpha() only accepts a values prepared by fit_initial()", {
     fit_types = illness.death.fit.types,
     tau = 1,
     treatment_model = A0 ~ L0,
-    a = 1
+    arms = 1
   )
 
   expect_equal(tmle_alpha(fit, target = "death", a = 1)$a, 1)

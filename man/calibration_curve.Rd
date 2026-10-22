@@ -10,14 +10,11 @@ calibration_curve(
   z_name,
   alpha_grid = seq(0, 5, length.out = 10),
   a = NULL,
-  min_iter = 1,
-  target_by_state = FALSE,
   estimand = c("risk", "years_lost"),
   exposure_estimand = c("risk", "years_lost"),
-  block_size = 10,
+  control = list(),
   cores = 1,
-  verbose = FALSE,
-  ...
+  verbose = FALSE
 )
 }
 \arguments{
@@ -33,31 +30,19 @@ intensity \code{alpha_grid} scales.}
 evaluate.}
 
 \item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on.
-Must be one of the values prepared by \code{\link[=fit_initial]{fit_initial()}}, \code{initial_fit$a}.}
-
-\item{min_iter}{Non-negative integer. Minimum number of TMLE iterations,
-passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
-
-\item{target_by_state}{Logical. If \code{TRUE}, use state-specific clever
-covariates in the targeting step.}
+Must be one of the \code{arms} prepared by \code{\link[=fit_initial]{fit_initial()}}.}
 
 \item{estimand}{The target parameter for \code{target}, as in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{exposure_estimand}{The target parameter for the exposure \code{z_name},
 as in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
-\item{block_size}{Positive integer. For \code{estimand = "years_lost"}, the
-integral is approximated by evaluating the risk once per block of
-\code{block_size} consecutive time points. \code{1} gives the exact integral of
-the estimated risk; the computation time is roughly proportional to
-\code{1 / block_size}.}
+\item{control}{Settings for the estimates, passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{cores}{Positive integer. Number of cores used by
 \code{\link[parallel:mclapply]{parallel::mclapply()}} for the per-individual computations.}
 
 \item{verbose}{Logical. If \code{TRUE}, print progress.}
-
-\item{...}{Further arguments passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 }
 \value{
 An object of class \code{calibration_curve}, a list with elements:
@@ -72,10 +57,10 @@ of \code{target} (\code{estimate}, with standard error \code{se} and the bounds
 to \code{alpha} of the exposure (\code{derivative_exposure}) and target
 (\code{derivative_target}) estimates, per \code{alpha} and \code{target}.
 \item \code{eic}: a list with, per value of \code{alpha_grid}, the influence curves of
-the exposure estimate (\code{exposure}), of \code{alpha} calibrated to it
-(\code{alpha}), and lists named by target of the target estimates treating
-\code{alpha} as known (\code{target}) and accounting for its calibration
-(\code{eic}).
+the exposure estimate (\code{exposure_eic}), of \code{alpha} calibrated to it
+(\code{alpha_eic}), and lists named by target of the target estimates
+accounting for its calibration (\code{eic}) and treating \code{alpha} as known
+(\code{eic_alpha_known}), as in \code{\link[=calibrate_alpha]{calibrate_alpha()}}.
 }
 }
 \description{

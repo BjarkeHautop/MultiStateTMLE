@@ -7,7 +7,9 @@ test_that("print methods summarise the result objects", {
   expect_output(print(est), "TMLE estimate under alpha = 0.5 on z")
   expect_output(print(est), "converged after")
   expect_output(
-    print(tmle_alpha(fit, target = "death", one_step = TRUE)),
+    print(
+      tmle_alpha(fit, target = "death", control = list(one_step = TRUE))
+    ),
     "One-step estimate without intervention"
   )
 
@@ -23,9 +25,12 @@ test_that("print methods summarise the result objects", {
 test_that("print shows the treatment model of an initial fit", {
   fit <- fixture.fit(30)
   fit$treatment_model <- A0 ~ L0
-  fit$a <- 0:1
+  fit$arms <- 0:1
 
-  expect_output(print(fit), "Treatment model: A0 ~ L0, prepared for a = 0, 1")
+  expect_output(
+    print(fit),
+    "Treatment model: A0 ~ L0, prepared for arms a = 0, 1"
+  )
 })
 
 test_that("coef() and confint() extract the estimates by target", {

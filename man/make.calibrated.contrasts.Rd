@@ -13,10 +13,13 @@ make.calibrated.contrasts(
 )
 }
 \arguments{
-\item{target}{See \code{\link[=calibrated_contrasts]{calibrated_contrasts()}}.}
+\item{target}{If given, must be the target of \code{treatment.fit}, which
+\code{\link[=calibrated_contrasts]{calibrated_contrasts()}} always uses.}
 
-\item{treatment.fit, placebo.fit, calibrated.fit, conf.level}{See the
-snake_case equivalents in \code{\link[=calibrated_contrasts]{calibrated_contrasts()}}.}
+\item{treatment.fit, placebo.fit, calibrated.fit}{See the snake_case
+equivalents in \code{\link[=calibrated_contrasts]{calibrated_contrasts()}}.}
+
+\item{conf.level}{See \code{level} in \code{\link[=calibrated_contrasts]{calibrated_contrasts()}}.}
 }
 \value{
 See \code{\link[=calibrated_contrasts]{calibrated_contrasts()}}.

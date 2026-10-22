@@ -35,13 +35,16 @@ influence curves.}
 
 \item{target, a, verbose}{See \code{\link[=calibration_curve]{calibration_curve()}}.}
 
-\item{z.name, alpha.grid, min.iter, target.by.state}{See the snake_case
-equivalents in \code{\link[=calibration_curve]{calibration_curve()}}.}
+\item{z.name, alpha.grid}{See the snake_case equivalents in
+\code{\link[=calibration_curve]{calibration_curve()}}.}
+
+\item{min.iter, target.by.state}{See the snake_case equivalents in the
+\code{control} of \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{block.size.z, block.size.target}{If given,
 \code{exposure_estimand = "years_lost"} and \code{estimand = "years_lost"},
-respectively, in \code{\link[=calibration_curve]{calibration_curve()}}, with this \code{block_size}. If both
-are given, they must be equal.}
+respectively, in \code{\link[=calibration_curve]{calibration_curve()}}, with this \code{control$block_size}.
+If both are given, they must be equal.}
 
 \item{...}{Passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}, with dotted argument names
 translated to their snake_case equivalents.}
