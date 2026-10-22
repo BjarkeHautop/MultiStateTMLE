@@ -235,8 +235,8 @@ exposure risk to what it would have been under placebo, and
 
 `illness_death` has no treatment, so for illustration we add a randomised
 treatment that has no actual effect. The treatment model is given in
-`treatment_model`, and `a` lists the treatment values to prepare estimates
-for.
+`treatment_model`, and `fit_initial()` then prepares estimates under both
+treatment values, `a = 0` and `a = 1`.
 
 ```{r}
 #| label: treatment-data
@@ -257,8 +257,7 @@ fit_treated <- fit_initial(
     censoring = list(delta = 0, model = ~L0)
   ),
   tau = 1,
-  treatment_model = A0 ~ L0,
-  a = 0:1
+  treatment_model = A0 ~ L0
 )
 ```
 

@@ -49,9 +49,11 @@ a formula such as \code{A0 ~ L0} or a list with elements \code{model} (such a
 formula) and \code{fit} (only \code{"glm"} is supported). Required when \code{a} is
 given.}
 
-\item{a}{Optional integer vector of baseline treatment values (\code{0}/\code{1})
-to compute interventional hazards and clever weights for. Each value
-can then be passed as \code{a} to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+\item{a}{Integer vector of the baseline treatment values (\code{0}/\code{1}) to
+prepare interventional hazards and clever weights for. Each value can
+then be passed as \code{a} to \code{\link[=tmle_alpha]{tmle_alpha()}}, \code{\link[=calibrate_alpha]{calibrate_alpha()}} and
+\code{\link[=calibration_curve]{calibration_curve()}}. Defaults to both values, \code{0:1}, when
+\code{treatment_model} is given.}
 
 \item{max_count}{Positive integer. Maximum number of jumps tracked per
 recurrent process in the state space.}

@@ -33,7 +33,7 @@ intensity \code{alpha_grid} scales.}
 evaluate.}
 
 \item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on.
-Must be one of the values of \code{a} given to \code{\link[=fit_initial]{fit_initial()}}.}
+Must be one of the values prepared by \code{\link[=fit_initial]{fit_initial()}}, \code{initial_fit$a}.}
 
 \item{min_iter}{Non-negative integer. Minimum number of TMLE iterations,
 passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}.}

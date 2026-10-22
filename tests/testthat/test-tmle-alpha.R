@@ -73,7 +73,11 @@ test_that("tmle_alpha() validates its arguments", {
   expect_error(tmle_alpha(list(), target = "death"), "initial_fit")
   expect_error(tmle_alpha(fit, target = "stroke"), "target must be one of")
   expect_error(tmle_alpha(fit, target = "death", alpha = -1), "alpha")
-  expect_error(tmle_alpha(fit, target = "death", a = 1), "clever.weight.a1")
+  expect_error(
+    tmle_alpha(fit, target = "death", a = 1),
+    "a requires a treatment_model in fit_initial()",
+    fixed = TRUE
+  )
   expect_error(
     tmle_alpha(fit, target = "death", alpha = 0.5),
     "z_name is required"
@@ -189,4 +193,33 @@ test_that("tmle_alpha() estimates the expected years lost", {
     "should be one of"
   )
   expect_error(tmle_alpha(fit, target = "death", block_size = 0), "block_size")
+})
+
+test_that("tmle_alpha() only accepts a values prepared by fit_initial()", {
+  fit <- fit_initial(
+    fixture.data.treated(),
+    fit_types = illness.death.fit.types,
+    tau = 1,
+    treatment_model = A0 ~ L0,
+    a = 1
+  )
+
+  expect_equal(tmle_alpha(fit, target = "death", a = 1)$a, 1)
+  expect_error(
+    tmle_alpha(fit, target = "death", a = 0),
+    "a must be one of the values prepared by fit_initial(): 1.",
+    fixed = TRUE
+  )
+  expect_error(
+    calibrate_alpha(
+      fit,
+      target = "death",
+      z_name = "z",
+      value = 1,
+      scale = "ratio",
+      a = 1,
+      reference_a = 0
+    ),
+    "reference_a must be one of"
+  )
 })

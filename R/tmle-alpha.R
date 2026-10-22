@@ -28,7 +28,7 @@
 #'   1))` halves the intensity of `z` before time 0.5. Supersedes `alpha`
 #'   and `z_name`.
 #' @param a Optional baseline treatment value (`0` or `1`) to intervene on.
-#'   Must be one of the values of `a` given to [fit_initial()].
+#'   Must be one of the values prepared by [fit_initial()], `initial_fit$a`.
 #' @param estimand The target parameter: `"risk"`, the risk of `target` by
 #'   `tau` (or the expected number of events for a recurrent `target`), or
 #'   `"years_lost"`, the expected time lost, i.e. the integral of the risk
@@ -127,6 +127,7 @@ tmle_alpha <- function(
   verbose = FALSE
 ) {
   .assert_initial_fit(initial_fit)
+  .assert_a(a, initial_fit)
   checkmate::assert_string(target)
   checkmate::assert_number(alpha, lower = 0, finite = TRUE)
   checkmate::assert_string(z_name, null.ok = TRUE)
@@ -136,7 +137,6 @@ tmle_alpha <- function(
     names = "unique",
     null.ok = TRUE
   )
-  checkmate::assert_int(a, lower = 0, upper = 1, null.ok = TRUE)
   estimand <- match.arg(estimand)
   checkmate::assert_count(block_size, positive = TRUE)
   checkmate::assert_flag(only_first)
@@ -285,14 +285,6 @@ tmle_alpha <- function(
 
   if (length(a) > 0) {
     a.weight.col <- paste0("clever.weight.a", a)
-    if (!(a.weight.col %in% names(tmp.long))) {
-      stop(
-        "Column '",
-        a.weight.col,
-        "' not found in initial_fit$tmp_long; a must be one of the values ",
-        "of a given to fit_initial()."
-      )
-    }
     a.weights <- weight_quantiles(tmp.long[,
       (A0.obs == a) / (pi.A0.1^(A0.obs == 1) * (1 - pi.A0.1)^(A0.obs == 0))
     ])
@@ -587,4 +579,32 @@ tmle_alpha <- function(
 
 .assert_initial_fit <- function(initial_fit) {
   checkmate::assert_class(initial_fit, "initial_fit")
+}
+
+# A baseline treatment value `a` must be one that fit_initial() prepared.
+.assert_a <- function(a, initial_fit, var_name = "a") {
+  checkmate::assert_int(
+    a,
+    lower = 0,
+    upper = 1,
+    null.ok = TRUE,
+    .var.name = var_name
+  )
+  if (is.null(a) || a %in% initial_fit$a) {
+    return(invisible(a))
+  }
+  if (length(initial_fit$a) == 0) {
+    stop(
+      var_name,
+      " requires a treatment_model in fit_initial().",
+      call. = FALSE
+    )
+  }
+  stop(
+    var_name,
+    " must be one of the values prepared by fit_initial(): ",
+    paste(initial_fit$a, collapse = ", "),
+    ".",
+    call. = FALSE
+  )
 }

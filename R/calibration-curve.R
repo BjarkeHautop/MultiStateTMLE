@@ -85,7 +85,7 @@ calibration_curve <- function(
     any.missing = FALSE,
     min.len = 1
   )
-  checkmate::assert_int(a, lower = 0, upper = 1, null.ok = TRUE)
+  .assert_a(a, initial_fit)
   checkmate::assert_count(min_iter)
   checkmate::assert_flag(target_by_state)
   estimand <- match.arg(estimand)

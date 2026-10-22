@@ -100,8 +100,10 @@ calibrate_alpha <- function(
   checkmate::assert_string(z_name)
   checkmate::assert_number(value, finite = TRUE)
   scale <- match.arg(scale)
-  checkmate::assert_int(a, lower = 0, upper = 1, null.ok = TRUE)
-  checkmate::assert_int(reference_a, lower = 0, upper = 1, null.ok = TRUE)
+  .assert_a(a, initial_fit)
+  if (scale != "absolute") {
+    .assert_a(reference_a, initial_fit, "reference_a")
+  }
   estimand <- match.arg(estimand)
   exposure_estimand <- match.arg(exposure_estimand)
   checkmate::assert_count(block_size, positive = TRUE)

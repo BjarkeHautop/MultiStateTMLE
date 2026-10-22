@@ -61,8 +61,7 @@ fit <- fit_initial(
     censoring = list(delta = 0, model = ~L0)
   ),
   tau = 1,
-  treatment_model = A0 ~ L0,
-  a = 0:1
+  treatment_model = A0 ~ L0
 )
 
 # How much of the effect of treatment on death is mediated by its effect

@@ -60,7 +60,8 @@ test_that("calibrate_alpha() validates its arguments", {
       z_name = "z",
       target = "death",
       value = 0.5,
-      reference_a = 2
+      scale = "ratio",
+      reference_a = 1
     ),
     "reference_a"
   )

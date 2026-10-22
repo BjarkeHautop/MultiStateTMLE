@@ -48,7 +48,7 @@ per row. For example, \code{list(z = function(time) ifelse(time < 0.5, 0.5, 1))}
 and \code{z_name}.}
 
 \item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on.
-Must be one of the values of \code{a} given to \code{\link[=fit_initial]{fit_initial()}}.}
+Must be one of the values prepared by \code{\link[=fit_initial]{fit_initial()}}, \code{initial_fit$a}.}
 
 \item{estimand}{The target parameter: \code{"risk"}, the risk of \code{target} by
 \code{tau} (or the expected number of events for a recurrent \code{target}), or

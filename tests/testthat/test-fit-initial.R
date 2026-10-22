@@ -166,10 +166,11 @@ test_that("fit_initial() fits a treatment model and propensities under 'a'", {
     fixture.data.treated(),
     fit_types = illness.death.fit.types,
     tau = 1,
-    treatment_model = A0 ~ L0,
-    a = 0:1
+    treatment_model = A0 ~ L0
   )
 
+  # a defaults to both arms when a treatment model is given.
+  expect_equal(fit$a, 0:1)
   expect_true(data.table::is.data.table(fit$tmp_long))
   expect_true(all(fit$tmp_long$pi.A0.1 >= 0 & fit$tmp_long$pi.A0.1 <= 1))
   expect_true(all(

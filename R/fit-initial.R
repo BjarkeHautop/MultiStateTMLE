@@ -30,9 +30,11 @@
 #'   a formula such as `A0 ~ L0` or a list with elements `model` (such a
 #'   formula) and `fit` (only `"glm"` is supported). Required when `a` is
 #'   given.
-#' @param a Optional integer vector of baseline treatment values (`0`/`1`)
-#'   to compute interventional hazards and clever weights for. Each value
-#'   can then be passed as `a` to [tmle_alpha()].
+#' @param a Integer vector of the baseline treatment values (`0`/`1`) to
+#'   prepare interventional hazards and clever weights for. Each value can
+#'   then be passed as `a` to [tmle_alpha()], [calibrate_alpha()] and
+#'   [calibration_curve()]. Defaults to both values, `0:1`, when
+#'   `treatment_model` is given.
 #' @param max_count Positive integer. Maximum number of jumps tracked per
 #'   recurrent process in the state space.
 #' @param derived_vars Named list of functions of the data deriving
@@ -176,6 +178,10 @@ fit_initial <- function(
   }
   if (length(a) > 0 && length(treatment_model[["model"]]) == 0) {
     stop("A treatment_model is required when a is given.")
+  }
+  if (length(a) == 0 && length(treatment_model[["model"]]) > 0) {
+    a <- 0:1
+    inputs$a <- a
   }
 
   hal_control <- utils::modifyList(.hal_control_defaults, hal_control)
