@@ -16,9 +16,9 @@
 #'   evaluate.
 #' @param min_iter Non-negative integer. Minimum number of TMLE iterations,
 #'   passed on to [tmle_alpha()].
-#' @param block_size_z,block_size_target Optional positive integers. If
-#'   given, the expected time lost is estimated for `z_name` and `target`,
-#'   respectively, instead of the risk; see `years_lost` in [tmle_alpha()].
+#' @param estimand The target parameter for `target`, as in [tmle_alpha()].
+#' @param exposure_estimand The target parameter for the exposure `z_name`,
+#'   as in [tmle_alpha()].
 #' @param ... Further arguments passed on to [tmle_alpha()].
 #'
 #' @return An object of class `calibration_curve`, a list with elements:
@@ -27,7 +27,7 @@
 #'     (`exposure_estimate`, with standard error `exposure_se`), and the risk
 #'     of `target` (`estimate`, with standard error `se` and the bounds
 #'     `lower` and `upper` of a 95% Wald confidence interval).
-#'   * `z_name` and `a`: as given.
+#'   * `z_name`, `a`, `estimand` and `exposure_estimand`: as given.
 #'   * `checks`: a `data.table` with the estimated derivatives with respect
 #'     to `alpha` of the exposure (`derivative_exposure`) and target
 #'     (`derivative_target`) estimates, per `alpha` and `target`.
@@ -68,8 +68,9 @@ calibration_curve <- function(
   a = NULL,
   min_iter = 1,
   target_by_state = FALSE,
-  block_size_z = NULL,
-  block_size_target = NULL,
+  estimand = c("risk", "years_lost"),
+  exposure_estimand = c("risk", "years_lost"),
+  block_size = 10,
   cores = 1,
   verbose = FALSE,
   ...
@@ -87,21 +88,23 @@ calibration_curve <- function(
   checkmate::assert_int(a, lower = 0, upper = 1, null.ok = TRUE)
   checkmate::assert_count(min_iter)
   checkmate::assert_flag(target_by_state)
-  checkmate::assert_count(block_size_z, positive = TRUE, null.ok = TRUE)
-  checkmate::assert_count(block_size_target, positive = TRUE, null.ok = TRUE)
+  estimand <- match.arg(estimand)
+  exposure_estimand <- match.arg(exposure_estimand)
+  checkmate::assert_count(block_size, positive = TRUE)
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
   n <- initial_fit$n
 
-  fit_at <- function(alpha, parameter = z_name, block_size = NULL) {
+  fit_at <- function(alpha, parameter, estimand) {
     tmle_alpha(
       initial_fit,
       target = parameter,
       alpha = alpha,
       z_name = z_name,
       a = a,
-      years_lost = block_size,
+      estimand = estimand,
+      block_size = block_size,
       min_iter = min_iter,
       target_by_state = target_by_state,
       cores = cores,
@@ -115,7 +118,7 @@ calibration_curve <- function(
       calibration.est <- fit_at(
         alpha = alpha,
         parameter = z_name,
-        block_size = block_size_z
+        estimand = exposure_estimand
       )
 
       h <- 0.3 * n^(-1 / 6) * sqrt(mean(.eic(calibration.est)^2))
@@ -125,7 +128,7 @@ calibration_curve <- function(
         alpha = alpha,
         h = h,
         parameter = z_name,
-        block_size = block_size_z
+        estimand = exposure_estimand
       )
 
       alpha.eic <- (1 / est.deriv.auxiliary) * (0 - .eic(calibration.est))
@@ -142,7 +145,7 @@ calibration_curve <- function(
       target.est <- fit_at(
         alpha = alpha,
         parameter = target1,
-        block_size = block_size_target
+        estimand = estimand
       )
 
       if (alpha > 0) {
@@ -151,7 +154,7 @@ calibration_curve <- function(
           alpha = alpha,
           h = h,
           parameter = target1,
-          block_size = block_size_target
+          estimand = estimand
         )
         eic <- .eic(target.est) + est.deriv.target * alpha.eic
       } else {
@@ -205,6 +208,8 @@ calibration_curve <- function(
       estimate = rbindlist(lapply(alpha.out, function(x) x$estimate)),
       z_name = z_name,
       a = a,
+      estimand = estimand,
+      exposure_estimand = exposure_estimand,
       checks = rbindlist(lapply(alpha.out, function(x) x$checks)),
       eic = stats::setNames(
         lapply(alpha.out, function(x) x$eic),

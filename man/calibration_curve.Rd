@@ -12,8 +12,9 @@ calibration_curve(
   a = NULL,
   min_iter = 1,
   target_by_state = FALSE,
-  block_size_z = NULL,
-  block_size_target = NULL,
+  estimand = c("risk", "years_lost"),
+  exposure_estimand = c("risk", "years_lost"),
+  block_size = 10,
   cores = 1,
   verbose = FALSE,
   ...
@@ -40,9 +41,14 @@ passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 \item{target_by_state}{Logical. If \code{TRUE}, use state-specific clever
 covariates in the targeting step.}
 
-\item{block_size_z, block_size_target}{Optional positive integers. If
-given, the expected time lost is estimated for \code{z_name} and \code{target},
-respectively, instead of the risk; see \code{years_lost} in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+\item{estimand}{The target parameter for \code{target}, as in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+
+\item{exposure_estimand}{The target parameter for the exposure \code{z_name},
+as in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+
+\item{block_size}{Positive integer. For \code{estimand = "years_lost"}, the
+number of time points per block in the approximation of the
+integral.}
 
 \item{cores}{Positive integer. Number of cores used by
 \code{\link[parallel:mclapply]{parallel::mclapply()}} for the per-individual computations.}
@@ -59,7 +65,7 @@ An object of class \code{calibration_curve}, a list with elements:
 (\code{exposure_estimate}, with standard error \code{exposure_se}), and the risk
 of \code{target} (\code{estimate}, with standard error \code{se} and the bounds
 \code{lower} and \code{upper} of a 95\% Wald confidence interval).
-\item \code{z_name} and \code{a}: as given.
+\item \code{z_name}, \code{a}, \code{estimand} and \code{exposure_estimand}: as given.
 \item \code{checks}: a \code{data.table} with the estimated derivatives with respect
 to \code{alpha} of the exposure (\code{derivative_exposure}) and target
 (\code{derivative_target}) estimates, per \code{alpha} and \code{target}.

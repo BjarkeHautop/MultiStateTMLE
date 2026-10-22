@@ -25,6 +25,12 @@ calibration.fun(
 \arguments{
 \item{initial.fit}{See \code{initial_fit} in \code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
 
+\item{theta, rho, delta, rho.1a}{The calibration target: \code{theta} with
+\code{scale = "absolute"}, \code{rho} with \code{scale = "ratio"}, \code{delta} with
+\code{scale = "difference"}, or \code{rho.1a} with \code{scale = "ratio"} and
+\code{reference_a = 1 - a} in \code{\link[=calibrate_alpha]{calibrate_alpha()}}. \code{theta} is ignored if
+one of the others is given.}
+
 \item{output.eic}{Ignored; \code{\link[=calibrate_alpha]{calibrate_alpha()}} always returns the
 influence curves.}
 
@@ -32,10 +38,9 @@ influence curves.}
 
 \item{use.cores}{See \code{cores} in \code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
 
-\item{target, a, theta, rho, delta, verbose}{See \code{\link[=calibrate_alpha]{calibrate_alpha()}}. \code{theta}
-is ignored if \code{rho}, \code{delta} or \code{rho.1a} is given.}
+\item{target, a, verbose}{See \code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
 
-\item{z.name, rho.1a}{See the snake_case equivalents in \code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
+\item{z.name}{See \code{z_name} in \code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
 
 \item{...}{Passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}, with dotted argument names
 translated to their snake_case equivalents.}

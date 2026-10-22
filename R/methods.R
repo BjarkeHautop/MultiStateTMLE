@@ -70,7 +70,14 @@ print.initial_fit <- function(x, ...) {
 #' @export
 print.tmle_alpha <- function(x, ...) {
   method <- if (x$method == "one_step") "One-step" else "TMLE"
-  cat(method, " estimate ", .describe_intervention(x), "\n\n", sep = "")
+  cat(
+    method,
+    " estimate ",
+    if (identical(x$estimand, "years_lost")) "of years lost ",
+    .describe_intervention(x),
+    "\n\n",
+    sep = ""
+  )
   print(x$estimate)
   cat("\nInitial estimate:", format(x$initial_estimate, digits = 4))
   if (x$method == "tmle") {

@@ -11,7 +11,8 @@ tmle_alpha(
   z_name = NULL,
   alpha_list = NULL,
   a = NULL,
-  years_lost = NULL,
+  estimand = c("risk", "years_lost"),
+  block_size = 10,
   only_first = FALSE,
   target_only_in_state = NULL,
   target_by_state = FALSE,
@@ -45,10 +46,14 @@ depends on. Supersedes \code{alpha} and \code{z_name}.}
 \item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on.
 Must be one of the values of \code{a} given to \code{\link[=fit_initial]{fit_initial()}}.}
 
-\item{years_lost}{Optional positive integer. If given, the target
-parameter is the expected time lost (the integral of the risk of
-\code{target} up to \code{tau}) instead of the risk at \code{tau}. The integral is
-approximated with blocks of \code{years_lost} time points.}
+\item{estimand}{The target parameter: \code{"risk"}, the risk of \code{target} by
+\code{tau} (or the expected number of events for a recurrent \code{target}), or
+\code{"years_lost"}, the expected time lost, i.e. the integral of the risk
+of \code{target} up to \code{tau}.}
+
+\item{block_size}{Positive integer. For \code{estimand = "years_lost"}, the
+number of time points per block in the approximation of the
+integral.}
 
 \item{only_first}{Logical. If \code{TRUE}, only the first \code{target} event
 counts, and only the first jump of \code{z_name} is intervened on.}
@@ -88,6 +93,7 @@ standard error \code{se}, and the bounds \code{lower} and \code{upper} of a 95\%
 confidence interval.
 \item \code{initial_estimate}: the initial plug-in estimate, before targeting.
 \item \code{method}: \code{"tmle"}, or \code{"one_step"} if \code{one_step = TRUE}.
+\item \code{estimand}: as given.
 \item \code{alpha}, \code{z_name} and \code{a}: the intervention (\code{alpha} is \code{NULL} if
 \code{alpha_list} is given).
 \item \code{eic}: a list, named by \code{target}, with the efficient influence curve,

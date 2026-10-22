@@ -79,3 +79,29 @@ test_that("calibration_curve() reports progress only when verbose = TRUE", {
     calibration_curve(fit, z_name = "z", target = "death", alpha_grid = 1)
   )
 })
+
+test_that("calibration_curve() has separate exposure and target estimands", {
+  fit <- fixture.fit(30)
+
+  curve <- calibration_curve(
+    fit,
+    z_name = "z",
+    target = "death",
+    alpha_grid = 1,
+    estimand = "years_lost"
+  )
+
+  expect_equal(
+    curve$estimate$exposure_estimate,
+    tmle_alpha(fit, target = "z", min_iter = 1)$estimate$estimate
+  )
+  expect_equal(
+    curve$estimate$estimate,
+    tmle_alpha(
+      fit,
+      target = "death",
+      min_iter = 1,
+      estimand = "years_lost"
+    )$estimate$estimate
+  )
+})

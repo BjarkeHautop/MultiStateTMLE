@@ -1,26 +1,37 @@
 #' Calibrate an intensity intervention to a target value
 #'
 #' Finds the intervention `alpha` on the intensity of the process `z_name`
-#' such that the estimated risk of `z_name` equals a calibration target, and
-#' estimates the risk of `target` under that calibrated intervention. The
-#' standard error of the latter accounts for the estimation of `alpha`.
+#' such that the estimated risk of `z_name` (the exposure) equals a
+#' calibration target `theta`, and estimates the risk of each `target` under
+#' that calibrated intervention. The standard errors of the latter account
+#' for the estimation of `alpha`.
 #'
-#' Exactly one of `theta`, `rho`, `delta` and `rho_1a` specifies the
-#' calibration target:
-#' * `theta`: the risk of `z_name` itself.
-#' * `rho`: a fraction of the risk of `z_name` without intervention.
-#' * `delta`: an absolute difference from the risk of `z_name` without
-#'   intervention.
-#' * `rho_1a`: a fraction of the risk of `z_name` without intervention on
-#'   `z_name`, under the opposite baseline treatment `1 - a`.
+#' The calibration target `theta` is given by `value` on the `scale`:
+#' * `"absolute"`: `theta = value`.
+#' * `"ratio"`: `theta = value * reference`.
+#' * `"difference"`: `theta = value + reference`.
+#'
+#' where `reference` is the exposure without intervention on `z_name`, under
+#' the baseline treatment `reference_a`.
 #'
 #' @inheritParams tmle_alpha
 #' @param z_name String. Name of the process in `initial_fit` whose
 #'   intensity is intervened on and calibrated.
 #' @param target Character vector. Names of the processes whose risks are
 #'   estimated under the calibrated intervention.
-#' @param theta,rho,delta,rho_1a Numbers specifying the calibration target,
-#'   see Description. Give exactly one.
+#' @param value Number. The calibration target on the `scale`, see
+#'   Description.
+#' @param scale The scale of `value`: `"absolute"`, `"ratio"` or
+#'   `"difference"`, see Description.
+#' @param a Optional baseline treatment value (`0` or `1`) to intervene on,
+#'   as in [tmle_alpha()].
+#' @param reference_a Optional baseline treatment value (`0` or `1`) under
+#'   which the reference exposure of a `"ratio"` or `"difference"` `scale`
+#'   is estimated. Defaults to `a`; e.g. `a = 1, reference_a = 0` calibrates
+#'   the exposure under treatment to that under placebo.
+#' @param estimand The target parameter for `target`, as in [tmle_alpha()].
+#' @param exposure_estimand The target parameter for the exposure `z_name`,
+#'   that `value` and the calibration refer to, as in [tmle_alpha()].
 #' @param ... Further arguments passed on to [tmle_alpha()].
 #'
 #' @return An object of class `calibrate_alpha`, a list with elements:
@@ -32,7 +43,8 @@
 #'   * `calibration`: a `data.table` with the calibrated `alpha` and the
 #'     calibration target `theta` (column `quantity`), with `estimate`, `se`,
 #'     `lower` and `upper`.
-#'   * `z_name` and `a`: as given.
+#'   * `z_name`, `a`, `value`, `scale`, `reference_a`, `estimand` and
+#'     `exposure_estimand`: as given.
 #'   * `eic`, `eic_alpha_known`: lists, named by target, of the influence
 #'     curves of the risk of `target`, accounting for the estimation of
 #'     alpha and treating it as known.
@@ -59,18 +71,26 @@
 #'
 #' # Risk of death under the intervention on z that brings the risk of z
 #' # down to 80% of its observed value.
-#' cal <- calibrate_alpha(fit, target = "death", z_name = "z", rho = 0.8)
+#' cal <- calibrate_alpha(
+#'   fit,
+#'   target = "death",
+#'   z_name = "z",
+#'   value = 0.8,
+#'   scale = "ratio"
+#' )
 #' cal$estimate
 #' @export
 calibrate_alpha <- function(
   initial_fit,
   target,
   z_name,
-  theta = NULL,
-  rho = NULL,
-  delta = NULL,
-  rho_1a = NULL,
+  value,
+  scale = c("absolute", "ratio", "difference"),
   a = NULL,
+  reference_a = a,
+  estimand = c("risk", "years_lost"),
+  exposure_estimand = c("risk", "years_lost"),
+  block_size = 10,
   cores = 1,
   verbose = FALSE,
   ...
@@ -78,51 +98,52 @@ calibrate_alpha <- function(
   .assert_initial_fit(initial_fit)
   checkmate::assert_character(target, min.len = 1, any.missing = FALSE)
   checkmate::assert_string(z_name)
-  checkmate::assert_number(theta, lower = 0, finite = TRUE, null.ok = TRUE)
-  checkmate::assert_number(rho, lower = 0, finite = TRUE, null.ok = TRUE)
-  checkmate::assert_number(delta, finite = TRUE, null.ok = TRUE)
-  checkmate::assert_number(rho_1a, lower = 0, finite = TRUE, null.ok = TRUE)
-  n_targets <- length(c(theta, rho, delta, rho_1a))
-  if (n_targets != 1) {
-    stop("Give exactly one of theta, rho, delta and rho_1a.")
-  }
+  checkmate::assert_number(value, finite = TRUE)
+  scale <- match.arg(scale)
   checkmate::assert_int(a, lower = 0, upper = 1, null.ok = TRUE)
-  if (!is.null(rho_1a) && is.null(a)) {
-    stop("rho_1a requires a baseline treatment a.")
-  }
+  checkmate::assert_int(reference_a, lower = 0, upper = 1, null.ok = TRUE)
+  estimand <- match.arg(estimand)
+  exposure_estimand <- match.arg(exposure_estimand)
+  checkmate::assert_count(block_size, positive = TRUE)
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
   n <- initial_fit$n
   a_fixed <- a
 
-  fit_at <- function(alpha, parameter = z_name, a = a_fixed) {
+  # Estimates of the exposure by default, as solve_alpha() needs.
+  fit_at <- function(
+    alpha,
+    parameter = z_name,
+    a = a_fixed,
+    estimand = exposure_estimand
+  ) {
     tmle_alpha(
       initial_fit,
       target = parameter,
       alpha = alpha,
       z_name = z_name,
       a = a,
+      estimand = estimand,
+      block_size = block_size,
       cores = cores,
       verbose = verbose,
       ...
     )
   }
 
-  if (!is.null(rho)) {
-    est.aux.1 <- fit_at(alpha = 1)
-    theta <- rho * .point_estimate(est.aux.1)
-    theta.eic <- rho * .eic(est.aux.1)
-  } else if (!is.null(rho_1a)) {
-    est.aux.1 <- fit_at(alpha = 1, a = 1 - a)
-    theta <- rho_1a * .point_estimate(est.aux.1)
-    theta.eic <- rho_1a * .eic(est.aux.1)
-  } else if (!is.null(delta)) {
-    est.aux.1 <- fit_at(alpha = 1)
-    theta <- delta + .point_estimate(est.aux.1)
-    theta.eic <- .eic(est.aux.1)
-  } else {
+  if (scale == "absolute") {
+    theta <- value
     theta.eic <- 0
+  } else {
+    reference <- fit_at(alpha = 1, a = reference_a)
+    if (scale == "ratio") {
+      theta <- value * .point_estimate(reference)
+      theta.eic <- value * .eic(reference)
+    } else {
+      theta <- value + .point_estimate(reference)
+      theta.eic <- .eic(reference)
+    }
   }
 
   theta.se <- sqrt(mean(theta.eic^2) / n)
@@ -177,13 +198,18 @@ calibrate_alpha <- function(
   alpha.se <- sqrt(mean(alpha.eic^2) / n)
 
   out.target <- lapply(target, function(target1) {
-    target.est <- fit_at(alpha = est.alpha$alpha_hat, parameter = target1)
+    target.est <- fit_at(
+      alpha = est.alpha$alpha_hat,
+      parameter = target1,
+      estimand = estimand
+    )
     if (theta > 0) {
       est.deriv.target <- estimate_derivative(
         fit_at,
         alpha = est.alpha$alpha_hat,
         h = h,
-        parameter = target1
+        parameter = target1,
+        estimand = estimand
       )
       eic <- .eic(target.est) + est.deriv.target * alpha.eic
     } else {
@@ -224,6 +250,11 @@ calibrate_alpha <- function(
       calibration = calibration,
       z_name = z_name,
       a = a,
+      value = value,
+      scale = scale,
+      reference_a = reference_a,
+      estimand = estimand,
+      exposure_estimand = exposure_estimand,
       eic = lapply(out.target, function(x) x$eic),
       eic_alpha_known = lapply(out.target, function(x) .eic(x$target.est)),
       alpha_eic = alpha.eic,

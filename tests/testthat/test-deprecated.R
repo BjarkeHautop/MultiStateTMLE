@@ -160,3 +160,54 @@ test_that("deprecated tmle.alpha.fun() builds the initial fit from dt", {
     tmle_alpha(fixture.fit(30), target = "death", z_name = "z")
   )
 })
+
+test_that("deprecated calibration functions translate their targets", {
+  withr::local_options(lifecycle_verbosity = "quiet")
+  fit <- fixture.fit(100)
+
+  expect_equal(
+    calibration.fun(fit, rho = 0.8, target = "death", verbose = FALSE),
+    calibrate_alpha(
+      fit,
+      target = "death",
+      z_name = "z",
+      value = 0.8,
+      scale = "ratio"
+    )
+  )
+  expect_error(
+    calibration.fun(fit, rho = 0.8, delta = 0.1, target = "death"),
+    "at most one"
+  )
+  expect_error(
+    calibration.fun(fit, rho.1a = 0.8, target = "death"),
+    "requires a baseline treatment"
+  )
+
+  expect_equal(
+    calibration.curve.fun(
+      fit,
+      target = "death",
+      alpha.grid = 1,
+      block.size.target = 5,
+      verbose = FALSE
+    ),
+    calibration_curve(
+      fit,
+      target = "death",
+      z_name = "z",
+      alpha_grid = 1,
+      estimand = "years_lost",
+      block_size = 5
+    )
+  )
+  expect_error(
+    calibration.curve.fun(
+      fit,
+      target = "death",
+      block.size.z = 5,
+      block.size.target = 10
+    ),
+    "must be equal"
+  )
+})

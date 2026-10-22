@@ -24,10 +24,13 @@
 #'   depends on. Supersedes `alpha` and `z_name`.
 #' @param a Optional baseline treatment value (`0` or `1`) to intervene on.
 #'   Must be one of the values of `a` given to [fit_initial()].
-#' @param years_lost Optional positive integer. If given, the target
-#'   parameter is the expected time lost (the integral of the risk of
-#'   `target` up to `tau`) instead of the risk at `tau`. The integral is
-#'   approximated with blocks of `years_lost` time points.
+#' @param estimand The target parameter: `"risk"`, the risk of `target` by
+#'   `tau` (or the expected number of events for a recurrent `target`), or
+#'   `"years_lost"`, the expected time lost, i.e. the integral of the risk
+#'   of `target` up to `tau`.
+#' @param block_size Positive integer. For `estimand = "years_lost"`, the
+#'   number of time points per block in the approximation of the
+#'   integral.
 #' @param only_first Logical. If `TRUE`, only the first `target` event
 #'   counts, and only the first jump of `z_name` is intervened on.
 #' @param target_only_in_state Optional function of the state space
@@ -55,6 +58,7 @@
 #'     confidence interval.
 #'   * `initial_estimate`: the initial plug-in estimate, before targeting.
 #'   * `method`: `"tmle"`, or `"one_step"` if `one_step = TRUE`.
+#'   * `estimand`: as given.
 #'   * `alpha`, `z_name` and `a`: the intervention (`alpha` is `NULL` if
 #'     `alpha_list` is given).
 #'   * `eic`: a list, named by `target`, with the efficient influence curve,
@@ -98,7 +102,8 @@ tmle_alpha <- function(
   z_name = NULL,
   alpha_list = NULL,
   a = NULL,
-  years_lost = NULL,
+  estimand = c("risk", "years_lost"),
+  block_size = 10,
   only_first = FALSE,
   target_only_in_state = NULL,
   target_by_state = FALSE,
@@ -121,7 +126,8 @@ tmle_alpha <- function(
     null.ok = TRUE
   )
   checkmate::assert_int(a, lower = 0, upper = 1, null.ok = TRUE)
-  checkmate::assert_count(years_lost, positive = TRUE, null.ok = TRUE)
+  estimand <- match.arg(estimand)
+  checkmate::assert_count(block_size, positive = TRUE)
   checkmate::assert_flag(only_first)
   checkmate::assert_function(target_only_in_state, null.ok = TRUE)
   checkmate::assert_flag(target_by_state)
@@ -318,7 +324,8 @@ tmle_alpha <- function(
   #-- tmle iterations:
 
   converged <- FALSE
-  clever.Q.label <- if (!is.null(years_lost)) {
+  years_lost <- estimand == "years_lost"
+  clever.Q.label <- if (years_lost) {
     "clever.Q.years.lost."
   } else {
     "clever.Q."
@@ -382,8 +389,8 @@ tmle_alpha <- function(
       process_types = process.types,
       p_prefix = P.prefix,
       parameter = target.name,
-      get_years_lost = !is.null(years_lost),
-      years_lost_block_size = years_lost,
+      get_years_lost = years_lost,
+      years_lost_block_size = block_size,
       clever_by_state = target_by_state,
       mc.cores = .n_cores(cores)
     )
@@ -510,6 +517,7 @@ tmle_alpha <- function(
       ),
       initial_estimate = g.est,
       method = if (one_step) "one_step" else "tmle",
+      estimand = estimand,
       alpha = if (length(alpha_list) > 0) NULL else alpha,
       z_name = if (is.finite(z.process.id)) z.name else NULL,
       a = a,

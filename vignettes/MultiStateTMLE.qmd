@@ -179,21 +179,25 @@ arrows(ce$exposure_estimate, ce$lower, ce$exposure_estimate, ce$upper,
 ## Step 4: Calibrate the intervention
 
 `calibrate_alpha()` solves for the `alpha` that achieves a given exposure
-risk and estimates the target risk under that intervention. The calibration
-target is given by exactly one of:
+risk `theta` and estimates the target risk under that intervention. The
+calibration target is given by a `value` on a `scale`:
 
-- `theta`: the risk of `z_name` itself.
-- `rho`: a fraction of the observed risk of `z_name`.
-- `delta`: an absolute difference from the observed risk of `z_name`.
-- `rho_1a`: a fraction of the risk of `z_name` under the opposite baseline
-  treatment (see the next section).
+- `"absolute"`: `theta = value`.
+- `"ratio"`: `theta` is `value` times the observed risk of `z_name`.
+- `"difference"`: `theta` is `value` plus the observed risk of `z_name`.
 
 For example, the risk of death if the risk of illness were reduced to 80% of
 its observed value:
 
 ```{r}
 #| label: calibrate-alpha
-cal <- calibrate_alpha(fit, target = "death", z_name = "z", rho = 0.8)
+cal <- calibrate_alpha(
+  fit,
+  target = "death",
+  z_name = "z",
+  value = 0.8,
+  scale = "ratio"
+)
 cal
 ```
 
@@ -201,6 +205,22 @@ The first table gives the calibrated intervention `alpha` and the exposure
 risk `theta` it achieves, and the second the risk of death under it. Its
 standard error `se` accounts for `alpha` being estimated, whereas `se_crude`
 treats it as known.
+
+The target can also be the expected years of life lost before `tau` rather
+than the risk of death, with `estimand = "years_lost"`. The exposure is
+still calibrated on its risk, unless `exposure_estimand` says otherwise:
+
+```{r}
+#| label: calibrate-years-lost
+calibrate_alpha(
+  fit,
+  target = "death",
+  z_name = "z",
+  value = 0.8,
+  scale = "ratio",
+  estimand = "years_lost"
+)$estimate
+```
 
 ## Step 5: Decompose a treatment effect
 
@@ -243,8 +263,9 @@ fit_treated <- fit_initial(
 ```
 
 The contrasts are computed from the influence curves that each fit
-returns. In the calibrated arm we set `a = 1` and `rho_1a = 1`, so the risk of illness under treatment is calibrated to equal the risk of
-illness under placebo:
+returns. In the calibrated arm we set `a = 1` and calibrate to a ratio of 1
+to the risk of illness under placebo, `reference_a = 0`, so the risk of
+illness under treatment is calibrated to equal that under placebo:
 
 ```{r}
 #| label: contrasts
@@ -254,8 +275,10 @@ calibrated_fit <- calibrate_alpha(
   fit_treated,
   target = "death",
   z_name = "z",
-  rho_1a = 1,
-  a = 1
+  value = 1,
+  scale = "ratio",
+  a = 1,
+  reference_a = 0
 )
 
 calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
@@ -267,7 +290,7 @@ of all three contrasts cover zero, as expected.
 ## Further reading
 
 - The function reference documents further options, such as recurrent
-  targets, expected time lost (`years_lost`), and time-varying interventions
-  (`alpha_list`).
+  targets, only counting first events (`only_first`), and time-varying
+  interventions (`alpha_list`).
 - To simulate multistate event history data, see the
   [simevent](https://github.com/BjarkeHautop/simevent) package.

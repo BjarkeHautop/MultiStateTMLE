@@ -6,7 +6,13 @@ test_that("calibrate_alpha() hits the calibration target", {
   )
   n <- length(unique(illness_death$id))
 
-  cal <- calibrate_alpha(fit, z_name = "z", target = "death", rho = 0.8)
+  cal <- calibrate_alpha(
+    fit,
+    z_name = "z",
+    target = "death",
+    value = 0.8,
+    scale = "ratio"
+  )
 
   expect_s3_class(cal, "calibrate_alpha")
   expect_named(
@@ -36,28 +42,44 @@ test_that("calibrate_alpha() validates its arguments", {
 
   expect_error(
     calibrate_alpha(fit, z_name = "z", target = "death"),
-    "exactly one"
+    "value"
   )
   expect_error(
     calibrate_alpha(
       fit,
       z_name = "z",
       target = "death",
-      theta = 0.2,
-      rho = 0.5
+      value = 0.5,
+      scale = "fraction"
     ),
-    "exactly one"
+    "should be one of"
   )
   expect_error(
-    calibrate_alpha(fit, z_name = "z", target = "death", rho_1a = 0.5),
-    "requires a baseline treatment"
+    calibrate_alpha(
+      fit,
+      z_name = "z",
+      target = "death",
+      value = 0.5,
+      reference_a = 2
+    ),
+    "reference_a"
+  )
+  expect_error(
+    calibrate_alpha(
+      fit,
+      z_name = "z",
+      target = "death",
+      value = 0.5,
+      estimand = "rate"
+    ),
+    "should be one of"
   )
 })
 
 test_that("calibrate_alpha() calibrates to theta directly", {
   fit <- fixture.fit(100)
 
-  cal <- calibrate_alpha(fit, z_name = "z", target = "death", theta = 0.2)
+  cal <- calibrate_alpha(fit, z_name = "z", target = "death", value = 0.2)
 
   expect_equal(cal$calibration$estimate[2], 0.2)
   expect_true(cal$checks$converged)
@@ -73,12 +95,12 @@ test_that("calibrate_alpha() calibrates to theta directly", {
 test_that("calibrate_alpha() handles several targets", {
   fit <- fixture.fit(100)
 
-  single <- calibrate_alpha(fit, z_name = "z", target = "death", theta = 0.2)
+  single <- calibrate_alpha(fit, z_name = "z", target = "death", value = 0.2)
   both <- calibrate_alpha(
     fit,
     z_name = "z",
     target = c("death", "z"),
-    theta = 0.2
+    value = 0.2
   )
 
   expect_equal(both$estimate$target, c("death", "z"))
@@ -95,11 +117,11 @@ test_that("calibrate_alpha() rejects invalid inputs", {
   fit <- fixture.fit(30)
 
   expect_error(
-    calibrate_alpha(fit, z_name = "z", target = "death", theta = "x"),
-    "theta"
+    calibrate_alpha(fit, z_name = "z", target = "death", value = "x"),
+    "value"
   )
   expect_error(
-    calibrate_alpha(fit, z_name = "z", target = 5, theta = 0.2),
+    calibrate_alpha(fit, z_name = "z", target = 5, value = 0.2),
     "target"
   )
   expect_error(
@@ -107,9 +129,80 @@ test_that("calibrate_alpha() rejects invalid inputs", {
       fit,
       z_name = "z",
       target = "death",
-      theta = 0.2,
+      value = 0.2,
       cores = 0
     ),
     "cores"
   )
+})
+
+test_that("calibrate_alpha() calibrates relative to a reference", {
+  fit <- fixture.fit(100)
+  reference <- tmle_alpha(fit, target = "z")$estimate$estimate
+
+  cal <- calibrate_alpha(
+    fit,
+    z_name = "z",
+    target = "death",
+    value = -0.05,
+    scale = "difference"
+  )
+  expect_equal(cal$calibration$estimate[2], reference - 0.05)
+  expect_equal(cal$scale, "difference")
+})
+
+test_that("calibrate_alpha() calibrates to the risk under another arm", {
+  fit <- fit_initial(
+    fixture.data.treated(100),
+    fit_types = illness.death.fit.types,
+    tau = 1,
+    treatment_model = A0 ~ L0,
+    a = 0:1
+  )
+
+  cal <- calibrate_alpha(
+    fit,
+    z_name = "z",
+    target = "death",
+    value = 1,
+    scale = "ratio",
+    a = 1,
+    reference_a = 0
+  )
+  expect_equal(
+    cal$calibration$estimate[2],
+    tmle_alpha(fit, target = "z", a = 0)$estimate$estimate
+  )
+})
+
+test_that("calibrate_alpha() can calibrate on risk and target years lost", {
+  fit <- fixture.fit(100)
+
+  cal <- calibrate_alpha(
+    fit,
+    z_name = "z",
+    target = "death",
+    value = 0.8,
+    scale = "ratio",
+    estimand = "years_lost"
+  )
+
+  # The exposure is calibrated on the risk scale...
+  expect_equal(
+    cal$calibration$estimate[2],
+    0.8 * tmle_alpha(fit, target = "z")$estimate$estimate
+  )
+  # ...while the target is on the years-lost scale.
+  expect_equal(
+    cal$estimate$estimate,
+    tmle_alpha(
+      fit,
+      target = "death",
+      alpha = cal$calibration$estimate[1],
+      z_name = "z",
+      estimand = "years_lost"
+    )$estimate$estimate
+  )
+  expect_equal(cal$estimand, "years_lost")
+  expect_equal(cal$exposure_estimand, "risk")
 })

@@ -172,3 +172,21 @@ test_that("tmle_alpha()'s alpha_list reproduces a constant scalar alpha", {
     scalar$estimate$estimate
   )
 })
+
+test_that("tmle_alpha() estimates the expected years lost", {
+  fit <- fixture.fit(30)
+
+  risk <- tmle_alpha(fit, target = "death")
+  years_lost <- tmle_alpha(fit, target = "death", estimand = "years_lost")
+
+  expect_equal(years_lost$estimand, "years_lost")
+  # The integral of the risk up to tau = 1 is below the risk at tau.
+  expect_lt(years_lost$estimate$estimate, risk$estimate$estimate)
+  expect_gt(years_lost$estimate$estimate, 0)
+  expect_output(print(years_lost), "estimate of years lost")
+  expect_error(
+    tmle_alpha(fit, target = "death", estimand = "rate"),
+    "should be one of"
+  )
+  expect_error(tmle_alpha(fit, target = "death", block_size = 0), "block_size")
+})

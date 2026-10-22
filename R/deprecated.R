@@ -211,8 +211,10 @@ prepare.initial <- function(
 #' @param target,alpha,a,verbose See [tmle_alpha()].
 #' @param z.name See `z_name` in [tmle_alpha()]. If `initial.fit` has no
 #'   such process, `z.name` is ignored, as is `alpha` with a warning.
-#' @param alpha.list,years.lost,target.only.in.state,target.by.state,conv.const,one.step,max.iter,min.iter,truncate.weights
+#' @param alpha.list,target.only.in.state,target.by.state,conv.const,one.step,max.iter,min.iter,truncate.weights
 #'   See the snake_case equivalents in [tmle_alpha()].
+#' @param years.lost If given, `estimand = "years_lost"` with
+#'   `block_size = years.lost` in [tmle_alpha()].
 #' @param only.first See `only_first` in [tmle_alpha()]; `NULL` means
 #'   `FALSE`.
 #' @param use.cores See `cores` in [tmle_alpha()].
@@ -284,7 +286,8 @@ tmle.alpha.fun <- function(
     z_name = z.name,
     alpha_list = alpha.list,
     a = a,
-    years_lost = years.lost,
+    estimand = if (is.null(years.lost)) "risk" else "years_lost",
+    block_size = if (is.null(years.lost)) 10 else years.lost,
     only_first = isTRUE(only.first),
     target_only_in_state = target.only.in.state,
     target_by_state = target.by.state,
@@ -304,9 +307,13 @@ tmle.alpha.fun <- function(
 #' [calibrate_alpha()] instead.
 #'
 #' @param initial.fit See `initial_fit` in [calibrate_alpha()].
-#' @param target,a,theta,rho,delta,verbose See [calibrate_alpha()]. `theta`
-#'   is ignored if `rho`, `delta` or `rho.1a` is given.
-#' @param z.name,rho.1a See the snake_case equivalents in [calibrate_alpha()].
+#' @param target,a,verbose See [calibrate_alpha()].
+#' @param theta,rho,delta,rho.1a The calibration target: `theta` with
+#'   `scale = "absolute"`, `rho` with `scale = "ratio"`, `delta` with
+#'   `scale = "difference"`, or `rho.1a` with `scale = "ratio"` and
+#'   `reference_a = 1 - a` in [calibrate_alpha()]. `theta` is ignored if
+#'   one of the others is given.
+#' @param z.name See `z_name` in [calibrate_alpha()].
 #' @param output.eic Ignored; [calibrate_alpha()] always returns the
 #'   influence curves.
 #' @param use.cores See `cores` in [calibrate_alpha()].
@@ -335,8 +342,31 @@ calibration.fun <- function(
   ...
 ) {
   lifecycle::deprecate_warn("0.1.0", "calibration.fun()", "calibrate_alpha()")
-  if (length(c(rho, delta, rho.1a)) > 0) {
-    theta <- NULL
+  if (length(c(rho, delta, rho.1a)) > 1) {
+    stop("Give at most one of rho, delta and rho.1a.")
+  }
+  reference_a <- a
+  if (!is.null(rho)) {
+    value <- rho
+    scale <- "ratio"
+  } else if (!is.null(delta)) {
+    value <- delta
+    scale <- "difference"
+  } else if (!is.null(rho.1a)) {
+    if (is.null(a)) {
+      stop("rho.1a requires a baseline treatment a.")
+    }
+    value <- rho.1a
+    scale <- "ratio"
+    reference_a <- 1 - a
+  } else {
+    value <- theta
+    scale <- "absolute"
+  }
+  args <- .snake_case_args(list(...))
+  # Years lost through `...` applied to all estimates.
+  if (identical(args$estimand, "years_lost")) {
+    args$exposure_estimand <- "years_lost"
   }
   do.call(
     calibrate_alpha,
@@ -345,15 +375,14 @@ calibration.fun <- function(
         initial_fit = initial.fit,
         target = target,
         z_name = z.name,
-        theta = theta,
-        rho = rho,
-        delta = delta,
-        rho_1a = rho.1a,
+        value = value,
+        scale = scale,
         a = a,
+        reference_a = reference_a,
         cores = use.cores,
         verbose = verbose
       ),
-      .snake_case_args(list(...))
+      args
     )
   )
 }
@@ -365,8 +394,12 @@ calibration.fun <- function(
 #'
 #' @param initial.fit See `initial_fit` in [calibration_curve()].
 #' @param target,a,verbose See [calibration_curve()].
-#' @param z.name,alpha.grid,min.iter,target.by.state,block.size.z,block.size.target
-#'   See the snake_case equivalents in [calibration_curve()].
+#' @param z.name,alpha.grid,min.iter,target.by.state See the snake_case
+#'   equivalents in [calibration_curve()].
+#' @param block.size.z,block.size.target If given,
+#'   `exposure_estimand = "years_lost"` and `estimand = "years_lost"`,
+#'   respectively, in [calibration_curve()], with this `block_size`. If both
+#'   are given, they must be equal.
 #' @param output.eic Ignored; [calibration_curve()] always returns the
 #'   influence curves.
 #' @param use.cores See `cores` in [calibration_curve()].
@@ -400,6 +433,10 @@ calibration.curve.fun <- function(
     "calibration.curve.fun()",
     "calibration_curve()"
   )
+  block.sizes <- unique(c(block.size.z, block.size.target))
+  if (length(block.sizes) > 1) {
+    stop("block.size.z and block.size.target must be equal.")
+  }
   do.call(
     calibration_curve,
     c(
@@ -411,8 +448,13 @@ calibration.curve.fun <- function(
         a = a,
         min_iter = min.iter,
         target_by_state = target.by.state,
-        block_size_z = block.size.z,
-        block_size_target = block.size.target,
+        estimand = if (is.null(block.size.target)) "risk" else "years_lost",
+        exposure_estimand = if (is.null(block.size.z)) {
+          "risk"
+        } else {
+          "years_lost"
+        },
+        block_size = if (length(block.sizes) == 0) 10 else block.sizes,
         cores = use.cores,
         verbose = verbose
       ),
@@ -636,7 +678,7 @@ compute.Q.clever.per.id <- function(
 
 # Translate the dotted argument names that the deprecated functions passed
 # on to tmle.alpha.fun() through `...` to those of tmle_alpha(), dropping the
-# ones it no longer has.
+# ones it no longer has. `years.lost` becomes `estimand` and `block_size`.
 .snake_case_args <- function(args) {
   if (length(args) == 0) {
     return(args)
@@ -645,11 +687,17 @@ compute.Q.clever.per.id <- function(
   nms[nms == "use.cores"] <- "cores"
   nms <- gsub(".", "_", nms, fixed = TRUE)
   names(args) <- nms
+  if (!is.null(args$years_lost)) {
+    args$estimand <- "years_lost"
+    args$block_size <- args$years_lost
+  }
+  nms <- names(args)
   dropped <- c(
     "tau",
     "dt",
     "browse",
     "verbose_exponential",
+    "years_lost",
     "output_convergence",
     "output_eic",
     "output_weights",

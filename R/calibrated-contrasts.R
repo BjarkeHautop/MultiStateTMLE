@@ -56,8 +56,10 @@
 #'     fit,
 #'     target = "death",
 #'     z_name = "z",
-#'     rho_1a = 1,
-#'     a = 1
+#'     value = 1,
+#'     scale = "ratio",
+#'     a = 1,
+#'     reference_a = 0
 #'   )
 #' )
 #' @export

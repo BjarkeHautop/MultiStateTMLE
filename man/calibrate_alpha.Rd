@@ -8,11 +8,13 @@ calibrate_alpha(
   initial_fit,
   target,
   z_name,
-  theta = NULL,
-  rho = NULL,
-  delta = NULL,
-  rho_1a = NULL,
+  value,
+  scale = c("absolute", "ratio", "difference"),
   a = NULL,
+  reference_a = a,
+  estimand = c("risk", "years_lost"),
+  exposure_estimand = c("risk", "years_lost"),
+  block_size = 10,
   cores = 1,
   verbose = FALSE,
   ...
@@ -27,11 +29,28 @@ estimated under the calibrated intervention.}
 \item{z_name}{String. Name of the process in \code{initial_fit} whose
 intensity is intervened on and calibrated.}
 
-\item{theta, rho, delta, rho_1a}{Numbers specifying the calibration target,
-see Description. Give exactly one.}
+\item{value}{Number. The calibration target on the \code{scale}, see
+Description.}
 
-\item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on.
-Must be one of the values of \code{a} given to \code{\link[=fit_initial]{fit_initial()}}.}
+\item{scale}{The scale of \code{value}: \code{"absolute"}, \code{"ratio"} or
+\code{"difference"}, see Description.}
+
+\item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on,
+as in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+
+\item{reference_a}{Optional baseline treatment value (\code{0} or \code{1}) under
+which the reference exposure of a \code{"ratio"} or \code{"difference"} \code{scale}
+is estimated. Defaults to \code{a}; e.g. \verb{a = 1, reference_a = 0} calibrates
+the exposure under treatment to that under placebo.}
+
+\item{estimand}{The target parameter for \code{target}, as in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+
+\item{exposure_estimand}{The target parameter for the exposure \code{z_name},
+that \code{value} and the calibration refer to, as in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+
+\item{block_size}{Positive integer. For \code{estimand = "years_lost"}, the
+number of time points per block in the approximation of the
+integral.}
 
 \item{cores}{Positive integer. Number of cores used by
 \code{\link[parallel:mclapply]{parallel::mclapply()}} for the per-individual computations.}
@@ -51,7 +70,8 @@ standard error \code{se_crude} treating alpha as known.
 \item \code{calibration}: a \code{data.table} with the calibrated \code{alpha} and the
 calibration target \code{theta} (column \code{quantity}), with \code{estimate}, \code{se},
 \code{lower} and \code{upper}.
-\item \code{z_name} and \code{a}: as given.
+\item \code{z_name}, \code{a}, \code{value}, \code{scale}, \code{reference_a}, \code{estimand} and
+\code{exposure_estimand}: as given.
 \item \code{eic}, \code{eic_alpha_known}: lists, named by target, of the influence
 curves of the risk of \code{target}, accounting for the estimation of
 alpha and treating it as known.
@@ -64,21 +84,21 @@ of \code{z_name} (\code{derivative_z}) and of each target
 }
 \description{
 Finds the intervention \code{alpha} on the intensity of the process \code{z_name}
-such that the estimated risk of \code{z_name} equals a calibration target, and
-estimates the risk of \code{target} under that calibrated intervention. The
-standard error of the latter accounts for the estimation of \code{alpha}.
+such that the estimated risk of \code{z_name} (the exposure) equals a
+calibration target \code{theta}, and estimates the risk of each \code{target} under
+that calibrated intervention. The standard errors of the latter account
+for the estimation of \code{alpha}.
 }
 \details{
-Exactly one of \code{theta}, \code{rho}, \code{delta} and \code{rho_1a} specifies the
-calibration target:
+The calibration target \code{theta} is given by \code{value} on the \code{scale}:
 \itemize{
-\item \code{theta}: the risk of \code{z_name} itself.
-\item \code{rho}: a fraction of the risk of \code{z_name} without intervention.
-\item \code{delta}: an absolute difference from the risk of \code{z_name} without
-intervention.
-\item \code{rho_1a}: a fraction of the risk of \code{z_name} without intervention on
-\code{z_name}, under the opposite baseline treatment \code{1 - a}.
+\item \code{"absolute"}: \code{theta = value}.
+\item \code{"ratio"}: \code{theta = value * reference}.
+\item \code{"difference"}: \code{theta = value + reference}.
 }
+
+where \code{reference} is the exposure without intervention on \code{z_name}, under
+the baseline treatment \code{reference_a}.
 }
 \examples{
 fit <- fit_initial(
@@ -97,6 +117,12 @@ fit <- fit_initial(
 
 # Risk of death under the intervention on z that brings the risk of z
 # down to 80\% of its observed value.
-cal <- calibrate_alpha(fit, target = "death", z_name = "z", rho = 0.8)
+cal <- calibrate_alpha(
+  fit,
+  target = "death",
+  z_name = "z",
+  value = 0.8,
+  scale = "ratio"
+)
 cal$estimate
 }

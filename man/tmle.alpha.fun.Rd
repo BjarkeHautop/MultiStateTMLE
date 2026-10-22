@@ -42,12 +42,15 @@ tmle.alpha.fun(
 \item{z.name}{See \code{z_name} in \code{\link[=tmle_alpha]{tmle_alpha()}}. If \code{initial.fit} has no
 such process, \code{z.name} is ignored, as is \code{alpha} with a warning.}
 
-\item{alpha.list, years.lost, target.only.in.state, target.by.state, conv.const, one.step, max.iter, min.iter, truncate.weights}{See the snake_case equivalents in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+\item{alpha.list, target.only.in.state, target.by.state, conv.const, one.step, max.iter, min.iter, truncate.weights}{See the snake_case equivalents in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{initial.fit}{See \code{initial_fit} in \code{\link[=tmle_alpha]{tmle_alpha()}}. If \code{NULL}, it is
 computed by \code{prepare.initial(tau = tau, a = a, verbose = verbose, ...)}.}
 
 \item{dt, browse, verbose.exponential}{Ignored.}
+
+\item{years.lost}{If given, \code{estimand = "years_lost"} with
+\code{block_size = years.lost} in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{only.first}{See \code{only_first} in \code{\link[=tmle_alpha]{tmle_alpha()}}; \code{NULL} means
 \code{FALSE}.}
