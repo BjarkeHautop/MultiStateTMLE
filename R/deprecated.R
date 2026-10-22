@@ -176,8 +176,10 @@ prepare.initial <- function(
     max_count = max.count,
     derived_vars = derived.vars,
     depend_time = depend.time,
-    prune_states = prune.states,
-    use_exponential = use.exponential,
+    control = list(
+      prune_states = prune.states,
+      use_exponential = use.exponential
+    ),
     hal_control = list(
       cut_time = cut.time,
       cut_one_way = cut.one.way,
@@ -463,76 +465,44 @@ calibration.curve.fun <- function(
   )
 }
 
-#' Search for the alpha achieving a target value (deprecated)
+#' Search for the alpha achieving a target value (defunct)
 #'
-#' `estimate.alpha.fun()` is deprecated as of MultiStateTMLE 0.1.0. Use
-#' [solve_alpha()] instead.
+#' `estimate.alpha.fun()` is defunct as of MultiStateTMLE 0.1.0. Use
+#' [calibrate_alpha()], which solves for alpha internally.
 #'
-#' @param theta,fun,c_n,alpha_init,expand_up,expand_down,max_iter,alpha_min,alpha_max,verbose,trace_every
-#'   See [solve_alpha()].
-#' @param use.cores Ignored.
+#' @param ... Ignored.
 #'
-#' @return See [solve_alpha()].
+#' @return None; always errors.
 #' @keywords internal
 #' @export
-estimate.alpha.fun <- function(
-  theta,
-  fun,
-  c_n,
-  alpha_init = 1,
-  expand_up = 2,
-  expand_down = 0.25,
-  max_iter = 100,
-  alpha_min = 1e-3,
-  alpha_max = 100,
-  use.cores = 1,
-  verbose = FALSE,
-  trace_every = 1L
-) {
-  lifecycle::deprecate_warn("0.1.0", "estimate.alpha.fun()", "solve_alpha()")
-  solve_alpha(
-    fun = fun,
-    theta = theta,
-    c_n = c_n,
-    alpha_init = alpha_init,
-    expand_up = expand_up,
-    expand_down = expand_down,
-    max_iter = max_iter,
-    alpha_min = alpha_min,
-    alpha_max = alpha_max,
-    verbose = verbose,
-    trace_every = trace_every
+estimate.alpha.fun <- function(...) {
+  lifecycle::deprecate_stop(
+    "0.1.0",
+    "estimate.alpha.fun()",
+    details = "Use calibrate_alpha(), which solves for alpha internally."
   )
 }
 
-#' Estimate the derivative with respect to alpha (deprecated)
+#' Estimate the derivative with respect to alpha (defunct)
 #'
-#' `estimate.derivative()` is deprecated as of MultiStateTMLE 0.1.0. Use
-#' [estimate_derivative()] instead.
+#' `estimate.derivative()` is defunct as of MultiStateTMLE 0.1.0. Use
+#' [calibrate_alpha()] or [calibration_curve()], which estimate the
+#' derivatives they need internally.
 #'
-#' @param alpha_hat See `alpha` in [estimate_derivative()].
-#' @param fun,h See [estimate_derivative()].
-#' @param parameter Passed on to `fun` as `parameter`.
-#' @param ... Passed on to `fun`.
+#' @param ... Ignored.
 #'
-#' @return See [estimate_derivative()].
+#' @return None; always errors.
 #' @keywords internal
 #' @export
-estimate.derivative <- function(
-  alpha_hat,
-  fun = alpha.est.fun,
-  parameter = "z",
-  h = length(unique(dt[, id]))^{
-    -1 / 6
-  },
-  ...
-) {
-  lifecycle::deprecate_warn(
+estimate.derivative <- function(...) {
+  lifecycle::deprecate_stop(
     "0.1.0",
     "estimate.derivative()",
-    "estimate_derivative()"
+    details = paste(
+      "Use calibrate_alpha() or calibration_curve(), which estimate the",
+      "derivatives they need internally."
+    )
   )
-  estimate_derivative(fun, alpha = alpha_hat, h = h, parameter = parameter, ...)
 }
 
 #' Total, mediated and calibrated contrasts (deprecated)

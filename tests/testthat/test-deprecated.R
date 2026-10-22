@@ -75,21 +75,16 @@ test_that("deprecated estimation functions warn and match their replacements", {
 test_that("deprecated helper functions warn and match their replacements", {
   withr::local_options(lifecycle_verbosity = "warning")
 
-  fun <- function(alpha, parameter) fake.estimate(alpha^2)
-  expect_warning(
-    d <- estimate.derivative(alpha_hat = 3, fun = fun, h = 0.01),
-    "estimate_derivative",
-    class = "lifecycle_warning_deprecated"
+  expect_error(
+    estimate.derivative(alpha_hat = 3),
+    "calibrate_alpha",
+    class = "lifecycle_error_deprecated"
   )
-  expect_equal(d, 6)
-
-  fun <- function(alpha) fake.estimate(alpha, 0.1, 0)
-  expect_warning(
-    res <- estimate.alpha.fun(theta = 2, fun = fun, c_n = 1e-4),
-    "solve_alpha",
-    class = "lifecycle_warning_deprecated"
+  expect_error(
+    estimate.alpha.fun(theta = 2),
+    "calibrate_alpha",
+    class = "lifecycle_error_deprecated"
   )
-  expect_equal(res, solve_alpha(fun, theta = 2, c_n = 1e-4))
 
   treatment.fit <- fake.tmle.fit(0.7, c(0.1, -0.1))
   placebo.fit <- fake.tmle.fit(0.3, c(0.2, -0.2))

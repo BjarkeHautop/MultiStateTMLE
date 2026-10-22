@@ -14,13 +14,10 @@
 NULL
 
 # Column names used via data.table's non-standard evaluation (e.g. `dt[, .(x)]`),
-# plus the defaults of the deprecated estimate.derivative(), which reference
-# objects expected to exist in the caller's environment, and fit.hal(), which
-# HAL fits expect on the search path. Listed here only to silence
-# `R CMD check`'s static analysis.
+# and fit.hal(), which HAL fits expect on the search path. Listed here only to
+# silence `R CMD check`'s static analysis.
 utils::globalVariables(c(
   "A0.obs",
-  "alpha.est.fun",
   "at.risk",
   "C",
   "C.1",

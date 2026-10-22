@@ -18,10 +18,15 @@
 #' @param z_name String. Name of the process in `initial_fit` whose
 #'   intensity `alpha` scales. Required unless `alpha = 1` or `alpha_list`
 #'   is given.
-#' @param alpha_list Experimental. Optional named list of functions, one per
-#'   process, giving a time-varying intervention on that process's intensity.
-#'   Each function's arguments name the columns of `initial_fit$tmp_long` it
-#'   depends on. Supersedes `alpha` and `z_name`.
+#' @param alpha_list Experimental, and may change. Optional named list of
+#'   functions, one per process, giving a time-varying multiplicative
+#'   intervention on that process's intensity. Each function is called with
+#'   the columns of `initial_fit$tmp_long` named by its arguments, e.g.
+#'   `time`, a baseline covariate such as `L0`, or a process such as `z`
+#'   (its number of jumps so far), and must return one non-negative factor
+#'   per row. For example, `list(z = function(time) ifelse(time < 0.5, 0.5,
+#'   1))` halves the intensity of `z` before time 0.5. Supersedes `alpha`
+#'   and `z_name`.
 #' @param a Optional baseline treatment value (`0` or `1`) to intervene on.
 #'   Must be one of the values of `a` given to [fit_initial()].
 #' @param estimand The target parameter: `"risk"`, the risk of `target` by
@@ -35,9 +40,13 @@
 #'   `1 / block_size`.
 #' @param only_first Logical. If `TRUE`, only the first `target` event
 #'   counts, and only the first jump of `z_name` is intervened on.
-#' @param target_only_in_state Optional function of the state space
-#'   (`initial_fit$depend_matrix`) returning a logical vector, marking the
-#'   states in which `target` events count.
+#' @param target_only_in_state Experimental, and may change. Optional
+#'   function of the state space `initial_fit$depend_matrix`, a data frame
+#'   with one row per state and a column per process that other processes
+#'   depend on (its number of jumps), returning a logical vector marking the
+#'   states in which `target` events count. For example,
+#'   `function(states) states[["z"]] == 0` counts only deaths before
+#'   illness.
 #' @param target_by_state Logical. If `TRUE`, use state-specific clever
 #'   covariates in the targeting step.
 #' @param conv_const Positive number. The TMLE iterations stop when the

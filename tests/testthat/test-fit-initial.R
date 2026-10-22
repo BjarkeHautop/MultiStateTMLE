@@ -188,10 +188,49 @@ test_that("fit_initial()'s HAL setup identifies the process for its own delta", 
   # HAL fit itself.
   ft <- illness.death.fit.types
   ft$z$fit <- "hal"
+  assign("fit.hal", function(...) stop("reached fit.hal"), envir = globalenv())
+  withr::defer(rm("fit.hal", envir = globalenv()))
 
   expect_error(
     fit_initial(fixture.data(30), fit_types = ft, tau = 1),
-    "could not find function \"fit.hal\"",
+    "reached fit.hal"
+  )
+})
+
+test_that("fit_initial() errors early when HAL is not available", {
+  ft <- illness.death.fit.types
+  ft$z$fit <- "hal"
+
+  expect_error(
+    fit_initial(fixture.data(30), fit_types = ft, tau = 1),
+    "requires a fit.hal() function",
     fixed = TRUE
+  )
+})
+
+test_that("fit_initial() validates its control settings", {
+  ft <- illness.death.fit.types
+
+  expect_error(
+    fit_initial(illness_death, ft, tau = 1, control = list(foo = TRUE)),
+    "control"
+  )
+  expect_error(
+    fit_initial(
+      illness_death,
+      ft,
+      tau = 1,
+      control = list(prune_states = "yes")
+    ),
+    "control\\$prune_states"
+  )
+  expect_equal(
+    fit_initial(
+      fixture.data(30),
+      ft,
+      tau = 1,
+      control = list(prune_states = FALSE, use_exponential = FALSE)
+    ),
+    fixture.fit(30)
   )
 })

@@ -39,11 +39,12 @@
 #'   additional state variables.
 #' @param depend_time Named list of functions describing dependence on the
 #'   time since a jump of a process, keyed by process name.
-#' @param prune_states Logical. If `TRUE`, prune states not admissible under
-#'   the `at_risk` functions of `fit_types`.
-#' @param use_exponential Logical. If `TRUE`, always transform the hazard
-#'   increments `dH` to probabilities `1 - exp(-dH)`. Otherwise this is only
-#'   done if some increments exceed 1.
+#' @param control A named list of tuning settings:
+#'   * `prune_states` (`FALSE`): if `TRUE`, prune states not admissible
+#'     under the `at_risk` functions of `fit_types`.
+#'   * `use_exponential` (`FALSE`): if `TRUE`, always transform the hazard
+#'     increments `dH` to probabilities `1 - exp(-dH)`. Otherwise this is
+#'     only done if some increments exceed 1.
 #' @param hal_control A named list of settings for processes fitted with
 #'   `fit = "hal"`, see Details.
 #' @param cores Positive integer. Number of cores used by
@@ -103,8 +104,7 @@ fit_initial <- function(
   max_count = 1,
   derived_vars = list(),
   depend_time = list(),
-  prune_states = FALSE,
-  use_exponential = FALSE,
+  control = list(),
   hal_control = list(),
   cores = 1,
   verbose = FALSE
@@ -127,8 +127,19 @@ fit_initial <- function(
   checkmate::assert_count(max_count, positive = TRUE)
   checkmate::assert_list(derived_vars, types = "function")
   checkmate::assert_list(depend_time, types = "function")
-  checkmate::assert_flag(prune_states)
-  checkmate::assert_flag(use_exponential)
+  checkmate::assert_list(control, names = "unique")
+  checkmate::assert_subset(names(control), names(.control_defaults))
+  control <- utils::modifyList(.control_defaults, control)
+  checkmate::assert_flag(
+    control$prune_states,
+    .var.name = "control$prune_states"
+  )
+  checkmate::assert_flag(
+    control$use_exponential,
+    .var.name = "control$use_exponential"
+  )
+  prune_states <- control$prune_states
+  use_exponential <- control$use_exponential
   checkmate::assert_list(hal_control, names = "unique")
   checkmate::assert_subset(names(hal_control), names(.hal_control_defaults))
   checkmate::assert_count(cores, positive = TRUE)
@@ -176,6 +187,12 @@ fit_initial <- function(
   any.hal <- any(
     which.hal <- sapply(fit_types, function(fit.type) fit.type$fit == "hal")
   )
+  if (any.hal && !exists("fit.hal", mode = "function")) {
+    stop(
+      "fit = \"hal\" requires a fit.hal() function on the search path, ",
+      "which MultiStateTMLE does not provide."
+    )
+  }
 
   at.risk.ids <- (1:length(fit_types))[sapply(fit_types, function(fit.type) {
     ("at.risk" %in% names(fit.type))

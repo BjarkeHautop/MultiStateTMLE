@@ -13,8 +13,7 @@ fit_initial(
   max_count = 1,
   derived_vars = list(),
   depend_time = list(),
-  prune_states = FALSE,
-  use_exponential = FALSE,
+  control = list(),
   hal_control = list(),
   cores = 1,
   verbose = FALSE
@@ -63,12 +62,14 @@ additional state variables.}
 \item{depend_time}{Named list of functions describing dependence on the
 time since a jump of a process, keyed by process name.}
 
-\item{prune_states}{Logical. If \code{TRUE}, prune states not admissible under
-the \code{at_risk} functions of \code{fit_types}.}
-
-\item{use_exponential}{Logical. If \code{TRUE}, always transform the hazard
-increments \code{dH} to probabilities \code{1 - exp(-dH)}. Otherwise this is only
-done if some increments exceed 1.}
+\item{control}{A named list of tuning settings:
+\itemize{
+\item \code{prune_states} (\code{FALSE}): if \code{TRUE}, prune states not admissible
+under the \code{at_risk} functions of \code{fit_types}.
+\item \code{use_exponential} (\code{FALSE}): if \code{TRUE}, always transform the hazard
+increments \code{dH} to probabilities \code{1 - exp(-dH)}. Otherwise this is
+only done if some increments exceed 1.
+}}
 
 \item{hal_control}{A named list of settings for processes fitted with
 \code{fit = "hal"}, see Details.}

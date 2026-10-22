@@ -2,33 +2,18 @@
 % Please edit documentation in R/deprecated.R
 \name{estimate.alpha.fun}
 \alias{estimate.alpha.fun}
-\title{Search for the alpha achieving a target value (deprecated)}
+\title{Search for the alpha achieving a target value (defunct)}
 \usage{
-estimate.alpha.fun(
-  theta,
-  fun,
-  c_n,
-  alpha_init = 1,
-  expand_up = 2,
-  expand_down = 0.25,
-  max_iter = 100,
-  alpha_min = 0.001,
-  alpha_max = 100,
-  use.cores = 1,
-  verbose = FALSE,
-  trace_every = 1L
-)
+estimate.alpha.fun(...)
 }
 \arguments{
-\item{theta, fun, c_n, alpha_init, expand_up, expand_down, max_iter, alpha_min, alpha_max, verbose, trace_every}{See \code{\link[=solve_alpha]{solve_alpha()}}.}
-
-\item{use.cores}{Ignored.}
+\item{...}{Ignored.}
 }
 \value{
-See \code{\link[=solve_alpha]{solve_alpha()}}.
+None; always errors.
 }
 \description{
-\code{estimate.alpha.fun()} is deprecated as of MultiStateTMLE 0.1.0. Use
-\code{\link[=solve_alpha]{solve_alpha()}} instead.
+\code{estimate.alpha.fun()} is defunct as of MultiStateTMLE 0.1.0. Use
+\code{\link[=calibrate_alpha]{calibrate_alpha()}}, which solves for alpha internally.
 }
 \keyword{internal}

@@ -2,32 +2,19 @@
 % Please edit documentation in R/deprecated.R
 \name{estimate.derivative}
 \alias{estimate.derivative}
-\title{Estimate the derivative with respect to alpha (deprecated)}
+\title{Estimate the derivative with respect to alpha (defunct)}
 \usage{
-estimate.derivative(
-  alpha_hat,
-  fun = alpha.est.fun,
-  parameter = "z",
-  h = length(unique(dt[, id]))^{
-     -1/6
- },
-  ...
-)
+estimate.derivative(...)
 }
 \arguments{
-\item{alpha_hat}{See \code{alpha} in \code{\link[=estimate_derivative]{estimate_derivative()}}.}
-
-\item{fun, h}{See \code{\link[=estimate_derivative]{estimate_derivative()}}.}
-
-\item{parameter}{Passed on to \code{fun} as \code{parameter}.}
-
-\item{...}{Passed on to \code{fun}.}
+\item{...}{Ignored.}
 }
 \value{
-See \code{\link[=estimate_derivative]{estimate_derivative()}}.
+None; always errors.
 }
 \description{
-\code{estimate.derivative()} is deprecated as of MultiStateTMLE 0.1.0. Use
-\code{\link[=estimate_derivative]{estimate_derivative()}} instead.
+\code{estimate.derivative()} is defunct as of MultiStateTMLE 0.1.0. Use
+\code{\link[=calibrate_alpha]{calibrate_alpha()}} or \code{\link[=calibration_curve]{calibration_curve()}}, which estimate the
+derivatives they need internally.
 }
 \keyword{internal}

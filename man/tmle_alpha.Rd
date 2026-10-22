@@ -38,10 +38,14 @@ intensity of \code{z_name}. \code{alpha = 1} is no intervention. Ignored if
 intensity \code{alpha} scales. Required unless \code{alpha = 1} or \code{alpha_list}
 is given.}
 
-\item{alpha_list}{Experimental. Optional named list of functions, one per
-process, giving a time-varying intervention on that process's intensity.
-Each function's arguments name the columns of \code{initial_fit$tmp_long} it
-depends on. Supersedes \code{alpha} and \code{z_name}.}
+\item{alpha_list}{Experimental, and may change. Optional named list of
+functions, one per process, giving a time-varying multiplicative
+intervention on that process's intensity. Each function is called with
+the columns of \code{initial_fit$tmp_long} named by its arguments, e.g.
+\code{time}, a baseline covariate such as \code{L0}, or a process such as \code{z}
+(its number of jumps so far), and must return one non-negative factor
+per row. For example, \code{list(z = function(time) ifelse(time < 0.5, 0.5, 1))} halves the intensity of \code{z} before time 0.5. Supersedes \code{alpha}
+and \code{z_name}.}
 
 \item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on.
 Must be one of the values of \code{a} given to \code{\link[=fit_initial]{fit_initial()}}.}
@@ -60,9 +64,13 @@ the estimated risk; the computation time is roughly proportional to
 \item{only_first}{Logical. If \code{TRUE}, only the first \code{target} event
 counts, and only the first jump of \code{z_name} is intervened on.}
 
-\item{target_only_in_state}{Optional function of the state space
-(\code{initial_fit$depend_matrix}) returning a logical vector, marking the
-states in which \code{target} events count.}
+\item{target_only_in_state}{Experimental, and may change. Optional
+function of the state space \code{initial_fit$depend_matrix}, a data frame
+with one row per state and a column per process that other processes
+depend on (its number of jumps), returning a logical vector marking the
+states in which \code{target} events count. For example,
+\code{function(states) states[["z"]] == 0} counts only deaths before
+illness.}
 
 \item{target_by_state}{Logical. If \code{TRUE}, use state-specific clever
 covariates in the targeting step.}

@@ -34,17 +34,7 @@
 #'   distance to `theta`), `c_n`, `grid` (a data frame of all evaluated
 #'   `alpha`, `psi` and `se`) and `eic` (the influence curve at `alpha_hat`).
 #'
-#' @examples
-#' # psi(alpha) = 0.6 * (1 - exp(-alpha)) has a known inverse, so
-#' # solve_alpha() should recover alpha = -log(1 - 0.3 / 0.6).
-#' fun <- function(alpha) {
-#'   psi <- 0.6 * (1 - exp(-alpha))
-#'   list(estimate = data.frame(estimate = psi, se = 0.01), eic = list(0))
-#' }
-#' res <- solve_alpha(fun, theta = 0.3, c_n = 1e-6)
-#' res$alpha_hat
-#' -log(1 - 0.3 / 0.6)
-#' @export
+#' @noRd
 solve_alpha <- function(
   fun,
   theta,

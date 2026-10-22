@@ -1,3 +1,9 @@
+# Defaults for the `control` argument of fit_initial().
+.control_defaults <- list(
+  prune_states = FALSE,
+  use_exponential = FALSE
+)
+
 # Defaults for the `hal_control` argument of fit_initial().
 .hal_control_defaults <- list(
   cut_time = 35,

@@ -15,11 +15,7 @@
 #'
 #' @return A number, the estimated derivative.
 #'
-#' @examples
-#' # The derivative of alpha^2 at alpha = 3 is 6.
-#' fun <- function(alpha) list(estimate = data.frame(estimate = alpha^2))
-#' estimate_derivative(fun, alpha = 3, h = 0.01)
-#' @export
+#' @noRd
 estimate_derivative <- function(fun, alpha, h, ...) {
   checkmate::assert_function(fun)
   checkmate::assert_number(alpha, lower = 0, finite = TRUE)

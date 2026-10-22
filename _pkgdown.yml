@@ -22,7 +22,6 @@ reference:
     Targeting the initial fit under a stochastic intensity intervention.
   contents:
   - tmle_alpha
-  - estimate_derivative
 
 - title: Calibration
   desc: >
@@ -31,7 +30,6 @@ reference:
   contents:
   - calibrate_alpha
   - calibration_curve
-  - solve_alpha
   - calibrated_contrasts
 
 - title: Results
