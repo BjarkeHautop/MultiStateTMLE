@@ -7,7 +7,7 @@
 calibrate_alpha(
   initial_fit,
   target,
-  z_name = "z",
+  z_name,
   theta = NULL,
   rho = NULL,
   delta = NULL,
@@ -24,9 +24,8 @@ calibrate_alpha(
 \item{target}{Character vector. Names of the processes whose risks are
 estimated under the calibrated intervention.}
 
-\item{z_name}{String. Name of the process whose intensity \code{alpha} scales.
-If no such process exists in \code{initial_fit}, \code{alpha} is ignored with a
-warning.}
+\item{z_name}{String. Name of the process in \code{initial_fit} whose
+intensity is intervened on and calibrated.}
 
 \item{theta, rho, delta, rho_1a}{Numbers specifying the calibration target,
 see Description. Give exactly one.}

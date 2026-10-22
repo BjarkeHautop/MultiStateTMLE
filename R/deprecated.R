@@ -209,7 +209,9 @@ prepare.initial <- function(
 #' @param initial.fit See `initial_fit` in [tmle_alpha()]. If `NULL`, it is
 #'   computed by `prepare.initial(tau = tau, a = a, verbose = verbose, ...)`.
 #' @param target,alpha,a,verbose See [tmle_alpha()].
-#' @param z.name,alpha.list,years.lost,target.only.in.state,target.by.state,conv.const,one.step,max.iter,min.iter,truncate.weights
+#' @param z.name See `z_name` in [tmle_alpha()]. If `initial.fit` has no
+#'   such process, `z.name` is ignored, as is `alpha` with a warning.
+#' @param alpha.list,years.lost,target.only.in.state,target.by.state,conv.const,one.step,max.iter,min.iter,truncate.weights
 #'   See the snake_case equivalents in [tmle_alpha()].
 #' @param only.first See `only_first` in [tmle_alpha()]; `NULL` means
 #'   `FALSE`.
@@ -262,6 +264,18 @@ tmle.alpha.fun <- function(
       verbose = verbose,
       ...
     )
+  }
+  # An unknown z.name is ignored, and alpha with it.
+  if (!isTRUE(tolower(z.name) %in% tolower(initial.fit$process_names))) {
+    if (!identical(alpha, 1) && length(alpha.list) == 0) {
+      warning(
+        "No process '",
+        z.name,
+        "' found in initial.fit; alpha is ignored (treated as 1)."
+      )
+    }
+    z.name <- NULL
+    alpha <- 1
   }
   tmle_alpha(
     initial_fit = initial.fit,

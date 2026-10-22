@@ -7,7 +7,7 @@
 calibration_curve(
   initial_fit,
   target,
-  z_name = "z",
+  z_name,
   alpha_grid = seq(0, 5, length.out = 10),
   a = NULL,
   min_iter = 1,
@@ -25,9 +25,8 @@ calibration_curve(
 \item{target}{Character vector. Names of the processes whose risks are
 estimated.}
 
-\item{z_name}{String. Name of the process whose intensity \code{alpha} scales.
-If no such process exists in \code{initial_fit}, \code{alpha} is ignored with a
-warning.}
+\item{z_name}{String. Name of the process in \code{initial_fit} whose
+intensity \code{alpha_grid} scales.}
 
 \item{alpha_grid}{Non-negative numeric vector. The interventions to
 evaluate.}

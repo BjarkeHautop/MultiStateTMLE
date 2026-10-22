@@ -8,7 +8,7 @@ tmle_alpha(
   initial_fit,
   target,
   alpha = 1,
-  z_name = "z",
+  z_name = NULL,
   alpha_list = NULL,
   a = NULL,
   years_lost = NULL,
@@ -33,9 +33,9 @@ tmle_alpha(
 intensity of \code{z_name}. \code{alpha = 1} is no intervention. Ignored if
 \code{alpha_list} is given.}
 
-\item{z_name}{String. Name of the process whose intensity \code{alpha} scales.
-If no such process exists in \code{initial_fit}, \code{alpha} is ignored with a
-warning.}
+\item{z_name}{String. Name of the process in \code{initial_fit} whose
+intensity \code{alpha} scales. Required unless \code{alpha = 1} or \code{alpha_list}
+is given.}
 
 \item{alpha_list}{Experimental. Optional named list of functions, one per
 process, giving a time-varying intervention on that process's intensity.

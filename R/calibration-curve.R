@@ -8,6 +8,8 @@
 #' calibrating to the estimated exposure risk rather than to `alpha`.
 #'
 #' @inheritParams tmle_alpha
+#' @param z_name String. Name of the process in `initial_fit` whose
+#'   intensity `alpha_grid` scales.
 #' @param target Character vector. Names of the processes whose risks are
 #'   estimated.
 #' @param alpha_grid Non-negative numeric vector. The interventions to
@@ -55,7 +57,7 @@
 calibration_curve <- function(
   initial_fit,
   target,
-  z_name = "z",
+  z_name,
   alpha_grid = seq(0, 5, length.out = 10),
   a = NULL,
   min_iter = 1,

@@ -6,7 +6,7 @@ test_that("calibrate_alpha() hits the calibration target", {
   )
   n <- length(unique(illness_death$id))
 
-  cal <- calibrate_alpha(fit, target = "death", rho = 0.8)
+  cal <- calibrate_alpha(fit, z_name = "z", target = "death", rho = 0.8)
 
   expect_named(
     cal$estimate,
@@ -24,7 +24,7 @@ test_that("calibrate_alpha() hits the calibration target", {
   expect_lt(cal$estimate[["alpha_est"]], 1)
 
   # solve_alpha() stops once within c_n = n^(-1/2) / log(n) of theta.
-  z_risk <- tmle_alpha(fit, target = "z", alpha = cal$estimate[["alpha_est"]])
+  z_risk <- tmle_alpha(fit, target = "z", alpha = cal$estimate[["alpha_est"]], z_name = "z")
   expect_lt(
     abs(z_risk$estimate[["tmle_est"]] - cal$estimate[["theta"]]),
     n^(-1 / 2) / log(n)
@@ -39,13 +39,13 @@ test_that("calibrate_alpha() validates its arguments", {
     tau = 1
   )
 
-  expect_error(calibrate_alpha(fit, target = "death"), "exactly one")
+  expect_error(calibrate_alpha(fit, z_name = "z", target = "death"), "exactly one")
   expect_error(
-    calibrate_alpha(fit, target = "death", theta = 0.2, rho = 0.5),
+    calibrate_alpha(fit, z_name = "z", target = "death", theta = 0.2, rho = 0.5),
     "exactly one"
   )
   expect_error(
-    calibrate_alpha(fit, target = "death", rho_1a = 0.5),
+    calibrate_alpha(fit, z_name = "z", target = "death", rho_1a = 0.5),
     "requires a baseline treatment"
   )
 })
@@ -53,19 +53,19 @@ test_that("calibrate_alpha() validates its arguments", {
 test_that("calibrate_alpha() calibrates to theta directly", {
   fit <- fixture.fit(100)
 
-  cal <- calibrate_alpha(fit, target = "death", theta = 0.2)
+  cal <- calibrate_alpha(fit, z_name = "z", target = "death", theta = 0.2)
 
   expect_equal(cal$estimate[["theta"]], 0.2)
   expect_equal(cal$checks[["est_alpha_converged"]], 1)
-  z_risk <- tmle_alpha(fit, target = "z", alpha = cal$estimate[["alpha_est"]])
+  z_risk <- tmle_alpha(fit, target = "z", alpha = cal$estimate[["alpha_est"]], z_name = "z")
   expect_lt(abs(z_risk$estimate[["tmle_est"]] - 0.2), 0.02)
 })
 
 test_that("calibrate_alpha() handles several targets", {
   fit <- fixture.fit(100)
 
-  single <- calibrate_alpha(fit, target = "death", theta = 0.2)
-  both <- calibrate_alpha(fit, target = c("death", "z"), theta = 0.2)
+  single <- calibrate_alpha(fit, z_name = "z", target = "death", theta = 0.2)
+  both <- calibrate_alpha(fit, z_name = "z", target = c("death", "z"), theta = 0.2)
 
   expect_equal(
     both$estimate[["target_est_death"]],
@@ -78,10 +78,10 @@ test_that("calibrate_alpha() handles several targets", {
 test_that("calibrate_alpha() rejects invalid inputs", {
   fit <- fixture.fit(30)
 
-  expect_error(calibrate_alpha(fit, target = "death", theta = "x"), "theta")
-  expect_error(calibrate_alpha(fit, target = 5, theta = 0.2), "target")
+  expect_error(calibrate_alpha(fit, z_name = "z", target = "death", theta = "x"), "theta")
+  expect_error(calibrate_alpha(fit, z_name = "z", target = 5, theta = 0.2), "target")
   expect_error(
-    calibrate_alpha(fit, target = "death", theta = 0.2, cores = 0),
+    calibrate_alpha(fit, z_name = "z", target = "death", theta = 0.2, cores = 0),
     "cores"
   )
 })

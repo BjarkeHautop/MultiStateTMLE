@@ -67,7 +67,7 @@ simulate.recovery.fit <- function(alpha, n, seed) {
     fit_types = illness.death.fit.types,
     tau = 1
   )
-  tmle_alpha(initial_fit, target = "death", alpha = alpha)
+  tmle_alpha(initial_fit, target = "death", alpha = alpha, z_name = "z")
 }
 
 # The first n individuals of illness_death, for fast unit tests.

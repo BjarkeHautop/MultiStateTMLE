@@ -15,9 +15,9 @@
 #' @param alpha Non-negative number. Multiplicative intervention on the
 #'   intensity of `z_name`. `alpha = 1` is no intervention. Ignored if
 #'   `alpha_list` is given.
-#' @param z_name String. Name of the process whose intensity `alpha` scales.
-#'   If no such process exists in `initial_fit`, `alpha` is ignored with a
-#'   warning.
+#' @param z_name String. Name of the process in `initial_fit` whose
+#'   intensity `alpha` scales. Required unless `alpha = 1` or `alpha_list`
+#'   is given.
 #' @param alpha_list Experimental. Optional named list of functions, one per
 #'   process, giving a time-varying intervention on that process's intensity.
 #'   Each function's arguments name the columns of `initial_fit$tmp_long` it
@@ -90,7 +90,7 @@ tmle_alpha <- function(
   initial_fit,
   target,
   alpha = 1,
-  z_name = "z",
+  z_name = NULL,
   alpha_list = NULL,
   a = NULL,
   years_lost = NULL,
@@ -108,7 +108,7 @@ tmle_alpha <- function(
   .assert_initial_fit(initial_fit)
   checkmate::assert_string(target)
   checkmate::assert_number(alpha, lower = 0, finite = TRUE)
-  checkmate::assert_string(z_name)
+  checkmate::assert_string(z_name, null.ok = TRUE)
   checkmate::assert_list(
     alpha_list,
     types = "function",
@@ -149,26 +149,29 @@ tmle_alpha <- function(
   }
   target.name <- process.names[target.id]
 
-  z.name <- z_name
-  z.process.id <- which(tolower(process.names) == tolower(z_name))
-
-  if (length(alpha_list) > 0) {
-    z.present <- TRUE
-  } else if (length(z.process.id) == 0) {
-    z.present <- FALSE
-    z.process.id <- Inf
-    z.name <- "not.applied"
-    if (!identical(alpha, 1)) {
-      warning(
-        "No process '",
-        z_name,
-        "' found in initial_fit; alpha is ignored (treated as 1)."
+  if (is.null(z_name)) {
+    if (length(alpha_list) == 0 && !identical(alpha, 1)) {
+      stop("z_name is required when alpha != 1.")
+    }
+    z.process.id <- integer(0)
+  } else {
+    z.process.id <- which(tolower(process.names) == tolower(z_name))
+    if (length(z.process.id) != 1) {
+      stop(
+        "z_name must be one of the processes in initial_fit: ",
+        paste(process.names, collapse = ", "),
+        "."
       )
     }
-  } else {
-    z.present <- TRUE
-    z.name <- process.names[z.process.id]
   }
+
+  if (length(z.process.id) == 1) {
+    z.name <- process.names[z.process.id]
+  } else {
+    z.process.id <- Inf
+    z.name <- "not.applied"
+  }
+  z.present <- length(alpha_list) > 0 || is.finite(z.process.id)
 
   #--------------------------------
   #-- initialization step:
@@ -191,7 +194,7 @@ tmle_alpha <- function(
     states[, at.risk := at.risks[[target.name]](depend.matrix)]
   }
 
-  if (only_first && z.present) {
+  if (only_first && is.finite(z.process.id)) {
     tmp.long[, at.risk := at.risk * (tmp.long[[z.name]] <= 1)]
     states[, at.risk := at.risk & (states[[z.name]] <= 1)]
   }

@@ -42,8 +42,23 @@ test_that("deprecated estimation functions warn and match their replacements", {
   )
   expect_equal(
     old_est,
-    tmle_alpha(new_fit, target = "death", alpha = 0.5)
+    tmle_alpha(new_fit, target = "death", alpha = 0.5, z_name = "z")
   )
+
+  # An unknown z.name is ignored, and alpha with it.
+  expect_warning(
+    old_est <- suppressWarnings(
+      tmle.alpha.fun(
+        initial.fit = old_fit,
+        target = "death",
+        alpha = 0.5,
+        z.name = "w"
+      ),
+      classes = "lifecycle_warning_deprecated"
+    ),
+    "alpha is ignored"
+  )
+  expect_equal(old_est, tmle_alpha(new_fit, target = "death"))
 
   expect_error(
     .prepare_initial(

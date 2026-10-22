@@ -15,6 +15,8 @@
 #'   `z_name`, under the opposite baseline treatment `1 - a`.
 #'
 #' @inheritParams tmle_alpha
+#' @param z_name String. Name of the process in `initial_fit` whose
+#'   intensity is intervened on and calibrated.
 #' @param target Character vector. Names of the processes whose risks are
 #'   estimated under the calibrated intervention.
 #' @param theta,rho,delta,rho_1a Numbers specifying the calibration target,
@@ -58,7 +60,7 @@
 calibrate_alpha <- function(
   initial_fit,
   target,
-  z_name = "z",
+  z_name,
   theta = NULL,
   rho = NULL,
   delta = NULL,

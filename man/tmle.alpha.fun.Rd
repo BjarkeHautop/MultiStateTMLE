@@ -39,7 +39,10 @@ tmle.alpha.fun(
 \item{tau}{Only used when \code{initial.fit} is \code{NULL}; the horizon is that of
 \code{initial.fit}.}
 
-\item{z.name, alpha.list, years.lost, target.only.in.state, target.by.state, conv.const, one.step, max.iter, min.iter, truncate.weights}{See the snake_case equivalents in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+\item{z.name}{See \code{z_name} in \code{\link[=tmle_alpha]{tmle_alpha()}}. If \code{initial.fit} has no
+such process, \code{z.name} is ignored, as is \code{alpha} with a warning.}
+
+\item{alpha.list, years.lost, target.only.in.state, target.by.state, conv.const, one.step, max.iter, min.iter, truncate.weights}{See the snake_case equivalents in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{initial.fit}{See \code{initial_fit} in \code{\link[=tmle_alpha]{tmle_alpha()}}. If \code{NULL}, it is
 computed by \code{prepare.initial(tau = tau, a = a, verbose = verbose, ...)}.}

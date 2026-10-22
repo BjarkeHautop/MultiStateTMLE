@@ -5,7 +5,7 @@ test_that("tmle_alpha() returns the estimate and diagnostics", {
     tau = 1
   )
 
-  est <- tmle_alpha(fit, target = "death", alpha = 0.5)
+  est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
 
   expect_named(est$estimate, c("tmle_est", "se", "g_est"))
   expect_true(est$estimate[["tmle_est"]] > 0 && est$estimate[["tmle_est"]] < 1)
@@ -28,7 +28,7 @@ test_that("tmle_alpha() returns the estimate and diagnostics", {
     prod(est$weights[c("intervention", "censoring"), "q100"]) + 1e-8
   )
 
-  one_step <- tmle_alpha(fit, target = "death", alpha = 0.5, one_step = TRUE)
+  one_step <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z", one_step = TRUE)
   expect_named(one_step$estimate, c("one_step_est", "se", "g_est"))
   expect_equal(one_step$estimate[["g_est"]], est$estimate[["g_est"]])
 })
@@ -41,8 +41,8 @@ test_that("tmle_alpha() matches the target case-insensitively", {
   )
 
   expect_equal(
-    tmle_alpha(fit, target = "DEATH", alpha = 0.5)$estimate,
-    tmle_alpha(fit, target = "death", alpha = 0.5)$estimate
+    tmle_alpha(fit, target = "DEATH", alpha = 0.5, z_name = "z")$estimate,
+    tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")$estimate
   )
 })
 
@@ -57,9 +57,22 @@ test_that("tmle_alpha() validates its arguments", {
   expect_error(tmle_alpha(fit, target = "stroke"), "target must be one of")
   expect_error(tmle_alpha(fit, target = "death", alpha = -1), "alpha")
   expect_error(tmle_alpha(fit, target = "death", a = 1), "clever.weight.a1")
-  expect_warning(
+  expect_error(
+    tmle_alpha(fit, target = "death", alpha = 0.5),
+    "z_name is required"
+  )
+  expect_error(
     tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "w"),
-    "alpha is ignored"
+    "z_name must be one of"
+  )
+  # z_name is optional without an intervention, but still validated.
+  expect_equal(
+    tmle_alpha(fit, target = "death")$estimate,
+    tmle_alpha(fit, target = "death", z_name = "Z")$estimate
+  )
+  expect_error(
+    tmle_alpha(fit, target = "death", z_name = "w"),
+    "z_name must be one of"
   )
 })
 
@@ -67,7 +80,9 @@ test_that("tmle_alpha() supports only_first, target_only_in_state, target_by_sta
   fit <- fixture.fit(30)
 
   expect_true(is.numeric(
-    tmle_alpha(fit, target = "z", only_first = TRUE)$estimate[["tmle_est"]]
+    tmle_alpha(fit, target = "z", z_name = "z", only_first = TRUE)$estimate[[
+      "tmle_est"
+    ]]
   ))
   expect_true(is.numeric(
     tmle_alpha(
@@ -88,6 +103,7 @@ test_that("tmle_alpha() truncates clever weights", {
     fixture.fit(30),
     target = "death",
     alpha = 3,
+    z_name = "z",
     truncate_weights = 1.5
   )
 
@@ -123,7 +139,7 @@ test_that("tmle_alpha()'s alpha_list reproduces a constant scalar alpha", {
   fit <- fixture.fit(30)
   constant <- list(z = function(time) rep(2, length(time)))
 
-  scalar <- tmle_alpha(fit, target = "death", alpha = 2)
+  scalar <- tmle_alpha(fit, target = "death", alpha = 2, z_name = "z")
   expect_equal(
     tmle_alpha(fit, target = "death", alpha_list = constant)$estimate,
     scalar$estimate
