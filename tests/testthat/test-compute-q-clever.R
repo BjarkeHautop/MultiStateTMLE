@@ -113,3 +113,30 @@ test_that(".compute_q_clever() errors on empty input", {
     "at least one row"
   )
 })
+
+test_that(".compute_q_clever() integrates the step-function risk up to tau", {
+  # The risk is 0.5 from time 0.2 and 0.75 from time 0.5, so its integral
+  # up to tau = 1 is 0.3 * 0.5 + 0.5 * 0.75.
+  dt_id <- data.table::data.table(
+    time = c(0.2, 0.5),
+    at.risk = 1,
+    state = 1L,
+    state.row.index = 1L,
+    P.D.1 = c(0.5, 0.5)
+  )
+  states <- data.table::data.table(state = 1L)
+  years_lost <- function(...) {
+    .compute_q_clever(
+      dt_id = data.table::copy(dt_id),
+      states = states,
+      process_types = list(D = "terminal"),
+      get_years_lost = TRUE,
+      years_lost_block_size = 1,
+      ...
+    )$Q[1]
+  }
+
+  expect_equal(years_lost(years_lost_tau = 1), 0.3 * 0.5 + 0.5 * 0.75)
+  # Without tau, the integral stops at the last time.
+  expect_equal(years_lost(), 0.3 * 0.5)
+})

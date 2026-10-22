@@ -47,8 +47,10 @@ covariates in the targeting step.}
 as in \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 
 \item{block_size}{Positive integer. For \code{estimand = "years_lost"}, the
-number of time points per block in the approximation of the
-integral.}
+integral is approximated by evaluating the risk once per block of
+\code{block_size} consecutive time points. \code{1} gives the exact integral of
+the estimated risk; the computation time is roughly proportional to
+\code{1 / block_size}.}
 
 \item{cores}{Positive integer. Number of cores used by
 \code{\link[parallel:mclapply]{parallel::mclapply()}} for the per-individual computations.}

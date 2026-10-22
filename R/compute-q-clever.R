@@ -6,7 +6,9 @@
 # 1..S. `states` is the product state space (one column per stateful
 # process, plus `state`), used to map state indices and build successor
 # mappings. Returns `dt_id` with `Q`, `Q.<s>` and `clever.Q.<name>[0|1]`
-# columns added (or `clever.Q.years.lost.<name>` when `get_years_lost`).
+# columns added (or `clever.Q.years.lost.<name>` when `get_years_lost`, with
+# the integral of the risk taken up to `years_lost_tau`, by default the last
+# time of `dt_id`).
 .compute_q_clever <- function(
   dt_id,
   states,
@@ -17,6 +19,7 @@
   compute_clever = TRUE,
   get_years_lost = FALSE,
   years_lost_block_size = 10,
+  years_lost_tau = NULL,
   clever_by_state = FALSE
 ) {
   if (is.null(states) || nrow(states) == 0) {
@@ -483,7 +486,13 @@
       })
     }
 
-    dt_vec <- diff(c(0, dt_id[["time"]]))
+    # The risk is a step function of time, constant from each time of
+    # dt_id to the next (or to tau), so its integral weights the risk at
+    # each time by the length of the interval that follows it.
+    if (is.null(years_lost_tau)) {
+      years_lost_tau <- dt_id[["time"]][Tn]
+    }
+    dt_vec <- diff(c(dt_id[["time"]], years_lost_tau))
     last_block <- NA_integer_
     q_out_block <- NULL
 

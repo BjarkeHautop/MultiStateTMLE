@@ -29,8 +29,10 @@
 #'   `"years_lost"`, the expected time lost, i.e. the integral of the risk
 #'   of `target` up to `tau`.
 #' @param block_size Positive integer. For `estimand = "years_lost"`, the
-#'   number of time points per block in the approximation of the
-#'   integral.
+#'   integral is approximated by evaluating the risk once per block of
+#'   `block_size` consecutive time points. `1` gives the exact integral of
+#'   the estimated risk; the computation time is roughly proportional to
+#'   `1 / block_size`.
 #' @param only_first Logical. If `TRUE`, only the first `target` event
 #'   counts, and only the first jump of `z_name` is intervened on.
 #' @param target_only_in_state Optional function of the state space
@@ -391,6 +393,7 @@ tmle_alpha <- function(
       parameter = target.name,
       get_years_lost = years_lost,
       years_lost_block_size = block_size,
+      years_lost_tau = initial_fit$tau,
       clever_by_state = target_by_state,
       mc.cores = .n_cores(cores)
     )

@@ -52,8 +52,10 @@ Must be one of the values of \code{a} given to \code{\link[=fit_initial]{fit_ini
 of \code{target} up to \code{tau}.}
 
 \item{block_size}{Positive integer. For \code{estimand = "years_lost"}, the
-number of time points per block in the approximation of the
-integral.}
+integral is approximated by evaluating the risk once per block of
+\code{block_size} consecutive time points. \code{1} gives the exact integral of
+the estimated risk; the computation time is roughly proportional to
+\code{1 / block_size}.}
 
 \item{only_first}{Logical. If \code{TRUE}, only the first \code{target} event
 counts, and only the first jump of \code{z_name} is intervened on.}
