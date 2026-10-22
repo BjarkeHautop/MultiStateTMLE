@@ -1,9 +1,10 @@
 # Calibrate an intensity intervention to a target value
 
 Finds the intervention `alpha` on the intensity of the process `z_name`
-such that the estimated risk of `z_name` equals a calibration target,
-and estimates the risk of `target` under that calibrated intervention.
-The standard error of the latter accounts for the estimation of `alpha`.
+such that the estimated risk of `z_name` (the exposure) equals a
+calibration target `theta`, and estimates the risk of each `target`
+under that calibrated intervention. The standard errors of the latter
+account for the estimation of `alpha`.
 
 ## Usage
 
@@ -11,15 +12,16 @@ The standard error of the latter accounts for the estimation of `alpha`.
 calibrate_alpha(
   initial_fit,
   target,
-  z_name = "z",
-  theta = NULL,
-  rho = NULL,
-  delta = NULL,
-  rho_1a = NULL,
+  z_name,
+  value,
+  scale = c("absolute", "ratio", "difference"),
   a = NULL,
+  reference_a = a,
+  estimand = c("risk", "years_lost"),
+  exposure_estimand = c("risk", "years_lost"),
+  control = list(),
   cores = 1,
-  verbose = FALSE,
-  ...
+  verbose = FALSE
 )
 ```
 
@@ -37,19 +39,46 @@ calibrate_alpha(
 
 - z_name:
 
-  String. Name of the process whose intensity `alpha` scales. If no such
-  process exists in `initial_fit`, `alpha` is ignored with a warning.
+  String. Name of the process in `initial_fit` whose intensity is
+  intervened on and calibrated.
 
-- theta, rho, delta, rho_1a:
+- value:
 
-  Numbers specifying the calibration target, see Description. Give
-  exactly one.
+  Number. The calibration target on the `scale`, see Description. Must
+  be non-negative unless `scale = "difference"`.
+
+- scale:
+
+  The scale of `value`: `"absolute"`, `"ratio"` or `"difference"`, see
+  Description.
 
 - a:
 
-  Optional baseline treatment value (`0` or `1`) to intervene on. Must
-  be one of the values of `a` given to
-  [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
+  Optional baseline treatment value (`0` or `1`) to intervene on, as in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
+
+- reference_a:
+
+  Optional baseline treatment value (`0` or `1`) under which the
+  reference exposure of a `"ratio"` or `"difference"` `scale` is
+  estimated. Defaults to `a`; e.g. `a = 1, reference_a = 0` calibrates
+  the exposure under treatment to that under placebo.
+
+- estimand:
+
+  The target parameter for `target`, as in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
+
+- exposure_estimand:
+
+  The target parameter for the exposure `z_name`, that `value` and the
+  calibration refer to, as in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
+
+- control:
+
+  Settings for the estimates, passed on to
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
 - cores:
 
@@ -61,45 +90,46 @@ calibrate_alpha(
 
   Logical. If `TRUE`, print progress.
 
-- ...:
-
-  Further arguments passed on to
-  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
-
 ## Value
 
-A list with elements:
+An object of class `calibrate_alpha`, a list with elements:
 
-- `estimate`: a named vector with the calibrated `alpha_est` and its
-  `alpha_se`, the risk of `target` (`target_est`) with standard error
-  `target_se` (accounting for the estimation of alpha) and
-  `target_se_crude` (treating alpha as known), and the calibration
-  target `theta` with standard error `theta_se`.
+- `estimate`: a `data.table` with one row per `target` and columns
+  `target`, the risk `estimate` under the calibrated intervention, its
+  standard error `se` (accounting for the estimation of alpha), the
+  bounds `lower` and `upper` of a 95% Wald confidence interval, and the
+  standard error `se_crude` treating alpha as known.
 
-- `checks`: diagnostics of the alpha search and derivative estimates.
+- `calibration`: a `data.table` with the calibrated `alpha` and the
+  calibration target `theta` (column `quantity`), with `estimate`, `se`,
+  `lower` and `upper`.
 
-- `alpha_eic`, `target_eic` and `eic`: the influence curves of the
-  calibrated alpha, of the risk of `target` treating alpha as known, and
-  of the risk of `target`.
+- `z_name`, `a`, `value`, `scale`, `reference_a`, `estimand` and
+  `exposure_estimand`: as given (`reference_a` is `NULL` for the
+  `"absolute"` `scale`).
 
-With several targets, the per-target entries of `estimate` and `checks`
-are suffixed by the target name (e.g. `target_est_death`), and
-`target_eic` and `eic` are lists named by target.
+- `eic`, `eic_alpha_known`: lists, named by target, of the influence
+  curves of the risk of `target`, accounting for the estimation of alpha
+  and treating it as known.
+
+- `alpha_eic`: the influence curve of the calibrated alpha.
+
+- `checks`: diagnostics of the alpha search (`converged`, `dist`, `c_n`)
+  and the estimated derivatives with respect to alpha of the risk of
+  `z_name` (`derivative_z`) and of each target (`derivative_target`).
 
 ## Details
 
-Exactly one of `theta`, `rho`, `delta` and `rho_1a` specifies the
-calibration target:
+The calibration target `theta` is given by `value` on the `scale`:
 
-- `theta`: the risk of `z_name` itself.
+- `"absolute"`: `theta = value`.
 
-- `rho`: a fraction of the risk of `z_name` without intervention.
+- `"ratio"`: `theta = value * reference`.
 
-- `delta`: an absolute difference from the risk of `z_name` without
-  intervention.
+- `"difference"`: `theta = value + reference`.
 
-- `rho_1a`: a fraction of the risk of `z_name` without intervention on
-  `z_name`, under the opposite baseline treatment `1 - a`.
+where `reference` is the exposure without intervention on `z_name`,
+under the baseline treatment `reference_a`.
 
 ## Examples
 
@@ -120,10 +150,15 @@ fit <- fit_initial(
 
 # Risk of death under the intervention on z that brings the risk of z
 # down to 80% of its observed value.
-cal <- calibrate_alpha(fit, target = "death", z_name = "z", rho = 0.8)
+cal <- calibrate_alpha(
+  fit,
+  target = "death",
+  z_name = "z",
+  value = 0.8,
+  scale = "ratio"
+)
 cal$estimate
-#>       alpha_est        alpha_se      target_est       target_se target_se_crude 
-#>      0.79272380      0.00995552      0.31992034      0.03864198      0.03866085 
-#>           theta        theta_se 
-#>      0.12713026      0.02505712 
+#>    target  estimate         se     lower     upper   se_crude
+#>    <char>     <num>      <num>     <num>     <num>      <num>
+#> 1:  death 0.3199203 0.03864198 0.2441835 0.3956572 0.03866085
 ```

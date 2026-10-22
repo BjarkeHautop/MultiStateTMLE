@@ -59,7 +59,7 @@ prepare.initial(
   Observed data, see `data` in
   [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
 
-- tau, a, verbose:
+- tau, verbose:
 
   See
   [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
@@ -74,6 +74,11 @@ prepare.initial(
 - verbose.exponential:
 
   Merged into `verbose`.
+
+- a:
+
+  See `arms` in
+  [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
 
 - fit.treatment:
 

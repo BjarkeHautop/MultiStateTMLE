@@ -55,19 +55,14 @@ likelihood estimation (TMLE).</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">tmle_alpha</span><span class="op">(</span></span>
 <span>  <span class="va">initial_fit</span>,</span>
 <span>  <span class="va">target</span>,</span>
+<span>  z_name <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  alpha <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  z_name <span class="op">=</span> <span class="st">"z"</span>,</span>
 <span>  alpha_list <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  a <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  years_lost <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  estimand <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"risk"</span>, <span class="st">"years_lost"</span><span class="op">)</span>,</span>
 <span>  only_first <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  target_only_in_state <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  target_by_state <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  conv_const <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  one_step <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  max_iter <span class="op">=</span> <span class="fl">10</span>,</span>
-<span>  min_iter <span class="op">=</span> <span class="fl">0</span>,</span>
-<span>  truncate_weights <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  cores <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -85,35 +80,38 @@ likelihood estimation (TMLE).</p>
 <dd><p>String. Name of the target process.</p></dd>
 
 
+<dt id="arg-z-name">z_name<a class="anchor" aria-label="anchor" href="#arg-z-name"></a></dt>
+<dd><p>String. Name of the process in <code>initial_fit</code> whose
+intensity <code>alpha</code> scales. Required unless <code>alpha = 1</code> or <code>alpha_list</code>
+is given.</p></dd>
+
+
 <dt id="arg-alpha">alpha<a class="anchor" aria-label="anchor" href="#arg-alpha"></a></dt>
 <dd><p>Non-negative number. Multiplicative intervention on the
-intensity of <code>z_name</code>. <code>alpha = 1</code> is no intervention. Ignored if
-<code>alpha_list</code> is given.</p></dd>
-
-
-<dt id="arg-z-name">z_name<a class="anchor" aria-label="anchor" href="#arg-z-name"></a></dt>
-<dd><p>String. Name of the process whose intensity <code>alpha</code> scales.
-If no such process exists in <code>initial_fit</code>, <code>alpha</code> is ignored with a
-warning.</p></dd>
+intensity of <code>z_name</code>. <code>alpha = 1</code> is no intervention.</p></dd>
 
 
 <dt id="arg-alpha-list">alpha_list<a class="anchor" aria-label="anchor" href="#arg-alpha-list"></a></dt>
-<dd><p>Experimental. Optional named list of functions, one per
-process, giving a time-varying intervention on that process's intensity.
-Each function's arguments name the columns of <code>initial_fit$tmp_long</code> it
-depends on. Supersedes <code>alpha</code> and <code>z_name</code>.</p></dd>
+<dd><p>Experimental, and may change. Optional named list of
+functions, one per process, giving a time-varying multiplicative
+intervention on that process's intensity. Each function is called with
+the columns of <code>initial_fit$tmp_long</code> named by its arguments, e.g.
+<code>time</code>, a baseline covariate such as <code>L0</code>, or a process such as <code>z</code>
+(its number of jumps so far), and must return one non-negative factor
+per row. For example, <code>list(z = function(time) ifelse(time &lt; 0.5, 0.5, 1))</code> halves the intensity of <code>z</code> before time 0.5. Cannot be combined
+with <code>alpha</code> and <code>z_name</code>.</p></dd>
 
 
 <dt id="arg-a">a<a class="anchor" aria-label="anchor" href="#arg-a"></a></dt>
 <dd><p>Optional baseline treatment value (<code>0</code> or <code>1</code>) to intervene on.
-Must be one of the values of <code>a</code> given to <code><a href="fit_initial.html">fit_initial()</a></code>.</p></dd>
+Must be one of the <code>arms</code> prepared by <code><a href="fit_initial.html">fit_initial()</a></code>.</p></dd>
 
 
-<dt id="arg-years-lost">years_lost<a class="anchor" aria-label="anchor" href="#arg-years-lost"></a></dt>
-<dd><p>Optional positive integer. If given, the target
-parameter is the expected time lost (the integral of the risk of
-<code>target</code> up to <code>tau</code>) instead of the risk at <code>tau</code>. The integral is
-approximated with blocks of <code>years_lost</code> time points.</p></dd>
+<dt id="arg-estimand">estimand<a class="anchor" aria-label="anchor" href="#arg-estimand"></a></dt>
+<dd><p>The target parameter: <code>"risk"</code>, the risk of <code>target</code> by
+<code>tau</code> (or the expected number of events for a recurrent <code>target</code>), or
+<code>"years_lost"</code>, the expected time lost, i.e. the integral of the risk
+of <code>target</code> up to <code>tau</code>.</p></dd>
 
 
 <dt id="arg-only-first">only_first<a class="anchor" aria-label="anchor" href="#arg-only-first"></a></dt>
@@ -122,39 +120,35 @@ counts, and only the first jump of <code>z_name</code> is intervened on.</p></dd
 
 
 <dt id="arg-target-only-in-state">target_only_in_state<a class="anchor" aria-label="anchor" href="#arg-target-only-in-state"></a></dt>
-<dd><p>Optional function of the state space
-(<code>initial_fit$depend_matrix</code>) returning a logical vector, marking the
-states in which <code>target</code> events count.</p></dd>
+<dd><p>Experimental, and may change. Optional
+function of the state space <code>initial_fit$depend_matrix</code>, a data frame
+with one row per state and a column per process that other processes
+depend on (its number of jumps), returning a logical vector marking the
+states in which <code>target</code> events count. For example,
+<code>function(states) states[["z"]] == 0</code> counts only deaths before
+illness.</p></dd>
 
 
-<dt id="arg-target-by-state">target_by_state<a class="anchor" aria-label="anchor" href="#arg-target-by-state"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, use state-specific clever
-covariates in the targeting step.</p></dd>
-
-
-<dt id="arg-conv-const">conv_const<a class="anchor" aria-label="anchor" href="#arg-conv-const"></a></dt>
-<dd><p>Positive number. The TMLE iterations stop when the
+<dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
+<dd><p>A named list of settings for how the estimate is
+computed:</p><ul><li><p><code>one_step</code> (<code>FALSE</code>): if <code>TRUE</code>, return the one-step estimator
+instead of iterating the TMLE update.</p></li>
+<li><p><code>block_size</code> (<code>10</code>): positive integer. For <code>estimand = "years_lost"</code>,
+the integral is approximated by evaluating the risk once per block of
+<code>block_size</code> consecutive time points. <code>1</code> gives the exact integral of
+the estimated risk; the computation time is roughly proportional to
+<code>1 / block_size</code>.</p></li>
+<li><p><code>target_by_state</code> (<code>FALSE</code>): if <code>TRUE</code>, use state-specific clever
+covariates in the targeting step.</p></li>
+<li><p><code>conv_const</code> (<code>1</code>): positive number. The TMLE iterations stop when the
 absolute mean of the efficient influence curve falls below
-<code>conv_const * se / log(n)</code>.</p></dd>
-
-
-<dt id="arg-one-step">one_step<a class="anchor" aria-label="anchor" href="#arg-one-step"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, return the one-step estimator instead
-of iterating the TMLE update.</p></dd>
-
-
-<dt id="arg-max-iter">max_iter<a class="anchor" aria-label="anchor" href="#arg-max-iter"></a></dt>
-<dd><p>Positive integer. Maximum number of TMLE iterations.</p></dd>
-
-
-<dt id="arg-min-iter">min_iter<a class="anchor" aria-label="anchor" href="#arg-min-iter"></a></dt>
-<dd><p>Non-negative integer. Minimum number of TMLE iterations
-before checking convergence.</p></dd>
-
-
-<dt id="arg-truncate-weights">truncate_weights<a class="anchor" aria-label="anchor" href="#arg-truncate-weights"></a></dt>
-<dd><p>Non-negative number. If positive, the clever
-weights of the intervention are truncated at this value.</p></dd>
+<code>conv_const * se / log(n)</code>.</p></li>
+<li><p><code>max_iter</code> (<code>10</code>): maximum number of TMLE iterations.</p></li>
+<li><p><code>min_iter</code> (<code>0</code>): minimum number of TMLE iterations before checking
+convergence.</p></li>
+<li><p><code>truncate_weights</code> (<code>Inf</code>): positive number at which the clever
+weights of the intervention are truncated. <code>Inf</code> is no truncation.</p></li>
+</ul></dd>
 
 
 <dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
@@ -168,22 +162,29 @@ weights of the intervention are truncated at this value.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list with elements:</p><ul><li><p><code>estimate</code>: a named vector with the estimate (<code>tmle_est</code>, or
-<code>one_step_est</code> if <code>one_step = TRUE</code>), its standard error <code>se</code>, and the
-initial plug-in estimate <code>g_est</code>.</p></li>
-<li><p><code>eic</code>: the efficient influence curve, one value per individual.</p></li>
-<li><p><code>convergence</code>: a named vector with the number of iterations <code>iter</code>,
-the absolute mean of the efficient influence curve <code>eic_solved_at</code>,
-and whether the iterations <code>converged</code>. A warning is given if they
-did not.</p></li>
+    <p>An object of class <code>tmle_alpha</code>, a list with elements:</p><ul><li><p><code>estimate</code>: a <code>data.table</code> with columns <code>target</code>, <code>estimate</code>, its
+standard error <code>se</code>, and the bounds <code>lower</code> and <code>upper</code> of a 95% Wald
+confidence interval.</p></li>
+<li><p><code>initial_estimate</code>: the initial plug-in estimate, before targeting.</p></li>
+<li><p><code>method</code>: <code>"tmle"</code>, or <code>"one_step"</code> if <code>control$one_step = TRUE</code>.</p></li>
+<li><p><code>estimand</code>: as given.</p></li>
+<li><p><code>alpha</code>, <code>z_name</code> and <code>a</code>: the intervention (<code>alpha</code> is <code>NULL</code> if
+<code>alpha_list</code> is given).</p></li>
+<li><p><code>eic</code>: a list, named by <code>target</code>, with the efficient influence curve,
+one value per individual.</p></li>
+<li><p><code>checks</code>: a list of diagnostics:</p><ul><li><p><code>iter</code>: the number of iterations.</p></li>
+<li><p><code>eic_solved_at</code>: the absolute mean of the efficient influence curve.</p></li>
+<li><p><code>converged</code>: whether the iterations converged. A warning is given
+if they did not.</p></li>
 <li><p><code>weights</code>: a matrix with the quantiles (columns <code>q50</code>, <code>q90</code>, <code>q99</code>
 and <code>q100</code>) over individuals of each individual's maximal
 <code>intervention</code>, <code>censoring</code> and <code>treatment</code> weight, and of their
-product <code>total</code>, the weight entering the targeting step (rows), as a
-positivity diagnostic. The intervention weights are those after
+product <code>total</code>, the weight entering the targeting step (rows), as
+a positivity diagnostic. The intervention weights are those after
 truncation, and the treatment weights are 1 when <code>a</code> is not given.</p></li>
 <li><p><code>n_truncated</code>: the number of individuals whose initial intervention
-weight was truncated (0 if <code>truncate_weights = 0</code>).</p></li>
+weight was truncated (0 if <code>control$truncate_weights = Inf</code>).</p></li>
+</ul></li>
 </ul></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -209,10 +210,11 @@ for a recurrent <code>target</code>).</p>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Risk of death by tau = 1 if the intensity of z were halved.</span></span></span>
-<span class="r-in"><span><span class="va">est</span> <span class="op">&lt;-</span> <span class="fu">tmle_alpha</span><span class="op">(</span><span class="va">fit</span>, target <span class="op">=</span> <span class="st">"death"</span>, alpha <span class="op">=</span> <span class="fl">0.5</span>, z_name <span class="op">=</span> <span class="st">"z"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">est</span> <span class="op">&lt;-</span> <span class="fu">tmle_alpha</span><span class="op">(</span><span class="va">fit</span>, target <span class="op">=</span> <span class="st">"death"</span>, z_name <span class="op">=</span> <span class="st">"z"</span>, alpha <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">est</span><span class="op">$</span><span class="va">estimate</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   tmle_est         se      g_est </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 0.30405495 0.03853505 0.31239982 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    target  estimate         se     lower     upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.3040549 0.03853505 0.2285276 0.3795823</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

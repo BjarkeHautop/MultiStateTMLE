@@ -13,13 +13,7 @@ based on the influence curves.
 ## Usage
 
 ``` r
-calibrated_contrasts(
-  treatment_fit,
-  placebo_fit,
-  calibrated_fit,
-  target = NULL,
-  conf_level = 0.95
-)
+calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit, level = 0.95)
 ```
 
 ## Arguments
@@ -27,43 +21,78 @@ calibrated_contrasts(
 - treatment_fit, placebo_fit:
 
   Fits for the treatment and placebo arms, as returned by
-  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
+  with different baseline treatments `a`.
 
 - calibrated_fit:
 
   Fit for the calibrated intervention, as returned by
-  [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md).
+  [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md)
+  with the `a` of `treatment_fit`. It may contain estimates for several
+  targets; the one of `treatment_fit` is used.
 
-- target:
-
-  Optional string. If `calibrated_fit` contains estimates for several
-  targets, the name of the one to use.
-
-- conf_level:
+- level:
 
   Number between 0 and 1. Confidence level of the intervals.
 
 ## Value
 
-A `data.table` with one row per contrast (`total`, `mediated` and
-`calibrated`) and columns `target` (`NA` if `target` is `NULL`),
-`contrast`, `estimate`, `se`, `lower` and `upper`. The attributes
-`decomposition_error` and `eic_decomposition_error` give how far the
-estimates and influence curves are from satisfying total = mediated +
-calibrated, which should be zero up to numerical error.
+An object of class `calibrated_contrasts`, a list with elements:
+
+- `estimate`: a `data.table` with one row per contrast (`total`,
+  `mediated` and `calibrated`) and columns `target`, `contrast`,
+  `estimate`, `se`, `lower` and `upper`.
+
+- `target` and `level`: the target and the confidence level.
+
+- `checks`: a list with `decomposition_error` and
+  `eic_decomposition_error`, how far the estimates and influence curves
+  are from satisfying total = mediated + calibrated, which should be
+  zero up to numerical error.
 
 ## Examples
 
 ``` r
-set.seed(1405)
-treatment_fit <- list(estimate = c(tmle_est = 0.7), eic = rnorm(200, sd = 0.1))
-placebo_fit <- list(estimate = c(tmle_est = 0.3), eic = rnorm(200, sd = 0.1))
-calibrated_fit <- list(estimate = c(target_est = 0.5), eic = rnorm(200, sd = 0.1))
+# illness_death with a randomised treatment A0 added, for illustration.
+set.seed(1)
+treated <- illness_death
+treated$A0 <- rbinom(max(treated$id), 1, 0.5)[treated$id]
 
-calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
-#>    target   contrast estimate         se     lower     upper
-#>    <char>     <char>    <num>      <num>     <num>     <num>
-#> 1:   <NA>      total      0.4 0.01028048 0.3798506 0.4201494
-#> 2:   <NA>   mediated      0.2 0.01050568 0.1794092 0.2205908
-#> 3:   <NA> calibrated      0.2 0.01028145 0.1798487 0.2201513
+fit <- fit_initial(
+  treated,
+  fit_types = list(
+    z = list(
+      delta = 2,
+      model = ~ L0 + A0,
+      at_risk = function(dt) dt[["z"]] == 0
+    ),
+    death = list(delta = 1, model = ~ L0 + A0 + z),
+    censoring = list(delta = 0, model = ~L0)
+  ),
+  tau = 1,
+  treatment_model = A0 ~ L0
+)
+
+# How much of the effect of treatment on death is mediated by its effect
+# on the risk of z?
+calibrated_contrasts(
+  treatment_fit = tmle_alpha(fit, target = "death", a = 1),
+  placebo_fit = tmle_alpha(fit, target = "death", a = 0),
+  calibrated_fit = calibrate_alpha(
+    fit,
+    target = "death",
+    z_name = "z",
+    value = 1,
+    scale = "ratio",
+    a = 1,
+    reference_a = 0
+  )
+)
+#> Decomposition of the effect of a on death into mediated and calibrated contrasts
+#> 
+#>    target   contrast   estimate         se       lower      upper
+#>    <char>     <char>      <num>      <num>       <num>      <num>
+#> 1:  death      total -0.1405813 0.07724416 -0.29197704 0.01081449
+#> 2:  death   mediated -0.0234265 0.01632300 -0.05541899 0.00856599
+#> 3:  death calibrated -0.1171548 0.08141345 -0.27672220 0.04241266
 ```

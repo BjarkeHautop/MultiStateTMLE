@@ -64,9 +64,14 @@ fit <- fit_initial(
 )
 
 est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
-est$estimate
-#>   tmle.est         se      g.est 
-#> 0.30405495 0.03853505 0.31239982
+est
+#> TMLE estimate under alpha = 0.5 on z
+#>
+#>    target  estimate         se     lower     upper
+#>    <char>     <num>      <num>     <num>     <num>
+#> 1:  death 0.3040549 0.03853505 0.2285276 0.3795823
+#>
+#> Initial estimate: 0.3124; converged after 2 iterations
 ```
 
 To simulate multistate event history data, see the

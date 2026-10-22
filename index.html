@@ -93,9 +93,14 @@
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">est</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/tmle_alpha.html">tmle_alpha</a></span><span class="op">(</span><span class="va">fit</span>, target <span class="op">=</span> <span class="st">"death"</span>, alpha <span class="op">=</span> <span class="fl">0.5</span>, z_name <span class="op">=</span> <span class="st">"z"</span><span class="op">)</span></span>
-<span><span class="va">est</span><span class="op">$</span><span class="va">estimate</span></span>
-<span><span class="co">#&gt;   tmle.est         se      g.est </span></span>
-<span><span class="co">#&gt; 0.30405495 0.03853505 0.31239982</span></span></code></pre></div>
+<span><span class="va">est</span></span>
+<span><span class="co">#&gt; TMLE estimate under alpha = 0.5 on z</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt;    target  estimate         se     lower     upper</span></span>
+<span><span class="co">#&gt;    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:  death 0.3040549 0.03853505 0.2285276 0.3795823</span></span>
+<span><span class="co">#&gt;</span></span>
+<span><span class="co">#&gt; Initial estimate: 0.3124; converged after 2 iterations</span></span></code></pre></div>
 <p>To simulate multistate event history data, see the <a href="https://github.com/BjarkeHautop/simevent" class="external-link">simevent</a> package.</p>
 </div>
 <div class="section level2">

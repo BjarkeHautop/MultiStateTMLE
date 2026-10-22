@@ -58,16 +58,14 @@ calibrating to the estimated exposure risk rather than to <code>alpha</code>.</p
     <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">calibration_curve</span><span class="op">(</span></span>
 <span>  <span class="va">initial_fit</span>,</span>
 <span>  <span class="va">target</span>,</span>
-<span>  z_name <span class="op">=</span> <span class="st">"z"</span>,</span>
+<span>  <span class="va">z_name</span>,</span>
 <span>  alpha_grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">5</span>, length.out <span class="op">=</span> <span class="fl">10</span><span class="op">)</span>,</span>
 <span>  a <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  min_iter <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  target_by_state <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  block_size_z <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  block_size_target <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  estimand <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"risk"</span>, <span class="st">"years_lost"</span><span class="op">)</span>,</span>
+<span>  exposure_estimand <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"risk"</span>, <span class="st">"years_lost"</span><span class="op">)</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  cores <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  <span class="va">...</span></span>
+<span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
 
@@ -85,9 +83,8 @@ estimated.</p></dd>
 
 
 <dt id="arg-z-name">z_name<a class="anchor" aria-label="anchor" href="#arg-z-name"></a></dt>
-<dd><p>String. Name of the process whose intensity <code>alpha</code> scales.
-If no such process exists in <code>initial_fit</code>, <code>alpha</code> is ignored with a
-warning.</p></dd>
+<dd><p>String. Name of the process in <code>initial_fit</code> whose
+intensity <code>alpha_grid</code> scales.</p></dd>
 
 
 <dt id="arg-alpha-grid">alpha_grid<a class="anchor" aria-label="anchor" href="#arg-alpha-grid"></a></dt>
@@ -97,23 +94,20 @@ evaluate.</p></dd>
 
 <dt id="arg-a">a<a class="anchor" aria-label="anchor" href="#arg-a"></a></dt>
 <dd><p>Optional baseline treatment value (<code>0</code> or <code>1</code>) to intervene on.
-Must be one of the values of <code>a</code> given to <code><a href="fit_initial.html">fit_initial()</a></code>.</p></dd>
+Must be one of the <code>arms</code> prepared by <code><a href="fit_initial.html">fit_initial()</a></code>.</p></dd>
 
 
-<dt id="arg-min-iter">min_iter<a class="anchor" aria-label="anchor" href="#arg-min-iter"></a></dt>
-<dd><p>Non-negative integer. Minimum number of TMLE iterations,
-passed on to <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
+<dt id="arg-estimand">estimand<a class="anchor" aria-label="anchor" href="#arg-estimand"></a></dt>
+<dd><p>The target parameter for <code>target</code>, as in <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
 
 
-<dt id="arg-target-by-state">target_by_state<a class="anchor" aria-label="anchor" href="#arg-target-by-state"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, use state-specific clever
-covariates in the targeting step.</p></dd>
+<dt id="arg-exposure-estimand">exposure_estimand<a class="anchor" aria-label="anchor" href="#arg-exposure-estimand"></a></dt>
+<dd><p>The target parameter for the exposure <code>z_name</code>,
+as in <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
 
 
-<dt id="arg-block-size-z-block-size-target">block_size_z, block_size_target<a class="anchor" aria-label="anchor" href="#arg-block-size-z-block-size-target"></a></dt>
-<dd><p>Optional positive integers. If
-given, the expected time lost is estimated for <code>z_name</code> and <code>target</code>,
-respectively, instead of the risk; see <code>years_lost</code> in <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
+<dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
+<dd><p>Settings for the estimates, passed on to <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
 
 
 <dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
@@ -124,21 +118,23 @@ respectively, instead of the risk; see <code>years_lost</code> in <code><a href=
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
 <dd><p>Logical. If <code>TRUE</code>, print progress.</p></dd>
 
-
-<dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
-<dd><p>Further arguments passed on to <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
-
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list with elements:</p><ul><li><p><code>estimate</code>: a <code>data.table</code> with one row per value of <code>alpha_grid</code> and
-columns <code>alpha</code>, <code>exposure_est</code>, <code>exposure_se</code>, <code>target_est</code> and
-<code>target_se</code> (suffixed by <code>_&lt;target&gt;</code> when there are several
-targets).</p></li>
-<li><p><code>checks</code>: per value of <code>alpha_grid</code>, the estimated derivatives of the
-exposure and target estimates with respect to <code>alpha</code>.</p></li>
-<li><p><code>eics</code>: per value of <code>alpha_grid</code>, the influence curves <code>alpha_eic</code>,
-<code>calibration_eic</code>, <code>target_eic</code> and <code>eic</code>.</p></li>
+    <p>An object of class <code>calibration_curve</code>, a list with elements:</p><ul><li><p><code>estimate</code>: a <code>data.table</code> with one row per value of <code>alpha_grid</code> and
+<code>target</code>, and columns <code>alpha</code>, <code>target</code>, the risk of <code>z_name</code>
+(<code>exposure_estimate</code>, with standard error <code>exposure_se</code>), and the risk
+of <code>target</code> (<code>estimate</code>, with standard error <code>se</code> and the bounds
+<code>lower</code> and <code>upper</code> of a 95% Wald confidence interval).</p></li>
+<li><p><code>z_name</code>, <code>a</code>, <code>estimand</code> and <code>exposure_estimand</code>: as given.</p></li>
+<li><p><code>checks</code>: a <code>data.table</code> with the estimated derivatives with respect
+to <code>alpha</code> of the exposure (<code>derivative_exposure</code>) and target
+(<code>derivative_target</code>) estimates, per <code>alpha</code> and <code>target</code>.</p></li>
+<li><p><code>eic</code>: a list with, per value of <code>alpha_grid</code>, the influence curves of
+the exposure estimate (<code>exposure_eic</code>), of <code>alpha</code> calibrated to it
+(<code>alpha_eic</code>), and lists named by target of the target estimates
+accounting for its calibration (<code>eic</code>) and treating <code>alpha</code> as known
+(<code>eic_alpha_known</code>), as in <code><a href="calibrate_alpha.html">calibrate_alpha()</a></code>.</p></li>
 </ul></div>
 
     <div class="section level2">
@@ -164,11 +160,16 @@ exposure and target estimates with respect to <code>alpha</code>.</p></li>
 <span class="r-in"><span>  alpha_grid <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">curve</span><span class="op">$</span><span class="va">estimate</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    alpha exposure_est exposure_se target_est  target_se</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;num&gt;        &lt;num&gt;       &lt;num&gt;      &lt;num&gt;      &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   0.0   0.00000000  0.00000000  0.2820265 0.03975707</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:   0.5   0.08791201  0.01791587  0.3040549 0.03896630</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3:   1.0   0.16448600  0.03131500  0.3239449 0.03949105</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    alpha target exposure_estimate exposure_se  estimate         se     lower</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;num&gt; &lt;char&gt;             &lt;num&gt;       &lt;num&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   0.0  death        0.00000000  0.00000000 0.2820265 0.03975707 0.2041041</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:   0.5  death        0.08486244  0.01787691 0.3040549 0.03899060 0.2276348</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:   1.0  death        0.15891283  0.03132140 0.3250469 0.03915660 0.2483014</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>        &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 0.3599489</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 0.3804751</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: 0.4017924</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

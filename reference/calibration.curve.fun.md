@@ -54,11 +54,22 @@ calibration.curve.fun(
   See
   [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md).
 
-- z.name, alpha.grid, min.iter, target.by.state, block.size.z,
-  block.size.target:
+- z.name, alpha.grid:
 
   See the snake_case equivalents in
   [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md).
+
+- min.iter, target.by.state:
+
+  See the snake_case equivalents in the `control` of
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
+
+- block.size.z, block.size.target:
+
+  If given, `exposure_estimand = "years_lost"` and
+  `estimand = "years_lost"`, respectively, in
+  [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md),
+  with this `control$block_size`. If both are given, they must be equal.
 
 - ...:
 

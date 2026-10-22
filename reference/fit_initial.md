@@ -18,12 +18,11 @@ fit_initial(
   fit_types,
   tau,
   treatment_model = NULL,
-  a = NULL,
+  arms = NULL,
   max_count = 1,
   derived_vars = list(),
   depend_time = list(),
-  prune_states = FALSE,
-  use_exponential = FALSE,
+  control = list(),
   hal_control = list(),
   cores = 1,
   verbose = FALSE
@@ -66,16 +65,19 @@ fit_initial(
 
 - treatment_model:
 
-  Optional model for the baseline treatment, either a formula such as
-  `A0 ~ L0` or a list with elements `model` (such a formula) and `fit`
-  (only `"glm"` is supported). Required when `a` is given.
+  Optional logistic regression model for the baseline treatment, a
+  two-sided formula such as `A0 ~ L0`. Required when `arms` is given.
 
-- a:
+- arms:
 
-  Optional integer vector of baseline treatment values (`0`/`1`) to
-  compute interventional hazards and clever weights for. Each value can
-  then be passed as `a` to
-  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
+  Integer vector of the baseline treatment values (`0`/`1`) to prepare
+  interventional hazards and clever weights for. Each value can then be
+  passed as `a` to
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md),
+  [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md)
+  and
+  [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md).
+  Defaults to both values, `0:1`, when `treatment_model` is given.
 
 - max_count:
 
@@ -84,24 +86,29 @@ fit_initial(
 
 - derived_vars:
 
-  Named list of functions of the data deriving additional state
-  variables.
+  Named list of functions of the data, each deriving an additional state
+  variable, named by the list, that can be used in the `model`s of
+  `fit_types`.
 
 - depend_time:
 
-  Named list of functions describing dependence on the time since a jump
-  of a process, keyed by process name.
+  Experimental, and may change. Named list of functions making hazards
+  depend on the time of a jump. Each is named by a state variable: a
+  process `z` that jumps once, or `z.k` for the `k`th jump of a
+  recurrent process `z`. It adds the covariate `T.<name>`, `0` before
+  that jump and the function applied to the time of the jump after it,
+  which can be used (as a factor) in the `model`s of `fit_types`.
 
-- prune_states:
+- control:
 
-  Logical. If `TRUE`, prune states not admissible under the `at_risk`
-  functions of `fit_types`.
+  A named list of tuning settings:
 
-- use_exponential:
+  - `prune_states` (`FALSE`): if `TRUE`, prune states not admissible
+    under the `at_risk` functions of `fit_types`.
 
-  Logical. If `TRUE`, always transform the hazard increments `dH` to
-  probabilities `1 - exp(-dH)`. Otherwise this is only done if some
-  increments exceed 1.
+  - `use_exponential` (`FALSE`): if `TRUE`, always transform the hazard
+    increments `dH` to probabilities `1 - exp(-dH)`. Otherwise this is
+    only done if some increments exceed 1.
 
 - hal_control:
 
@@ -120,10 +127,22 @@ fit_initial(
 
 ## Value
 
-A list containing, among others, `tmp_long` (the expanded data with
-fitted hazards and clever weights), `depend_matrix` (the product state
-space), `process_names`, `process_types`, `process_deltas`,
-`cens_process_id` and `at_risks`.
+An object of class `initial_fit`, a list with elements:
+
+- `n`: the number of individuals.
+
+- `tau`, `treatment_model` and `arms`: as given (`arms` with its default
+  filled in).
+
+- `processes`: a `data.table` with one row per process and columns
+  `name`, `delta`, `type` (`"terminal"`, `"recurrent"` or `"one_jump"`,
+  inferred from the data), `model` and `at_risk` (whether an `at_risk`
+  function was given).
+
+It also contains the internal elements used by
+[`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md),
+among them `tmp_long` (the expanded data with fitted hazards and clever
+weights) and `depend_matrix` (the product state space).
 
 ## Details
 
@@ -165,14 +184,12 @@ fit <- fit_initial(
   ),
   tau = 1
 )
-fit$process_types
-#> $z
-#> [1] "one_jump"
+fit
+#> Initial fit of 150 individuals up to tau = 1
 #> 
-#> $death
-#> [1] "terminal"
-#> 
-#> $censoring
-#> [1] "terminal"
-#> 
+#>         name delta     type   model at_risk
+#>       <char> <num>   <char>  <char>  <lgcl>
+#> 1:         z     2 one_jump     ~L0    TRUE
+#> 2:     death     1 terminal ~L0 + z   FALSE
+#> 3: censoring     0 terminal     ~L0   FALSE
 ```

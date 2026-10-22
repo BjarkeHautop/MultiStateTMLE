@@ -88,8 +88,21 @@ influence curves.</p></dd>
 <dd><p>See <code><a href="calibration_curve.html">calibration_curve()</a></code>.</p></dd>
 
 
-<dt id="arg-z-name-alpha-grid-min-iter-target-by-state-block-size-z-block-size-target">z.name, alpha.grid, min.iter, target.by.state, block.size.z, block.size.target<a class="anchor" aria-label="anchor" href="#arg-z-name-alpha-grid-min-iter-target-by-state-block-size-z-block-size-target"></a></dt>
-<dd><p>See the snake_case equivalents in <code><a href="calibration_curve.html">calibration_curve()</a></code>.</p></dd>
+<dt id="arg-z-name-alpha-grid">z.name, alpha.grid<a class="anchor" aria-label="anchor" href="#arg-z-name-alpha-grid"></a></dt>
+<dd><p>See the snake_case equivalents in
+<code><a href="calibration_curve.html">calibration_curve()</a></code>.</p></dd>
+
+
+<dt id="arg-min-iter-target-by-state">min.iter, target.by.state<a class="anchor" aria-label="anchor" href="#arg-min-iter-target-by-state"></a></dt>
+<dd><p>See the snake_case equivalents in the
+<code>control</code> of <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
+
+
+<dt id="arg-block-size-z-block-size-target">block.size.z, block.size.target<a class="anchor" aria-label="anchor" href="#arg-block-size-z-block-size-target"></a></dt>
+<dd><p>If given,
+<code>exposure_estimand = "years_lost"</code> and <code>estimand = "years_lost"</code>,
+respectively, in <code><a href="calibration_curve.html">calibration_curve()</a></code>, with this <code>control$block_size</code>.
+If both are given, they must be equal.</p></dd>
 
 
 <dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>

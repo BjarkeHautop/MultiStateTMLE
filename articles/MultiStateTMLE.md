@@ -95,16 +95,18 @@ fit_types <- list(
 )
 
 fit <- fit_initial(illness_death, fit_types = fit_types, tau = 1)
-fit$process_types
-#> $z
-#> [1] "one_jump"
+fit
+#> Initial fit of 150 individuals up to tau = 1
 #> 
-#> $death
-#> [1] "terminal"
-#> 
-#> $censoring
-#> [1] "terminal"
+#>         name delta     type   model at_risk
+#>       <char> <num>   <char>  <char>  <lgcl>
+#> 1:         z     2 one_jump     ~L0    TRUE
+#> 2:     death     1 terminal ~L0 + z   FALSE
+#> 3: censoring     0 terminal     ~L0   FALSE
 ```
+
+The `type` of each process is inferred from the data: death and
+censoring end follow-up, and the illness occurs at most once.
 
 By default the hazards are fitted with Cox models. Setting `fit = "hal"`
 in a process’s entry uses the highly adaptive lasso instead
@@ -120,31 +122,46 @@ death by time 1:
 
 ``` r
 
-observed <- tmle_alpha(fit, target = "death", alpha = 1, z_name = "z")
-observed$estimate
-#>   tmle_est         se      g_est 
-#> 0.32504691 0.03906316 0.32504691
+observed <- tmle_alpha(fit, target = "death", alpha = 1)
+observed
+#> TMLE estimate without intervention
+#> 
+#>    target  estimate         se     lower     upper
+#>    <char>     <num>      <num>     <num>     <num>
+#> 1:  death 0.3250469 0.03906316 0.2484845 0.4016093
+#> 
+#> Initial estimate: 0.325; converged after 1 iterations
 ```
 
-The estimate contains the targeted estimate `tmle_est`, its standard
-error `se`, and the initial plug-in estimate `g_est`. Halving the
-intensity of the illness gives:
+The printed table gives the targeted estimate with its standard error
+and a 95% confidence interval, and it is stored as `observed$estimate`.
+Halving the intensity of the illness gives:
 
 ``` r
 
 halved <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
-halved$estimate
-#>   tmle_est         se      g_est 
-#> 0.30405495 0.03853505 0.31239982
+halved
+#> TMLE estimate under alpha = 0.5 on z
+#> 
+#>    target  estimate         se     lower     upper
+#>    <char>     <num>      <num>     <num>     <num>
+#> 1:  death 0.3040549 0.03853505 0.2285276 0.3795823
+#> 
+#> Initial estimate: 0.3124; converged after 2 iterations
 ```
 
-A 95% confidence interval follows from the standard error:
+[`coef()`](https://rdrr.io/r/stats/coef.html) and
+[`confint()`](https://rdrr.io/r/stats/confint.html) extract the estimate
+and confidence intervals at other levels:
 
 ``` r
 
-est <- halved$estimate
-est[["tmle_est"]] + c(-1, 1) * qnorm(0.975) * est[["se"]]
-#> [1] 0.2285276 0.3795823
+coef(halved)
+#>     death 
+#> 0.3040549
+confint(halved, level = 0.9)
+#>             5 %      95 %
+#> death 0.2406704 0.3674395
 ```
 
 Setting `alpha = 0` removes the illness altogether, while `alpha > 1`
@@ -168,14 +185,22 @@ curve <- calibration_curve(
   alpha_grid = c(0, 0.25, 0.5, 1, 1.5, 2)
 )
 curve$estimate
-#>    alpha exposure_est exposure_se target_est  target_se
-#>    <num>        <num>       <num>      <num>      <num>
-#> 1:  0.00   0.00000000 0.000000000  0.2820265 0.03975707
-#> 2:  0.25   0.04556128 0.009650541  0.2933270 0.03917784
-#> 3:  0.50   0.08791201 0.017915870  0.3040549 0.03896630
-#> 4:  1.00   0.16448600 0.031315003  0.3239449 0.03949105
-#> 5:  1.50   0.23212809 0.041662682  0.3419800 0.04090885
-#> 6:  2.00   0.29250854 0.049801208  0.3584115 0.04287637
+#>    alpha target exposure_estimate exposure_se  estimate         se     lower
+#>    <num> <char>             <num>       <num>     <num>      <num>     <num>
+#> 1:  0.00  death        0.00000000 0.000000000 0.2820265 0.03975707 0.2041041
+#> 2:  0.25  death        0.04391205 0.009617945 0.2933270 0.03919098 0.2165141
+#> 3:  0.50  death        0.08486244 0.017876912 0.3040549 0.03899060 0.2276348
+#> 4:  1.00  death        0.15891283 0.031321396 0.3250469 0.03915660 0.2483014
+#> 5:  1.50  death        0.23212809 0.041662682 0.3367827 0.04049368 0.2574166
+#> 6:  2.00  death        0.29250854 0.049801208 0.3584115 0.04287637 0.2743753
+#>        upper
+#>        <num>
+#> 1: 0.3599489
+#> 2: 0.3701399
+#> 3: 0.3804751
+#> 4: 0.4017924
+#> 5: 0.4161489
+#> 6: 0.4424476
 ```
 
 Plotting the target risk against the exposure risk traces out the
@@ -184,19 +209,17 @@ calibration curve:
 ``` r
 
 ce <- curve$estimate
-lower <- ce$target_est - qnorm(0.975) * ce$target_se
-upper <- ce$target_est + qnorm(0.975) * ce$target_se
 
 plot(
-  ce$exposure_est,
-  ce$target_est,
+  ce$exposure_estimate,
+  ce$estimate,
   type = "b",
   pch = 19,
-  ylim = range(lower, upper),
+  ylim = range(ce$lower, ce$upper),
   xlab = "Risk of illness by time 1",
   ylab = "Risk of death by time 1"
 )
-arrows(ce$exposure_est, lower, ce$exposure_est, upper,
+arrows(ce$exposure_estimate, ce$lower, ce$exposure_estimate, ce$upper,
   angle = 90, code = 3, length = 0.04
 )
 ```
@@ -209,33 +232,64 @@ illness.](MultiStateTMLE_files/figure-html/calibration-plot-1.png)
 ## Step 4: Calibrate the intervention
 
 [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md)
-solves for the `alpha` that achieves a given exposure risk and estimates
-the target risk under that intervention. The calibration target is given
-by exactly one of:
+solves for the `alpha` that achieves a given exposure risk `theta` and
+estimates the target risk under that intervention. The calibration
+target is given by a `value` on a `scale`:
 
-- `theta`: the risk of `z_name` itself.
-- `rho`: a fraction of the observed risk of `z_name`.
-- `delta`: an absolute difference from the observed risk of `z_name`.
-- `rho_1a`: a fraction of the risk of `z_name` under the opposite
-  baseline treatment (see the next section).
+- `"absolute"`: `theta = value`.
+- `"ratio"`: `theta` is `value` times the observed risk of `z_name`.
+- `"difference"`: `theta` is `value` plus the observed risk of `z_name`.
 
 For example, the risk of death if the risk of illness were reduced to
 80% of its observed value:
 
 ``` r
 
-cal <- calibrate_alpha(fit, target = "death", z_name = "z", rho = 0.8)
-cal$estimate
-#>       alpha_est        alpha_se      target_est       target_se target_se_crude 
-#>      0.79272380      0.00995552      0.31992034      0.03864198      0.03866085 
-#>           theta        theta_se 
-#>      0.12713026      0.02505712
+cal <- calibrate_alpha(
+  fit,
+  target = "death",
+  z_name = "z",
+  value = 0.8,
+  scale = "ratio"
+)
+cal
+#> Calibrated intervention on z
+#> 
+#>    quantity  estimate         se      lower     upper
+#>      <char>     <num>      <num>      <num>     <num>
+#> 1:    alpha 0.7927238 0.00995552 0.77321133 0.8122363
+#> 2:    theta 0.1271303 0.02505712 0.07801922 0.1762413
+#> 
+#> Estimates under the calibrated intervention:
+#>    target  estimate         se     lower     upper   se_crude
+#>    <char>     <num>      <num>     <num>     <num>      <num>
+#> 1:  death 0.3199203 0.03864198 0.2441835 0.3956572 0.03866085
 ```
 
-Here `alpha_est` is the calibrated intervention, `theta` is the exposure
-risk it achieves, and `target_est` is the risk of death under it. The
-standard error `target_se` accounts for `alpha` being estimated, whereas
-`target_se_crude` treats it as known.
+The first table gives the calibrated intervention `alpha` and the
+exposure risk `theta` it achieves, and the second the risk of death
+under it. Its standard error `se` accounts for `alpha` being estimated,
+whereas `se_crude` treats it as known.
+
+The target can also be the expected years of life lost before `tau`
+rather than the risk of death, with `estimand = "years_lost"`. The
+exposure is still calibrated on its risk, unless `exposure_estimand`
+says otherwise:
+
+``` r
+
+calibrate_alpha(
+  fit,
+  target = "death",
+  z_name = "z",
+  value = 0.8,
+  scale = "ratio",
+  estimand = "years_lost"
+)$estimate
+#>    target  estimate         se     lower     upper   se_crude
+#>    <char>     <num>      <num>     <num>     <num>      <num>
+#> 1:  death 0.1644942 0.02295448 0.1195042 0.2094842 0.02295436
+```
 
 ## Step 5: Decompose a treatment effect
 
@@ -252,8 +306,10 @@ then decomposes the total effect into:
 
 `illness_death` has no treatment, so for illustration we add a
 randomised treatment that has no actual effect. The treatment model is
-given in `treatment_model`, and `a` lists the treatment values to
-prepare estimates for.
+given in `treatment_model`, and
+[`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
+then prepares estimates under both treatment values, `a = 0` and
+`a = 1`.
 
 ``` r
 
@@ -274,44 +330,38 @@ fit_treated <- fit_initial(
     censoring = list(delta = 0, model = ~L0)
   ),
   tau = 1,
-  treatment_model = A0 ~ L0,
-  a = 0:1
+  treatment_model = A0 ~ L0
 )
 ```
 
 The contrasts are computed from the influence curves that each fit
-returns. In the calibrated arm we set `a = 1` and `rho_1a = 1`, so the
-risk of illness under treatment is calibrated to equal the risk of
-illness under placebo:
+returns. In the calibrated arm we set `a = 1` and calibrate to a ratio
+of 1 to the risk of illness under placebo, `reference_a = 0`, so the
+risk of illness under treatment is calibrated to equal that under
+placebo:
 
 ``` r
 
-treatment_fit <- tmle_alpha(
-  fit_treated,
-  target = "death",
-  alpha = 1,
-  a = 1
-)
-placebo_fit <- tmle_alpha(
-  fit_treated,
-  target = "death",
-  alpha = 1,
-  a = 0
-)
+treatment_fit <- tmle_alpha(fit_treated, target = "death", a = 1)
+placebo_fit <- tmle_alpha(fit_treated, target = "death", a = 0)
 calibrated_fit <- calibrate_alpha(
   fit_treated,
   target = "death",
   z_name = "z",
-  rho_1a = 1,
-  a = 1
+  value = 1,
+  scale = "ratio",
+  a = 1,
+  reference_a = 0
 )
 
 calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
+#> Decomposition of the effect of a on death into mediated and calibrated contrasts
+#> 
 #>    target   contrast   estimate         se       lower      upper
 #>    <char>     <char>      <num>      <num>       <num>      <num>
-#> 1:   <NA>      total -0.1405813 0.07724416 -0.29197704 0.01081449
-#> 2:   <NA>   mediated -0.0234265 0.01632300 -0.05541899 0.00856599
-#> 3:   <NA> calibrated -0.1171548 0.08141345 -0.27672220 0.04241266
+#> 1:  death      total -0.1405813 0.07724416 -0.29197704 0.01081449
+#> 2:  death   mediated -0.0234265 0.01632300 -0.05541899 0.00856599
+#> 3:  death calibrated -0.1171548 0.08141345 -0.27672220 0.04241266
 ```
 
 The treatment was randomised without any effect, so the confidence
@@ -320,7 +370,7 @@ intervals of all three contrasts cover zero, as expected.
 ## Further reading
 
 - The function reference documents further options, such as recurrent
-  targets, expected time lost (`years_lost`), and time-varying
+  targets, only counting first events (`only_first`), and time-varying
   interventions (`alpha_list`).
 - To simulate multistate event history data, see the
   [simevent](https://github.com/BjarkeHautop/simevent) package.

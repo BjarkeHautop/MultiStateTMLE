@@ -23,8 +23,6 @@ Targeting the initial fit under a stochastic intensity intervention.
 
 - [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
   : Targeted estimation under a stochastic intensity intervention
-- [`estimate_derivative()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate_derivative.md)
-  : Estimate the derivative of an estimate with respect to alpha
 
 ## Calibration
 
@@ -35,10 +33,24 @@ decomposing treatment effects into calibrated contrasts.
   : Calibrate an intensity intervention to a target value
 - [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md)
   : Trace the calibration curve over a grid of interventions
-- [`solve_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/solve_alpha.md)
-  : Solve for the intervention achieving a target value
 - [`calibrated_contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.md)
   : Decompose a treatment effect into mediated and calibrated contrasts
+
+## Results
+
+Printing, extracting estimates from, and computing confidence intervals
+for the result objects.
+
+- [`print(`*`<initial_fit>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`print(`*`<tmle_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`print(`*`<calibrate_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`print(`*`<calibration_curve>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`print(`*`<calibrated_contrasts>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`coef(`*`<tmle_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`coef(`*`<calibrate_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`confint(`*`<tmle_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`confint(`*`<calibrate_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  : Methods for the result objects
 
 ## Data
 
@@ -61,9 +73,9 @@ in the future.
 - [`calibration.curve.fun()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration.curve.fun.md)
   : Calibration curve over a grid of interventions (deprecated)
 - [`estimate.alpha.fun()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate.alpha.fun.md)
-  : Search for the alpha achieving a target value (deprecated)
+  : Search for the alpha achieving a target value (defunct)
 - [`estimate.derivative()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate.derivative.md)
-  : Estimate the derivative with respect to alpha (deprecated)
+  : Estimate the derivative with respect to alpha (defunct)
 - [`make.calibrated.contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/make.calibrated.contrasts.md)
   : Total, mediated and calibrated contrasts (deprecated)
 - [`compute.Q.clever.per.id()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/compute.Q.clever.per.id.md)

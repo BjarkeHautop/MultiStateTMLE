@@ -86,8 +86,14 @@ tmle_alpha() instead."></head><body>
 <code>initial.fit</code>.</p></dd>
 
 
-<dt id="arg-z-name-alpha-list-years-lost-target-only-in-state-target-by-state-conv-const-one-step-max-iter-min-iter-truncate-weights">z.name, alpha.list, years.lost, target.only.in.state, target.by.state, conv.const, one.step, max.iter, min.iter, truncate.weights<a class="anchor" aria-label="anchor" href="#arg-z-name-alpha-list-years-lost-target-only-in-state-target-by-state-conv-const-one-step-max-iter-min-iter-truncate-weights"></a></dt>
-<dd><p>See the snake_case equivalents in <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
+<dt id="arg-z-name">z.name<a class="anchor" aria-label="anchor" href="#arg-z-name"></a></dt>
+<dd><p>See <code>z_name</code> in <code><a href="tmle_alpha.html">tmle_alpha()</a></code>. If <code>initial.fit</code> has no
+such process, <code>z.name</code> is ignored, as is <code>alpha</code> with a warning.</p></dd>
+
+
+<dt id="arg-alpha-list-target-only-in-state-target-by-state-conv-const-one-step-max-iter-min-iter-truncate-weights">alpha.list, target.only.in.state, target.by.state, conv.const, one.step, max.iter, min.iter, truncate.weights<a class="anchor" aria-label="anchor" href="#arg-alpha-list-target-only-in-state-target-by-state-conv-const-one-step-max-iter-min-iter-truncate-weights"></a></dt>
+<dd><p>See the snake_case equivalents in <code><a href="tmle_alpha.html">tmle_alpha()</a></code> and its <code>control</code>;
+<code>truncate.weights = 0</code> is no truncation.</p></dd>
 
 
 <dt id="arg-initial-fit">initial.fit<a class="anchor" aria-label="anchor" href="#arg-initial-fit"></a></dt>
@@ -97,6 +103,11 @@ computed by <code>prepare.initial(tau = tau, a = a, verbose = verbose, ...)</cod
 
 <dt id="arg-dt-browse-verbose-exponential">dt, browse, verbose.exponential<a class="anchor" aria-label="anchor" href="#arg-dt-browse-verbose-exponential"></a></dt>
 <dd><p>Ignored.</p></dd>
+
+
+<dt id="arg-years-lost">years.lost<a class="anchor" aria-label="anchor" href="#arg-years-lost"></a></dt>
+<dd><p>If given, <code>estimand = "years_lost"</code> with
+<code>control$block_size = years.lost</code> in <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
 
 
 <dt id="arg-only-first">only.first<a class="anchor" aria-label="anchor" href="#arg-only-first"></a></dt>

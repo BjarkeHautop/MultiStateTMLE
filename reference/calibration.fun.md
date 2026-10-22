@@ -33,6 +33,14 @@ calibration.fun(
   See `initial_fit` in
   [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md).
 
+- theta, rho, delta, rho.1a:
+
+  The calibration target: `theta` with `scale = "absolute"`, `rho` with
+  `scale = "ratio"`, `delta` with `scale = "difference"`, or `rho.1a`
+  with `scale = "ratio"` and `reference_a = 1 - a` in
+  [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md).
+  `theta` is ignored if one of the others is given.
+
 - output.eic:
 
   Ignored;
@@ -48,15 +56,14 @@ calibration.fun(
   See `cores` in
   [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md).
 
-- target, a, theta, rho, delta, verbose:
+- target, a, verbose:
 
   See
   [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md).
-  `theta` is ignored if `rho`, `delta` or `rho.1a` is given.
 
-- z.name, rho.1a:
+- z.name:
 
-  See the snake_case equivalents in
+  See `z_name` in
   [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md).
 
 - ...:

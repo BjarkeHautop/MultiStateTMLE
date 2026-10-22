@@ -49,11 +49,19 @@ tmle.alpha.fun(
   Only used when `initial.fit` is `NULL`; the horizon is that of
   `initial.fit`.
 
-- z.name, alpha.list, years.lost, target.only.in.state, target.by.state,
-  conv.const, one.step, max.iter, min.iter, truncate.weights:
+- z.name:
+
+  See `z_name` in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
+  If `initial.fit` has no such process, `z.name` is ignored, as is
+  `alpha` with a warning.
+
+- alpha.list, target.only.in.state, target.by.state, conv.const,
+  one.step, max.iter, min.iter, truncate.weights:
 
   See the snake_case equivalents in
-  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
+  and its `control`; `truncate.weights = 0` is no truncation.
 
 - initial.fit:
 
@@ -65,6 +73,12 @@ tmle.alpha.fun(
 - dt, browse, verbose.exponential:
 
   Ignored.
+
+- years.lost:
+
+  If given, `estimand = "years_lost"` with
+  `control$block_size = years.lost` in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
 - only.first:
 

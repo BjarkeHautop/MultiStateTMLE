@@ -60,12 +60,11 @@ processes' hazards depend on. The result is the input to <code><a href="tmle_alp
 <span>  <span class="va">fit_types</span>,</span>
 <span>  <span class="va">tau</span>,</span>
 <span>  treatment_model <span class="op">=</span> <span class="cn">NULL</span>,</span>
-<span>  a <span class="op">=</span> <span class="cn">NULL</span>,</span>
+<span>  arms <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_count <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  derived_vars <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  depend_time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  prune_states <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  use_exponential <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  hal_control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  cores <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
@@ -105,16 +104,17 @@ evaluated at <code>tau</code>.</p></dd>
 
 
 <dt id="arg-treatment-model">treatment_model<a class="anchor" aria-label="anchor" href="#arg-treatment-model"></a></dt>
-<dd><p>Optional model for the baseline treatment, either
-a formula such as <code>A0 ~ L0</code> or a list with elements <code>model</code> (such a
-formula) and <code>fit</code> (only <code>"glm"</code> is supported). Required when <code>a</code> is
-given.</p></dd>
+<dd><p>Optional logistic regression model for the
+baseline treatment, a two-sided formula such as <code>A0 ~ L0</code>. Required when
+<code>arms</code> is given.</p></dd>
 
 
-<dt id="arg-a">a<a class="anchor" aria-label="anchor" href="#arg-a"></a></dt>
-<dd><p>Optional integer vector of baseline treatment values (<code>0</code>/<code>1</code>)
-to compute interventional hazards and clever weights for. Each value
-can then be passed as <code>a</code> to <code><a href="tmle_alpha.html">tmle_alpha()</a></code>.</p></dd>
+<dt id="arg-arms">arms<a class="anchor" aria-label="anchor" href="#arg-arms"></a></dt>
+<dd><p>Integer vector of the baseline treatment values (<code>0</code>/<code>1</code>) to
+prepare interventional hazards and clever weights for. Each value can
+then be passed as <code>a</code> to <code><a href="tmle_alpha.html">tmle_alpha()</a></code>, <code><a href="calibrate_alpha.html">calibrate_alpha()</a></code> and
+<code><a href="calibration_curve.html">calibration_curve()</a></code>. Defaults to both values, <code>0:1</code>, when
+<code>treatment_model</code> is given.</p></dd>
 
 
 <dt id="arg-max-count">max_count<a class="anchor" aria-label="anchor" href="#arg-max-count"></a></dt>
@@ -123,24 +123,27 @@ recurrent process in the state space.</p></dd>
 
 
 <dt id="arg-derived-vars">derived_vars<a class="anchor" aria-label="anchor" href="#arg-derived-vars"></a></dt>
-<dd><p>Named list of functions of the data deriving
-additional state variables.</p></dd>
+<dd><p>Named list of functions of the data, each deriving an
+additional state variable, named by the list, that can be used in the
+<code>model</code>s of <code>fit_types</code>.</p></dd>
 
 
 <dt id="arg-depend-time">depend_time<a class="anchor" aria-label="anchor" href="#arg-depend-time"></a></dt>
-<dd><p>Named list of functions describing dependence on the
-time since a jump of a process, keyed by process name.</p></dd>
+<dd><p>Experimental, and may change. Named list of functions
+making hazards depend on the time of a jump. Each is named by a state
+variable: a process <code>z</code> that jumps once, or <code>z.k</code> for the <code>k</code>th jump of
+a recurrent process <code>z</code>. It adds the covariate <code>T.&lt;name&gt;</code>, <code>0</code> before
+that jump and the function applied to the time of the jump after it,
+which can be used (as a factor) in the <code>model</code>s of <code>fit_types</code>.</p></dd>
 
 
-<dt id="arg-prune-states">prune_states<a class="anchor" aria-label="anchor" href="#arg-prune-states"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, prune states not admissible under
-the <code>at_risk</code> functions of <code>fit_types</code>.</p></dd>
-
-
-<dt id="arg-use-exponential">use_exponential<a class="anchor" aria-label="anchor" href="#arg-use-exponential"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, always transform the hazard
-increments <code>dH</code> to probabilities <code>1 - exp(-dH)</code>. Otherwise this is only
-done if some increments exceed 1.</p></dd>
+<dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
+<dd><p>A named list of tuning settings:</p><ul><li><p><code>prune_states</code> (<code>FALSE</code>): if <code>TRUE</code>, prune states not admissible
+under the <code>at_risk</code> functions of <code>fit_types</code>.</p></li>
+<li><p><code>use_exponential</code> (<code>FALSE</code>): if <code>TRUE</code>, always transform the hazard
+increments <code>dH</code> to probabilities <code>1 - exp(-dH)</code>. Otherwise this is
+only done if some increments exceed 1.</p></li>
+</ul></dd>
 
 
 <dt id="arg-hal-control">hal_control<a class="anchor" aria-label="anchor" href="#arg-hal-control"></a></dt>
@@ -159,10 +162,16 @@ done if some increments exceed 1.</p></dd>
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>A list containing, among others, <code>tmp_long</code> (the expanded data
-with fitted hazards and clever weights), <code>depend_matrix</code> (the product
-state space), <code>process_names</code>, <code>process_types</code>, <code>process_deltas</code>,
-<code>cens_process_id</code> and <code>at_risks</code>.</p>
+    <p>An object of class <code>initial_fit</code>, a list with elements:</p><ul><li><p><code>n</code>: the number of individuals.</p></li>
+<li><p><code>tau</code>, <code>treatment_model</code> and <code>arms</code>: as given (<code>arms</code> with its
+default filled in).</p></li>
+<li><p><code>processes</code>: a <code>data.table</code> with one row per process and columns
+<code>name</code>, <code>delta</code>, <code>type</code> (<code>"terminal"</code>, <code>"recurrent"</code> or
+<code>"one_jump"</code>, inferred from the data), <code>model</code> and <code>at_risk</code>
+(whether an <code>at_risk</code> function was given).</p></li>
+</ul><p>It also contains the internal elements used by <code><a href="tmle_alpha.html">tmle_alpha()</a></code>, among
+them <code>tmp_long</code> (the expanded data with fitted hazards and clever
+weights) and <code>depend_matrix</code> (the product state space).</p>
     </div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
@@ -204,16 +213,14 @@ parentheses.</p>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  tau <span class="op">=</span> <span class="fl">1</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">fit</span><span class="op">$</span><span class="va">process_types</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $z</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "one_jump"</span>
+<span class="r-in"><span><span class="va">fit</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Initial fit of 150 individuals up to tau = 1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $death</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "terminal"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> $censoring</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] "terminal"</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         name delta     type   model at_risk</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt; &lt;num&gt;   &lt;char&gt;  &lt;char&gt;  &lt;lgcl&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:         z     2 one_jump     ~L0    TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     death     1 terminal ~L0 + z   FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: censoring     0 terminal     ~L0   FALSE</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

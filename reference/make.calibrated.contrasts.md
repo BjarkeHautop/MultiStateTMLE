@@ -21,12 +21,18 @@ make.calibrated.contrasts(
 
 - target:
 
-  See
-  [`calibrated_contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.md).
+  If given, must be the target of `treatment.fit`, which
+  [`calibrated_contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.md)
+  always uses.
 
-- treatment.fit, placebo.fit, calibrated.fit, conf.level:
+- treatment.fit, placebo.fit, calibrated.fit:
 
   See the snake_case equivalents in
+  [`calibrated_contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.md).
+
+- conf.level:
+
+  See `level` in
   [`calibrated_contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.md).
 
 ## Value

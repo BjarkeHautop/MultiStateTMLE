@@ -13,16 +13,14 @@ calibrating to the estimated exposure risk rather than to `alpha`.
 calibration_curve(
   initial_fit,
   target,
-  z_name = "z",
+  z_name,
   alpha_grid = seq(0, 5, length.out = 10),
   a = NULL,
-  min_iter = 1,
-  target_by_state = FALSE,
-  block_size_z = NULL,
-  block_size_target = NULL,
+  estimand = c("risk", "years_lost"),
+  exposure_estimand = c("risk", "years_lost"),
+  control = list(),
   cores = 1,
-  verbose = FALSE,
-  ...
+  verbose = FALSE
 )
 ```
 
@@ -39,8 +37,8 @@ calibration_curve(
 
 - z_name:
 
-  String. Name of the process whose intensity `alpha` scales. If no such
-  process exists in `initial_fit`, `alpha` is ignored with a warning.
+  String. Name of the process in `initial_fit` whose intensity
+  `alpha_grid` scales.
 
 - alpha_grid:
 
@@ -49,24 +47,22 @@ calibration_curve(
 - a:
 
   Optional baseline treatment value (`0` or `1`) to intervene on. Must
-  be one of the values of `a` given to
+  be one of the `arms` prepared by
   [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
 
-- min_iter:
+- estimand:
 
-  Non-negative integer. Minimum number of TMLE iterations, passed on to
+  The target parameter for `target`, as in
   [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
-- target_by_state:
+- exposure_estimand:
 
-  Logical. If `TRUE`, use state-specific clever covariates in the
-  targeting step.
+  The target parameter for the exposure `z_name`, as in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
-- block_size_z, block_size_target:
+- control:
 
-  Optional positive integers. If given, the expected time lost is
-  estimated for `z_name` and `target`, respectively, instead of the
-  risk; see `years_lost` in
+  Settings for the estimates, passed on to
   [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
 
 - cores:
@@ -79,24 +75,28 @@ calibration_curve(
 
   Logical. If `TRUE`, print progress.
 
-- ...:
-
-  Further arguments passed on to
-  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md).
-
 ## Value
 
-A list with elements:
+An object of class `calibration_curve`, a list with elements:
 
 - `estimate`: a `data.table` with one row per value of `alpha_grid` and
-  columns `alpha`, `exposure_est`, `exposure_se`, `target_est` and
-  `target_se` (suffixed by `_<target>` when there are several targets).
+  `target`, and columns `alpha`, `target`, the risk of `z_name`
+  (`exposure_estimate`, with standard error `exposure_se`), and the risk
+  of `target` (`estimate`, with standard error `se` and the bounds
+  `lower` and `upper` of a 95% Wald confidence interval).
 
-- `checks`: per value of `alpha_grid`, the estimated derivatives of the
-  exposure and target estimates with respect to `alpha`.
+- `z_name`, `a`, `estimand` and `exposure_estimand`: as given.
 
-- `eics`: per value of `alpha_grid`, the influence curves `alpha_eic`,
-  `calibration_eic`, `target_eic` and `eic`.
+- `checks`: a `data.table` with the estimated derivatives with respect
+  to `alpha` of the exposure (`derivative_exposure`) and target
+  (`derivative_target`) estimates, per `alpha` and `target`.
+
+- `eic`: a list with, per value of `alpha_grid`, the influence curves of
+  the exposure estimate (`exposure_eic`), of `alpha` calibrated to it
+  (`alpha_eic`), and lists named by target of the target estimates
+  accounting for its calibration (`eic`) and treating `alpha` as known
+  (`eic_alpha_known`), as in
+  [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md).
 
 ## Examples
 
@@ -122,9 +122,14 @@ curve <- calibration_curve(
   alpha_grid = c(0, 0.5, 1)
 )
 curve$estimate
-#>    alpha exposure_est exposure_se target_est  target_se
-#>    <num>        <num>       <num>      <num>      <num>
-#> 1:   0.0   0.00000000  0.00000000  0.2820265 0.03975707
-#> 2:   0.5   0.08791201  0.01791587  0.3040549 0.03896630
-#> 3:   1.0   0.16448600  0.03131500  0.3239449 0.03949105
+#>    alpha target exposure_estimate exposure_se  estimate         se     lower
+#>    <num> <char>             <num>       <num>     <num>      <num>     <num>
+#> 1:   0.0  death        0.00000000  0.00000000 0.2820265 0.03975707 0.2041041
+#> 2:   0.5  death        0.08486244  0.01787691 0.3040549 0.03899060 0.2276348
+#> 3:   1.0  death        0.15891283  0.03132140 0.3250469 0.03915660 0.2483014
+#>        upper
+#>        <num>
+#> 1: 0.3599489
+#> 2: 0.3804751
+#> 3: 0.4017924
 ```

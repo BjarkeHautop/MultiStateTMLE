@@ -13,19 +13,14 @@ is updated by iterative targeted maximum likelihood estimation (TMLE).
 tmle_alpha(
   initial_fit,
   target,
+  z_name = NULL,
   alpha = 1,
-  z_name = "z",
   alpha_list = NULL,
   a = NULL,
-  years_lost = NULL,
+  estimand = c("risk", "years_lost"),
   only_first = FALSE,
   target_only_in_state = NULL,
-  target_by_state = FALSE,
-  conv_const = 1,
-  one_step = FALSE,
-  max_iter = 10,
-  min_iter = 0,
-  truncate_weights = 0,
+  control = list(),
   cores = 1,
   verbose = FALSE
 )
@@ -42,36 +37,40 @@ tmle_alpha(
 
   String. Name of the target process.
 
+- z_name:
+
+  String. Name of the process in `initial_fit` whose intensity `alpha`
+  scales. Required unless `alpha = 1` or `alpha_list` is given.
+
 - alpha:
 
   Non-negative number. Multiplicative intervention on the intensity of
-  `z_name`. `alpha = 1` is no intervention. Ignored if `alpha_list` is
-  given.
-
-- z_name:
-
-  String. Name of the process whose intensity `alpha` scales. If no such
-  process exists in `initial_fit`, `alpha` is ignored with a warning.
+  `z_name`. `alpha = 1` is no intervention.
 
 - alpha_list:
 
-  Experimental. Optional named list of functions, one per process,
-  giving a time-varying intervention on that process's intensity. Each
-  function's arguments name the columns of `initial_fit$tmp_long` it
-  depends on. Supersedes `alpha` and `z_name`.
+  Experimental, and may change. Optional named list of functions, one
+  per process, giving a time-varying multiplicative intervention on that
+  process's intensity. Each function is called with the columns of
+  `initial_fit$tmp_long` named by its arguments, e.g. `time`, a baseline
+  covariate such as `L0`, or a process such as `z` (its number of jumps
+  so far), and must return one non-negative factor per row. For example,
+  `list(z = function(time) ifelse(time < 0.5, 0.5, 1))` halves the
+  intensity of `z` before time 0.5. Cannot be combined with `alpha` and
+  `z_name`.
 
 - a:
 
   Optional baseline treatment value (`0` or `1`) to intervene on. Must
-  be one of the values of `a` given to
+  be one of the `arms` prepared by
   [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
 
-- years_lost:
+- estimand:
 
-  Optional positive integer. If given, the target parameter is the
-  expected time lost (the integral of the risk of `target` up to `tau`)
-  instead of the risk at `tau`. The integral is approximated with blocks
-  of `years_lost` time points.
+  The target parameter: `"risk"`, the risk of `target` by `tau` (or the
+  expected number of events for a recurrent `target`), or
+  `"years_lost"`, the expected time lost, i.e. the integral of the risk
+  of `target` up to `tau`.
 
 - only_first:
 
@@ -80,38 +79,41 @@ tmle_alpha(
 
 - target_only_in_state:
 
-  Optional function of the state space (`initial_fit$depend_matrix`)
-  returning a logical vector, marking the states in which `target`
-  events count.
+  Experimental, and may change. Optional function of the state space
+  `initial_fit$depend_matrix`, a data frame with one row per state and a
+  column per process that other processes depend on (its number of
+  jumps), returning a logical vector marking the states in which
+  `target` events count. For example,
+  `function(states) states[["z"]] == 0` counts only deaths before
+  illness.
 
-- target_by_state:
+- control:
 
-  Logical. If `TRUE`, use state-specific clever covariates in the
-  targeting step.
+  A named list of settings for how the estimate is computed:
 
-- conv_const:
+  - `one_step` (`FALSE`): if `TRUE`, return the one-step estimator
+    instead of iterating the TMLE update.
 
-  Positive number. The TMLE iterations stop when the absolute mean of
-  the efficient influence curve falls below `conv_const * se / log(n)`.
+  - `block_size` (`10`): positive integer. For
+    `estimand = "years_lost"`, the integral is approximated by
+    evaluating the risk once per block of `block_size` consecutive time
+    points. `1` gives the exact integral of the estimated risk; the
+    computation time is roughly proportional to `1 / block_size`.
 
-- one_step:
+  - `target_by_state` (`FALSE`): if `TRUE`, use state-specific clever
+    covariates in the targeting step.
 
-  Logical. If `TRUE`, return the one-step estimator instead of iterating
-  the TMLE update.
+  - `conv_const` (`1`): positive number. The TMLE iterations stop when
+    the absolute mean of the efficient influence curve falls below
+    `conv_const * se / log(n)`.
 
-- max_iter:
+  - `max_iter` (`10`): maximum number of TMLE iterations.
 
-  Positive integer. Maximum number of TMLE iterations.
+  - `min_iter` (`0`): minimum number of TMLE iterations before checking
+    convergence.
 
-- min_iter:
-
-  Non-negative integer. Minimum number of TMLE iterations before
-  checking convergence.
-
-- truncate_weights:
-
-  Non-negative number. If positive, the clever weights of the
-  intervention are truncated at this value.
+  - `truncate_weights` (`Inf`): positive number at which the clever
+    weights of the intervention are truncated. `Inf` is no truncation.
 
 - cores:
 
@@ -125,28 +127,42 @@ tmle_alpha(
 
 ## Value
 
-A list with elements:
+An object of class `tmle_alpha`, a list with elements:
 
-- `estimate`: a named vector with the estimate (`tmle_est`, or
-  `one_step_est` if `one_step = TRUE`), its standard error `se`, and the
-  initial plug-in estimate `g_est`.
+- `estimate`: a `data.table` with columns `target`, `estimate`, its
+  standard error `se`, and the bounds `lower` and `upper` of a 95% Wald
+  confidence interval.
 
-- `eic`: the efficient influence curve, one value per individual.
+- `initial_estimate`: the initial plug-in estimate, before targeting.
 
-- `convergence`: a named vector with the number of iterations `iter`,
-  the absolute mean of the efficient influence curve `eic_solved_at`,
-  and whether the iterations `converged`. A warning is given if they did
-  not.
+- `method`: `"tmle"`, or `"one_step"` if `control$one_step = TRUE`.
 
-- `weights`: a matrix with the quantiles (columns `q50`, `q90`, `q99`
-  and `q100`) over individuals of each individual's maximal
-  `intervention`, `censoring` and `treatment` weight, and of their
-  product `total`, the weight entering the targeting step (rows), as a
-  positivity diagnostic. The intervention weights are those after
-  truncation, and the treatment weights are 1 when `a` is not given.
+- `estimand`: as given.
 
-- `n_truncated`: the number of individuals whose initial intervention
-  weight was truncated (0 if `truncate_weights = 0`).
+- `alpha`, `z_name` and `a`: the intervention (`alpha` is `NULL` if
+  `alpha_list` is given).
+
+- `eic`: a list, named by `target`, with the efficient influence curve,
+  one value per individual.
+
+- `checks`: a list of diagnostics:
+
+  - `iter`: the number of iterations.
+
+  - `eic_solved_at`: the absolute mean of the efficient influence curve.
+
+  - `converged`: whether the iterations converged. A warning is given if
+    they did not.
+
+  - `weights`: a matrix with the quantiles (columns `q50`, `q90`, `q99`
+    and `q100`) over individuals of each individual's maximal
+    `intervention`, `censoring` and `treatment` weight, and of their
+    product `total`, the weight entering the targeting step (rows), as a
+    positivity diagnostic. The intervention weights are those after
+    truncation, and the treatment weights are 1 when `a` is not given.
+
+  - `n_truncated`: the number of individuals whose initial intervention
+    weight was truncated (0 if `control$truncate_weights = Inf`).
 
 ## Details
 
@@ -173,8 +189,9 @@ fit <- fit_initial(
 )
 
 # Risk of death by tau = 1 if the intensity of z were halved.
-est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
+est <- tmle_alpha(fit, target = "death", z_name = "z", alpha = 0.5)
 est$estimate
-#>   tmle_est         se      g_est 
-#> 0.30405495 0.03853505 0.31239982 
+#>    target  estimate         se     lower     upper
+#>    <char>     <num>      <num>     <num>     <num>
+#> 1:  death 0.3040549 0.03853505 0.2285276 0.3795823
 ```
