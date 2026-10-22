@@ -5,7 +5,7 @@
 # assumption the code here relies on.
 
 test_that("solve_alpha() validates its arguments", {
-  fun <- function(alpha) list(estimate = c(tmle_est = alpha), eic = alpha)
+  fun <- function(alpha) fake.estimate(alpha, NA, alpha)
 
   expect_error(
     solve_alpha(theta = 1, fun = fun),
@@ -33,7 +33,7 @@ test_that("solve_alpha() returns immediately when alpha_init already matches the
   n_calls <- 0
   fun <- function(alpha) {
     n_calls <<- n_calls + 1
-    list(estimate = c(tmle_est = alpha, se = 0.1), eic = rep(alpha, 10))
+    fake.estimate(alpha, 0.1, rep(alpha, 10))
   }
 
   res <- solve_alpha(
@@ -51,7 +51,7 @@ test_that("solve_alpha() returns immediately when alpha_init already matches the
 test_that("solve_alpha() finds alpha for a monotone increasing estimand", {
   # psi(alpha) = alpha, so the root at theta is alpha = theta
   fun <- function(alpha) {
-    list(estimate = c(tmle_est = alpha, se = 0.1), eic = rep(alpha - 3, 20))
+    fake.estimate(alpha, 0.1, rep(alpha - 3, 20))
   }
 
   res <- solve_alpha(
@@ -68,7 +68,7 @@ test_that("solve_alpha() finds alpha for a monotone increasing estimand", {
 
 test_that("solve_alpha() searches downward when starting above theta", {
   fun <- function(alpha) {
-    list(estimate = c(tmle_est = alpha, se = 0.1), eic = rep(0, 5))
+    fake.estimate(alpha, 0.1, rep(0, 5))
   }
 
   res <- solve_alpha(
@@ -86,7 +86,7 @@ test_that("solve_alpha() caches evaluations: every fun call is recorded exactly 
   n_calls <- 0
   fun <- function(alpha) {
     n_calls <<- n_calls + 1
-    list(estimate = c(tmle_est = alpha, se = 0.1), eic = rep(0, 5))
+    fake.estimate(alpha, 0.1, rep(0, 5))
   }
 
   res <- solve_alpha(
@@ -107,7 +107,7 @@ test_that("solve_alpha() solves the calibration equation for a Psi_z-shaped curv
   L <- 0.6
   fun <- function(alpha) {
     psi <- L * (1 - exp(-alpha))
-    list(estimate = c(tmle_est = psi, se = 0.05), eic = rep(psi, 10))
+    fake.estimate(psi, 0.05, rep(psi, 10))
   }
 
   theta <- 0.3
@@ -127,7 +127,7 @@ test_that("solve_alpha() solves the calibration equation for a Psi_z-shaped curv
 test_that("solve_alpha() reports no bracket found when the estimand is out of range", {
   # psi is constant, so it can never bracket a theta above it
   fun <- function(alpha) {
-    list(estimate = c(tmle_est = 1, se = 0.1), eic = rep(0, 5))
+    fake.estimate(1, 0.1, rep(0, 5))
   }
 
   res <- solve_alpha(

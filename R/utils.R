@@ -48,10 +48,7 @@
       "the response is built from `delta`."
     )
   }
-  covariates <- paste(
-    deparse(spec$model[[2]], width.cutoff = 500L),
-    collapse = ""
-  )
+  covariates <- .deparse_one_line(spec$model[[2]])
   spec$model <- gsub(
     "\\s+",
     "",
@@ -85,20 +82,30 @@
   as.integer(max(1L, min(cores, parallel::detectCores(), na.rm = TRUE)))
 }
 
-# Name the per-target values `x` (named by target, or "" for a single target)
-# as `prefix`, suffixed by `_<target>` when there are several targets.
-.target_names <- function(x, prefix) {
-  names(x) <- if (identical(names(x), "")) {
-    prefix
-  } else {
-    paste0(prefix, "_", names(x))
-  }
-  x
+# A language object, such as a formula, as a single string.
+.deparse_one_line <- function(x) {
+  paste(deparse(x, width.cutoff = 500L), collapse = "")
 }
 
-# The point estimate of a tmle_alpha() fit (TMLE or one-step).
+# The estimate table of the result objects: one row per target with the
+# estimate, its standard error and a 95% Wald confidence interval.
+.wald_table <- function(target, estimate, se) {
+  z <- stats::qnorm(0.975)
+  data.table(
+    target = target,
+    estimate = estimate,
+    se = se,
+    lower = estimate - z * se,
+    upper = estimate + z * se
+  )
+}
+
+# The point estimate of a tmle_alpha() fit.
 .point_estimate <- function(fit) {
-  est <- fit[["estimate"]]
-  nm <- intersect(c("tmle_est", "one_step_est"), names(est))
-  as.numeric(est[[nm[1]]])
+  as.numeric(fit[["estimate"]][["estimate"]][1])
+}
+
+# The efficient influence curve of a tmle_alpha() fit.
+.eic <- function(fit) {
+  fit[["eic"]][[1]]
 }

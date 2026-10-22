@@ -6,7 +6,7 @@
 #' @importFrom Matrix Matrix
 #' @importFrom nleqslv nleqslv
 #' @importFrom parallel detectCores mclapply
-#' @importFrom stats as.formula binomial coef formula glm lm median
+#' @importFrom stats as.formula binomial coef confint formula glm lm median
 #'   model.matrix predict quantile sd setNames
 #' @importFrom survival basehaz coxph coxph.control
 #' @importFrom utils combn flush.console

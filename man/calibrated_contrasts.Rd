@@ -19,16 +19,17 @@ as returned by \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 \item{calibrated_fit}{Fit for the calibrated intervention, as returned by
 \code{\link[=calibrate_alpha]{calibrate_alpha()}}.}
 
-\item{target}{Optional string. If \code{calibrated_fit} contains estimates for
-several targets, the name of the one to use.}
+\item{target}{Optional string. The target to use from \code{calibrated_fit},
+which may contain estimates for several targets. Defaults to the
+target of \code{treatment_fit}.}
 
 \item{conf_level}{Number between 0 and 1. Confidence level of the
 intervals.}
 }
 \value{
 A \code{data.table} with one row per contrast (\code{total}, \code{mediated}
-and \code{calibrated}) and columns \code{target} (\code{NA} if \code{target} is \code{NULL}),
-\code{contrast}, \code{estimate}, \code{se}, \code{lower} and \code{upper}.
+and \code{calibrated}) and columns \code{target}, \code{contrast}, \code{estimate}, \code{se},
+\code{lower} and \code{upper}.
 The attributes \code{decomposition_error} and \code{eic_decomposition_error} give
 how far the estimates and influence curves are from satisfying
 total = mediated + calibrated, which should be zero up to numerical
@@ -43,10 +44,38 @@ a calibrated contrast (calibrated versus placebo), with Wald confidence
 intervals based on the influence curves.
 }
 \examples{
-set.seed(1405)
-treatment_fit <- list(estimate = c(tmle_est = 0.7), eic = rnorm(200, sd = 0.1))
-placebo_fit <- list(estimate = c(tmle_est = 0.3), eic = rnorm(200, sd = 0.1))
-calibrated_fit <- list(estimate = c(target_est = 0.5), eic = rnorm(200, sd = 0.1))
+# illness_death with a randomised treatment A0 added, for illustration.
+set.seed(1)
+treated <- illness_death
+treated$A0 <- rbinom(max(treated$id), 1, 0.5)[treated$id]
 
-calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
+fit <- fit_initial(
+  treated,
+  fit_types = list(
+    z = list(
+      delta = 2,
+      model = ~ L0 + A0,
+      at_risk = function(dt) dt[["z"]] == 0
+    ),
+    death = list(delta = 1, model = ~ L0 + A0 + z),
+    censoring = list(delta = 0, model = ~L0)
+  ),
+  tau = 1,
+  treatment_model = A0 ~ L0,
+  a = 0:1
+)
+
+# How much of the effect of treatment on death is mediated by its effect
+# on the risk of z?
+calibrated_contrasts(
+  treatment_fit = tmle_alpha(fit, target = "death", a = 1),
+  placebo_fit = tmle_alpha(fit, target = "death", a = 0),
+  calibrated_fit = calibrate_alpha(
+    fit,
+    target = "death",
+    z_name = "z",
+    rho_1a = 1,
+    a = 1
+  )
+)
 }

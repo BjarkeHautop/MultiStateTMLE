@@ -82,7 +82,7 @@ fit <- fit_initial(
 )
 
 est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
-est$estimate
+est
 ```
 
 To simulate multistate event history data, see the

@@ -11,26 +11,55 @@
 #'   as returned by [tmle_alpha()].
 #' @param calibrated_fit Fit for the calibrated intervention, as returned by
 #'   [calibrate_alpha()].
-#' @param target Optional string. If `calibrated_fit` contains estimates for
-#'   several targets, the name of the one to use.
+#' @param target Optional string. The target to use from `calibrated_fit`,
+#'   which may contain estimates for several targets. Defaults to the
+#'   target of `treatment_fit`.
 #' @param conf_level Number between 0 and 1. Confidence level of the
 #'   intervals.
 #'
 #' @return A `data.table` with one row per contrast (`total`, `mediated`
-#'   and `calibrated`) and columns `target` (`NA` if `target` is `NULL`),
-#'   `contrast`, `estimate`, `se`, `lower` and `upper`.
+#'   and `calibrated`) and columns `target`, `contrast`, `estimate`, `se`,
+#'   `lower` and `upper`.
 #'   The attributes `decomposition_error` and `eic_decomposition_error` give
 #'   how far the estimates and influence curves are from satisfying
 #'   total = mediated + calibrated, which should be zero up to numerical
 #'   error.
 #'
 #' @examples
-#' set.seed(1405)
-#' treatment_fit <- list(estimate = c(tmle_est = 0.7), eic = rnorm(200, sd = 0.1))
-#' placebo_fit <- list(estimate = c(tmle_est = 0.3), eic = rnorm(200, sd = 0.1))
-#' calibrated_fit <- list(estimate = c(target_est = 0.5), eic = rnorm(200, sd = 0.1))
+#' # illness_death with a randomised treatment A0 added, for illustration.
+#' set.seed(1)
+#' treated <- illness_death
+#' treated$A0 <- rbinom(max(treated$id), 1, 0.5)[treated$id]
 #'
-#' calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
+#' fit <- fit_initial(
+#'   treated,
+#'   fit_types = list(
+#'     z = list(
+#'       delta = 2,
+#'       model = ~ L0 + A0,
+#'       at_risk = function(dt) dt[["z"]] == 0
+#'     ),
+#'     death = list(delta = 1, model = ~ L0 + A0 + z),
+#'     censoring = list(delta = 0, model = ~L0)
+#'   ),
+#'   tau = 1,
+#'   treatment_model = A0 ~ L0,
+#'   a = 0:1
+#' )
+#'
+#' # How much of the effect of treatment on death is mediated by its effect
+#' # on the risk of z?
+#' calibrated_contrasts(
+#'   treatment_fit = tmle_alpha(fit, target = "death", a = 1),
+#'   placebo_fit = tmle_alpha(fit, target = "death", a = 0),
+#'   calibrated_fit = calibrate_alpha(
+#'     fit,
+#'     target = "death",
+#'     z_name = "z",
+#'     rho_1a = 1,
+#'     a = 1
+#'   )
+#' )
 #' @export
 calibrated_contrasts <- function(
   treatment_fit,
@@ -39,30 +68,33 @@ calibrated_contrasts <- function(
   target = NULL,
   conf_level = 0.95
 ) {
-  checkmate::assert_list(treatment_fit)
-  checkmate::assert_list(placebo_fit)
-  checkmate::assert_list(calibrated_fit)
+  checkmate::assert_class(treatment_fit, "tmle_alpha")
+  checkmate::assert_class(placebo_fit, "tmle_alpha")
+  checkmate::assert_class(calibrated_fit, "calibrate_alpha")
   checkmate::assert_string(target, null.ok = TRUE)
   checkmate::assert_number(conf_level, lower = 0, upper = 1)
 
-  treatment.est <- .point_estimate(treatment_fit)
-
-  placebo.est <- .point_estimate(placebo_fit)
-
-  calibrated.est <-
-    calibrated_fit$estimate[[ifelse(
-      length(target) > 0,
-      paste0("target_est_", target),
-      "target_est"
-    )]]
-
-  treatment.eic <- treatment_fit$eic
-  placebo.eic <- placebo_fit$eic
-  calibrated.eic <- if (length(target) > 0) {
-    calibrated_fit$eic[[target]]
-  } else {
-    calibrated_fit$eic
+  if (is.null(target)) {
+    target <- treatment_fit$estimate$target
   }
+  calibrated.row <- match(target, calibrated_fit$estimate$target)
+  if (is.na(calibrated.row)) {
+    stop(
+      "target '",
+      target,
+      "' is not among the targets of calibrated_fit: ",
+      paste(calibrated_fit$estimate$target, collapse = ", "),
+      "."
+    )
+  }
+
+  treatment.est <- .point_estimate(treatment_fit)
+  placebo.est <- .point_estimate(placebo_fit)
+  calibrated.est <- calibrated_fit$estimate$estimate[calibrated.row]
+
+  treatment.eic <- .eic(treatment_fit)
+  placebo.eic <- .eic(placebo_fit)
+  calibrated.eic <- calibrated_fit$eic[[calibrated.row]]
 
   n <- length(treatment.eic)
 
@@ -117,11 +149,7 @@ calibrated_contrasts <- function(
   )
 
   out <- rbind(total, mediated, calibrated)
-  out <- data.table(
-    target = if (length(target) > 0) target else NA_character_,
-    contrast = rownames(out),
-    out
-  )
+  out <- data.table(target = target, contrast = rownames(out), out)
 
   decomposition.error <-
     total[["estimate"]] -

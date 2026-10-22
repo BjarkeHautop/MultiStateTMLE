@@ -9,18 +9,9 @@ test_that("calibrated_contrasts() decomposes total into mediated + calibrated", 
   placebo.eic <- rnorm(n, sd = 0.1)
   calibrated.eic <- rnorm(n, sd = 0.1)
 
-  treatment.fit <- list(
-    estimate = c(tmle_est = 0.7),
-    eic = treatment.eic
-  )
-  placebo.fit <- list(
-    estimate = c(tmle_est = 0.3),
-    eic = placebo.eic
-  )
-  calibrated.fit <- list(
-    estimate = c(target_est = 0.5),
-    eic = calibrated.eic
-  )
+  treatment.fit <- fake.tmle.fit(0.7, treatment.eic)
+  placebo.fit <- fake.tmle.fit(0.3, placebo.eic)
+  calibrated.fit <- fake.calibrated.fit(0.5, calibrated.eic)
 
   out <- calibrated_contrasts(
     treatment_fit = treatment.fit,
@@ -32,7 +23,7 @@ test_that("calibrated_contrasts() decomposes total into mediated + calibrated", 
     out,
     c("target", "contrast", "estimate", "se", "lower", "upper")
   )
-  expect_true(all(is.na(out$target)))
+  expect_true(all(out$target == "death"))
   expect_equal(out$contrast, c("total", "mediated", "calibrated"))
   expect_equal(out$estimate[out$contrast == "total"], 0.7 - 0.3)
   expect_equal(out$estimate[out$contrast == "mediated"], 0.7 - 0.5)
@@ -53,9 +44,9 @@ test_that("calibrated_contrasts() computes se/CI from the influence curves", {
   placebo.eic <- rep(0, n)
   calibrated.eic <- rep(c(0.5, -0.5, 0.2, -0.2), length.out = n)
 
-  treatment.fit <- list(estimate = c(tmle_est = 1), eic = treatment.eic)
-  placebo.fit <- list(estimate = c(tmle_est = 0), eic = placebo.eic)
-  calibrated.fit <- list(estimate = c(target_est = 0.4), eic = calibrated.eic)
+  treatment.fit <- fake.tmle.fit(1, treatment.eic)
+  placebo.fit <- fake.tmle.fit(0, placebo.eic)
+  calibrated.fit <- fake.calibrated.fit(0.4, calibrated.eic)
 
   out <- calibrated_contrasts(
     treatment_fit = treatment.fit,
@@ -93,13 +84,10 @@ test_that("calibrated_contrasts() attributes the total correctly at the decompos
   treatment.eic <- rnorm(n, sd = 0.1)
   placebo.eic <- rnorm(n, sd = 0.1)
 
-  treatment.fit <- list(estimate = c(tmle_est = 0.8), eic = treatment.eic)
-  placebo.fit <- list(estimate = c(tmle_est = 0.2), eic = placebo.eic)
+  treatment.fit <- fake.tmle.fit(0.8, treatment.eic)
+  placebo.fit <- fake.tmle.fit(0.2, placebo.eic)
 
-  calibrated.fit.at.treatment <- list(
-    estimate = c(target_est = 0.8),
-    eic = treatment.eic
-  )
+  calibrated.fit.at.treatment <- fake.calibrated.fit(0.8, treatment.eic)
   out.at.treatment <- calibrated_contrasts(
     treatment_fit = treatment.fit,
     placebo_fit = placebo.fit,
@@ -114,10 +102,7 @@ test_that("calibrated_contrasts() attributes the total correctly at the decompos
     out.at.treatment$estimate[out.at.treatment$contrast == "total"]
   )
 
-  calibrated.fit.at.placebo <- list(
-    estimate = c(target_est = 0.2),
-    eic = placebo.eic
-  )
+  calibrated.fit.at.placebo <- fake.calibrated.fit(0.2, placebo.eic)
   out.at.placebo <- calibrated_contrasts(
     treatment_fit = treatment.fit,
     placebo_fit = placebo.fit,
@@ -134,9 +119,9 @@ test_that("calibrated_contrasts() attributes the total correctly at the decompos
 })
 
 test_that("calibrated_contrasts() errors on mismatched eic lengths", {
-  treatment.fit <- list(estimate = c(tmle_est = 1), eic = rep(0, 10))
-  placebo.fit <- list(estimate = c(tmle_est = 0), eic = rep(0, 5))
-  calibrated.fit <- list(estimate = c(target_est = 0), eic = rep(0, 10))
+  treatment.fit <- fake.tmle.fit(1, rep(0, 10))
+  placebo.fit <- fake.tmle.fit(0, rep(0, 5))
+  calibrated.fit <- fake.calibrated.fit(0, rep(0, 10))
 
   expect_error(
     calibrated_contrasts(
@@ -149,11 +134,12 @@ test_that("calibrated_contrasts() errors on mismatched eic lengths", {
 })
 
 test_that("calibrated_contrasts() supports selecting a named target", {
-  treatment.fit <- list(estimate = c(tmle_est = 1), eic = rep(0.1, 20))
-  placebo.fit <- list(estimate = c(tmle_est = 0), eic = rep(-0.1, 20))
-  calibrated.fit <- list(
-    estimate = c("target_est_arm1" = 0.4, "target_est_arm2" = 0.6),
-    eic = list(arm1 = rep(0, 20), arm2 = rep(0.05, 20))
+  treatment.fit <- fake.tmle.fit(1, rep(0.1, 20))
+  placebo.fit <- fake.tmle.fit(0, rep(-0.1, 20))
+  calibrated.fit <- fake.calibrated.fit(
+    c(0.4, 0.6),
+    list(rep(0, 20), rep(0.05, 20)),
+    target = c("arm1", "arm2")
   )
 
   out <- calibrated_contrasts(
@@ -168,13 +154,32 @@ test_that("calibrated_contrasts() supports selecting a named target", {
   expect_true(all(out$target == "arm1"))
 })
 
-test_that("calibrated_contrasts() accepts one-step fits", {
+test_that("calibrated_contrasts() defaults to the treatment fit's target", {
   eic <- c(0.1, -0.1)
-  out <- calibrated_contrasts(
-    list(estimate = c(one_step_est = 0.7), eic = eic),
-    list(estimate = c(one_step_est = 0.3), eic = eic),
-    list(estimate = c(target_est = 0.5), eic = eic)
+  calibrated.fit <- fake.calibrated.fit(
+    c(0.5, 0.9),
+    list(eic, eic),
+    target = c("z", "death")
   )
 
-  expect_equal(out$estimate, c(0.7 - 0.3, 0.7 - 0.5, 0.5 - 0.3))
+  out <- calibrated_contrasts(
+    fake.tmle.fit(0.7, eic),
+    fake.tmle.fit(0.3, eic),
+    calibrated.fit
+  )
+  expect_equal(out$target, rep("death", 3))
+  expect_equal(out$estimate, c(0.7 - 0.3, 0.7 - 0.9, 0.9 - 0.3))
+
+  expect_error(
+    calibrated_contrasts(
+      fake.tmle.fit(0.7, eic, target = "stroke"),
+      fake.tmle.fit(0.3, eic, target = "stroke"),
+      calibrated.fit
+    ),
+    "not among the targets"
+  )
+  expect_error(
+    calibrated_contrasts(list(), fake.tmle.fit(0.3, eic), calibrated.fit),
+    "tmle_alpha"
+  )
 })

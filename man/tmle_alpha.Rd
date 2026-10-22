@@ -81,12 +81,17 @@ weights of the intervention are truncated at this value.}
 \item{verbose}{Logical. If \code{TRUE}, print progress.}
 }
 \value{
-A list with elements:
+An object of class \code{tmle_alpha}, a list with elements:
 \itemize{
-\item \code{estimate}: a named vector with the estimate (\code{tmle_est}, or
-\code{one_step_est} if \code{one_step = TRUE}), its standard error \code{se}, and the
-initial plug-in estimate \code{g_est}.
-\item \code{eic}: the efficient influence curve, one value per individual.
+\item \code{estimate}: a \code{data.table} with columns \code{target}, \code{estimate}, its
+standard error \code{se}, and the bounds \code{lower} and \code{upper} of a 95\% Wald
+confidence interval.
+\item \code{initial_estimate}: the initial plug-in estimate, before targeting.
+\item \code{method}: \code{"tmle"}, or \code{"one_step"} if \code{one_step = TRUE}.
+\item \code{alpha}, \code{z_name} and \code{a}: the intervention (\code{alpha} is \code{NULL} if
+\code{alpha_list} is given).
+\item \code{eic}: a list, named by \code{target}, with the efficient influence curve,
+one value per individual.
 \item \code{convergence}: a named vector with the number of iterations \code{iter},
 the absolute mean of the efficient influence curve \code{eic_solved_at},
 and whether the iterations \code{converged}. A warning is given if they

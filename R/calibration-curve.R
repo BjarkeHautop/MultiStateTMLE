@@ -21,15 +21,21 @@
 #'   respectively, instead of the risk; see `years_lost` in [tmle_alpha()].
 #' @param ... Further arguments passed on to [tmle_alpha()].
 #'
-#' @return A list with elements:
+#' @return An object of class `calibration_curve`, a list with elements:
 #'   * `estimate`: a `data.table` with one row per value of `alpha_grid` and
-#'     columns `alpha`, `exposure_est`, `exposure_se`, `target_est` and
-#'     `target_se` (suffixed by `_<target>` when there are several
-#'     targets).
-#'   * `checks`: per value of `alpha_grid`, the estimated derivatives of the
-#'     exposure and target estimates with respect to `alpha`.
-#'   * `eics`: per value of `alpha_grid`, the influence curves `alpha_eic`,
-#'     `calibration_eic`, `target_eic` and `eic`.
+#'     `target`, and columns `alpha`, `target`, the risk of `z_name`
+#'     (`exposure_estimate`, with standard error `exposure_se`), and the risk
+#'     of `target` (`estimate`, with standard error `se` and the bounds
+#'     `lower` and `upper` of a 95% Wald confidence interval).
+#'   * `z_name` and `a`: as given.
+#'   * `checks`: a `data.table` with the estimated derivatives with respect
+#'     to `alpha` of the exposure (`derivative_exposure`) and target
+#'     (`derivative_target`) estimates, per `alpha` and `target`.
+#'   * `eic`: a list with, per value of `alpha_grid`, the influence curves of
+#'     the exposure estimate (`exposure`), of `alpha` calibrated to it
+#'     (`alpha`), and lists named by target of the target estimates treating
+#'     `alpha` as known (`target`) and accounting for its calibration
+#'     (`eic`).
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -86,7 +92,7 @@ calibration_curve <- function(
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
-  n <- length(unique(initial_fit[["tmp_long"]][["id"]]))
+  n <- initial_fit$n
 
   fit_at <- function(alpha, parameter = z_name, block_size = NULL) {
     tmle_alpha(
@@ -112,7 +118,7 @@ calibration_curve <- function(
         block_size = block_size_z
       )
 
-      h <- 0.3 * n^(-1 / 6) * sqrt(mean(calibration.est$eic^2))
+      h <- 0.3 * n^(-1 / 6) * sqrt(mean(.eic(calibration.est)^2))
 
       est.deriv.auxiliary <- estimate_derivative(
         fit_at,
@@ -122,9 +128,12 @@ calibration_curve <- function(
         block_size = block_size_z
       )
 
-      alpha.eic <- (1 / est.deriv.auxiliary) * (0 - calibration.est$eic)
+      alpha.eic <- (1 / est.deriv.auxiliary) * (0 - .eic(calibration.est))
     } else {
-      calibration.est <- list(estimate = c(tmle_est = 0, se = 0), eic = 0)
+      calibration.est <- list(
+        estimate = data.table(estimate = 0, se = 0),
+        eic = list(0)
+      )
       alpha.eic <- 0
       est.deriv.auxiliary <- Inf
     }
@@ -144,84 +153,64 @@ calibration_curve <- function(
           parameter = target1,
           block_size = block_size_target
         )
-
-        target.se <- sqrt(
-          mean((target.est[["eic"]] + est.deriv.target * alpha.eic)^2) / n
-        )
+        eic <- .eic(target.est) + est.deriv.target * alpha.eic
       } else {
         est.deriv.target <- Inf
-        target.se <- sqrt(mean((target.est[["eic"]])^2) / n)
+        eic <- .eic(target.est)
       }
 
       list(
         target.est = target.est,
-        target.se = target.se,
-        est.deriv.target = est.deriv.target
+        est.deriv.target = est.deriv.target,
+        eic = eic
       )
     })
+    names(out.target) <- target
 
-    names(out.target) <- if (length(target) > 1) target else ""
+    per_target <- function(f) vapply(out.target, f, numeric(1))
 
-    out.estimate <- c(
-      alpha = alpha,
-      exposure_est = .point_estimate(calibration.est),
-      exposure_se = calibration.est$estimate[["se"]],
-      .target_names(
-        vapply(
-          out.target,
-          function(x) .point_estimate(x[["target.est"]]),
-          numeric(1)
-        ),
-        "target_est"
+    estimate <- cbind(
+      data.table(
+        alpha = alpha,
+        exposure_estimate = .point_estimate(calibration.est),
+        exposure_se = calibration.est$estimate$se[1]
       ),
-      .target_names(
-        vapply(out.target, function(x) x[["target.se"]], numeric(1)),
-        "target_se"
+      .wald_table(
+        target,
+        per_target(function(x) .point_estimate(x$target.est)),
+        per_target(function(x) sqrt(mean(x$eic^2) / n))
       )
     )
+    setcolorder(estimate, c("alpha", "target"))
 
-    out.checks <- c(
-      est_deriv_auxiliary = est.deriv.auxiliary,
-      .target_names(
-        vapply(out.target, function(x) x[["est.deriv.target"]], numeric(1)),
-        "est_deriv_target"
-      )
+    checks <- data.table(
+      alpha = alpha,
+      target = target,
+      derivative_exposure = est.deriv.auxiliary,
+      derivative_target = per_target(function(x) x$est.deriv.target)
     )
 
-    target.eic <- lapply(out.target, function(x) x[["target.est"]][["eic"]])
-    eic <- lapply(out.target, function(x) {
-      if (alpha > 0) {
-        x[["target.est"]][["eic"]] + x[["est.deriv.target"]] * alpha.eic
-      } else {
-        x[["target.est"]][["eic"]]
-      }
-    })
-    if (length(target) == 1) {
-      target.eic <- target.eic[[1]]
-      eic <- eic[[1]]
-    }
+    eic <- list(
+      exposure = .eic(calibration.est),
+      alpha = alpha.eic,
+      target = lapply(out.target, function(x) .eic(x$target.est)),
+      eic = lapply(out.target, function(x) x$eic)
+    )
+
+    list(estimate = estimate, checks = checks, eic = eic)
+  })
+
+  structure(
     list(
-      estimate = out.estimate,
-      checks = out.checks,
-      alpha_eic = alpha.eic,
-      calibration_eic = calibration.est$eic,
-      target_eic = target.eic,
-      eic = eic
-    )
-  })
-
-  names(alpha.out) <- paste0("alpha = ", alpha_grid)
-
-  estimate.table <- rbindlist(
-    lapply(alpha.out, function(x) as.list(x$estimate)),
-    fill = TRUE
+      estimate = rbindlist(lapply(alpha.out, function(x) x$estimate)),
+      z_name = z_name,
+      a = a,
+      checks = rbindlist(lapply(alpha.out, function(x) x$checks)),
+      eic = stats::setNames(
+        lapply(alpha.out, function(x) x$eic),
+        paste0("alpha = ", alpha_grid)
+      )
+    ),
+    class = "calibration_curve"
   )
-
-  checks.list <- lapply(alpha.out, function(x) x$checks)
-
-  eic.list <- lapply(alpha.out, function(x) {
-    x[c("alpha_eic", "calibration_eic", "target_eic", "eic")]
-  })
-
-  list(estimate = estimate.table, checks = checks.list, eics = eic.list)
 }

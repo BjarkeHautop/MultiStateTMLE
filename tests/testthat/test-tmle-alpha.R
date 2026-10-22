@@ -7,9 +7,19 @@ test_that("tmle_alpha() returns the estimate and diagnostics", {
 
   est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
 
-  expect_named(est$estimate, c("tmle_est", "se", "g_est"))
-  expect_true(est$estimate[["tmle_est"]] > 0 && est$estimate[["tmle_est"]] < 1)
-  expect_length(est$eic, length(unique(illness_death$id)))
+  expect_s3_class(est, "tmle_alpha")
+  expect_named(est$estimate, c("target", "estimate", "se", "lower", "upper"))
+  expect_equal(est$estimate$target, "death")
+  expect_true(est$estimate$estimate > 0 && est$estimate$estimate < 1)
+  expect_equal(
+    c(est$estimate$lower, est$estimate$upper),
+    est$estimate$estimate + c(-1, 1) * qnorm(0.975) * est$estimate$se
+  )
+  expect_equal(est$method, "tmle")
+  expect_equal(est$alpha, 0.5)
+  expect_equal(est$z_name, "z")
+  expect_named(est$eic, "death")
+  expect_length(est$eic$death, length(unique(illness_death$id)))
   expect_named(est$convergence, c("iter", "eic_solved_at", "converged"))
   expect_equal(
     dimnames(est$weights),
@@ -28,9 +38,16 @@ test_that("tmle_alpha() returns the estimate and diagnostics", {
     prod(est$weights[c("intervention", "censoring"), "q100"]) + 1e-8
   )
 
-  one_step <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z", one_step = TRUE)
-  expect_named(one_step$estimate, c("one_step_est", "se", "g_est"))
-  expect_equal(one_step$estimate[["g_est"]], est$estimate[["g_est"]])
+  one_step <- tmle_alpha(
+    fit,
+    target = "death",
+    alpha = 0.5,
+    z_name = "z",
+    one_step = TRUE
+  )
+  expect_equal(one_step$method, "one_step")
+  expect_named(one_step$estimate, names(est$estimate))
+  expect_equal(one_step$initial_estimate, est$initial_estimate)
 })
 
 test_that("tmle_alpha() matches the target case-insensitively", {
@@ -80,21 +97,22 @@ test_that("tmle_alpha() supports only_first, target_only_in_state, target_by_sta
   fit <- fixture.fit(30)
 
   expect_true(is.numeric(
-    tmle_alpha(fit, target = "z", z_name = "z", only_first = TRUE)$estimate[[
-      "tmle_est"
-    ]]
+    tmle_alpha(
+      fit,
+      target = "z",
+      z_name = "z",
+      only_first = TRUE
+    )$estimate$estimate
   ))
   expect_true(is.numeric(
     tmle_alpha(
       fit,
       target = "death",
       target_only_in_state = function(states) states[["z"]] == 0
-    )$estimate[["tmle_est"]]
+    )$estimate$estimate
   ))
   expect_true(is.numeric(
-    tmle_alpha(fit, target = "death", target_by_state = TRUE)$estimate[[
-      "tmle_est"
-    ]]
+    tmle_alpha(fit, target = "death", target_by_state = TRUE)$estimate$estimate
   ))
 })
 
@@ -129,7 +147,7 @@ test_that("tmle_alpha() estimates under a baseline intervention 'a'", {
     tmle_alpha(fit, target = "death", a = 0)$weights["censoring", ]
   )
   expect_true(
-    est$estimate[["tmle_est"]] >= 0 && est$estimate[["tmle_est"]] <= 1
+    est$estimate$estimate >= 0 && est$estimate$estimate <= 1
   )
 
   expect_error(tmle_alpha(fit, target = "death", a = 5), "a")
@@ -150,7 +168,7 @@ test_that("tmle_alpha()'s alpha_list reproduces a constant scalar alpha", {
       target = "death",
       alpha_list = constant,
       target_by_state = TRUE
-    )$estimate[["tmle_est"]],
-    scalar$estimate[["tmle_est"]]
+    )$estimate$estimate,
+    scalar$estimate$estimate
   )
 })

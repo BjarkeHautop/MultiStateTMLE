@@ -88,8 +88,11 @@ fit_types <- list(
 )
 
 fit <- fit_initial(illness_death, fit_types = fit_types, tau = 1)
-fit$process_types
+fit
 ```
+
+The `type` of each process is inferred from the data: death and censoring
+end follow-up, and the illness occurs at most once.
 
 By default the hazards are fitted with Cox models. Setting `fit = "hal"` in a
 process's entry uses the highly adaptive lasso instead (experimental).
@@ -103,26 +106,27 @@ by time 1:
 
 ```{r}
 #| label: tmle-observed
-observed <- tmle_alpha(fit, target = "death", alpha = 1, z_name = "z")
-observed$estimate
+observed <- tmle_alpha(fit, target = "death", alpha = 1)
+observed
 ```
 
-The estimate contains the targeted estimate `tmle_est`, its standard error
-`se`, and the initial plug-in estimate `g_est`. Halving the intensity of the
-illness gives:
+The printed table gives the targeted estimate with its standard error and a
+95% confidence interval, and it is stored as `observed$estimate`. Halving the
+intensity of the illness gives:
 
 ```{r}
 #| label: tmle-halved
 halved <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
-halved$estimate
+halved
 ```
 
-A 95% confidence interval follows from the standard error:
+`coef()` and `confint()` extract the estimate and confidence intervals at
+other levels:
 
 ```{r}
 #| label: tmle-ci
-est <- halved$estimate
-est[["tmle_est"]] + c(-1, 1) * qnorm(0.975) * est[["se"]]
+coef(halved)
+confint(halved, level = 0.9)
 ```
 
 Setting `alpha = 0` removes the illness altogether, while `alpha > 1`
@@ -157,19 +161,17 @@ calibration curve:
 #|   across interventions on the illness intensity, with 95% confidence
 #|   bands. The risk of death increases with the risk of illness.
 ce <- curve$estimate
-lower <- ce$target_est - qnorm(0.975) * ce$target_se
-upper <- ce$target_est + qnorm(0.975) * ce$target_se
 
 plot(
-  ce$exposure_est,
-  ce$target_est,
+  ce$exposure_estimate,
+  ce$estimate,
   type = "b",
   pch = 19,
-  ylim = range(lower, upper),
+  ylim = range(ce$lower, ce$upper),
   xlab = "Risk of illness by time 1",
   ylab = "Risk of death by time 1"
 )
-arrows(ce$exposure_est, lower, ce$exposure_est, upper,
+arrows(ce$exposure_estimate, ce$lower, ce$exposure_estimate, ce$upper,
   angle = 90, code = 3, length = 0.04
 )
 ```
@@ -192,13 +194,13 @@ its observed value:
 ```{r}
 #| label: calibrate-alpha
 cal <- calibrate_alpha(fit, target = "death", z_name = "z", rho = 0.8)
-cal$estimate
+cal
 ```
 
-Here `alpha_est` is the calibrated intervention, `theta` is the exposure risk
-it achieves, and `target_est` is the risk of death under it. The standard
-error `target_se` accounts for `alpha` being estimated, whereas
-`target_se_crude` treats it as known.
+The first table gives the calibrated intervention `alpha` and the exposure
+risk `theta` it achieves, and the second the risk of death under it. Its
+standard error `se` accounts for `alpha` being estimated, whereas `se_crude`
+treats it as known.
 
 ## Step 5: Decompose a treatment effect
 
@@ -246,18 +248,8 @@ illness under placebo:
 
 ```{r}
 #| label: contrasts
-treatment_fit <- tmle_alpha(
-  fit_treated,
-  target = "death",
-  alpha = 1,
-  a = 1
-)
-placebo_fit <- tmle_alpha(
-  fit_treated,
-  target = "death",
-  alpha = 1,
-  a = 0
-)
+treatment_fit <- tmle_alpha(fit_treated, target = "death", a = 1)
+placebo_fit <- tmle_alpha(fit_treated, target = "death", a = 0)
 calibrated_fit <- calibrate_alpha(
   fit_treated,
   target = "death",

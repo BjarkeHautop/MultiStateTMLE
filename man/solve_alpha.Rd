@@ -19,9 +19,9 @@ solve_alpha(
 )
 }
 \arguments{
-\item{fun}{A function of \code{alpha} returning a list with elements
-\code{estimate} (a named vector containing \code{tmle_est} or \code{one_step_est}, and
-\code{se}) and \code{eic}, such as a call to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
+\item{fun}{A function of \code{alpha} returning a \code{\link[=tmle_alpha]{tmle_alpha()}} fit, or a
+list like it with elements \code{estimate} (a data frame with columns
+\code{estimate} and \code{se}) and \code{eic} (a list with the influence curve).}
 
 \item{theta}{Number. The target value of the estimate.}
 
@@ -70,7 +70,7 @@ used by \code{\link[=calibrate_alpha]{calibrate_alpha()}}.
 # solve_alpha() should recover alpha = -log(1 - 0.3 / 0.6).
 fun <- function(alpha) {
   psi <- 0.6 * (1 - exp(-alpha))
-  list(estimate = c(tmle_est = psi, se = 0.01), eic = rep(0, 10))
+  list(estimate = data.frame(estimate = psi, se = 0.01), eic = list(0))
 }
 res <- solve_alpha(fun, theta = 0.3, c_n = 1e-6)
 res$alpha_hat

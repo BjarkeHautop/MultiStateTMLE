@@ -79,10 +79,19 @@ done if some increments exceed 1.}
 \item{verbose}{Logical. If \code{TRUE}, print model fits and progress.}
 }
 \value{
-A list containing, among others, \code{tmp_long} (the expanded data
-with fitted hazards and clever weights), \code{depend_matrix} (the product
-state space), \code{process_names}, \code{process_types}, \code{process_deltas},
-\code{cens_process_id} and \code{at_risks}.
+An object of class \code{initial_fit}, a list with elements:
+\itemize{
+\item \code{n}: the number of individuals.
+\item \code{tau}, \code{treatment_model} and \code{a}: as given.
+\item \code{processes}: a \code{data.table} with one row per process and columns
+\code{name}, \code{delta}, \code{type} (\code{"terminal"}, \code{"recurrent"} or
+\code{"one_jump"}, inferred from the data), \code{model} and \code{at_risk}
+(whether an \code{at_risk} function was given).
+}
+
+It also contains the internal elements used by \code{\link[=tmle_alpha]{tmle_alpha()}}, among
+them \code{tmp_long} (the expanded data with fitted hazards and clever
+weights) and \code{depend_matrix} (the product state space).
 }
 \description{
 Fits the initial (nuisance) hazard model for each event process (Cox

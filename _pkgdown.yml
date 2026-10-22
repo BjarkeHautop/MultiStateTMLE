@@ -34,6 +34,13 @@ reference:
   - solve_alpha
   - calibrated_contrasts
 
+- title: Results
+  desc: >
+    Printing, extracting estimates from, and computing confidence intervals
+    for the result objects.
+  contents:
+  - result-methods
+
 - title: Data
   desc: >
     Example data.

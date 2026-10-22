@@ -41,21 +41,26 @@ Must be one of the values of \code{a} given to \code{\link[=fit_initial]{fit_ini
 \item{...}{Further arguments passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 }
 \value{
-A list with elements:
+An object of class \code{calibrate_alpha}, a list with elements:
 \itemize{
-\item \code{estimate}: a named vector with the calibrated \code{alpha_est} and its
-\code{alpha_se}, the risk of \code{target} (\code{target_est}) with standard error
-\code{target_se} (accounting for the estimation of alpha) and
-\code{target_se_crude} (treating alpha as known), and the calibration
-target \code{theta} with standard error \code{theta_se}.
-\item \code{checks}: diagnostics of the alpha search and derivative estimates.
-\item \code{alpha_eic}, \code{target_eic} and \code{eic}: the influence curves of the calibrated alpha, of the risk of \code{target}
-treating alpha as known, and of the risk of \code{target}.
+\item \code{estimate}: a \code{data.table} with one row per \code{target} and columns
+\code{target}, the risk \code{estimate} under the calibrated intervention, its
+standard error \code{se} (accounting for the estimation of alpha), the
+bounds \code{lower} and \code{upper} of a 95\% Wald confidence interval, and the
+standard error \code{se_crude} treating alpha as known.
+\item \code{calibration}: a \code{data.table} with the calibrated \code{alpha} and the
+calibration target \code{theta} (column \code{quantity}), with \code{estimate}, \code{se},
+\code{lower} and \code{upper}.
+\item \code{z_name} and \code{a}: as given.
+\item \code{eic}, \code{eic_alpha_known}: lists, named by target, of the influence
+curves of the risk of \code{target}, accounting for the estimation of
+alpha and treating it as known.
+\item \code{alpha_eic}: the influence curve of the calibrated alpha.
+\item \code{checks}: diagnostics of the alpha search (\code{converged}, \code{dist},
+\code{c_n}) and the estimated derivatives with respect to alpha of the risk
+of \code{z_name} (\code{derivative_z}) and of each target
+(\code{derivative_target}).
 }
-
-With several targets, the per-target entries of \code{estimate} and \code{checks}
-are suffixed by the target name (e.g. \code{target_est_death}), and
-\code{target_eic} and \code{eic} are lists named by target.
 }
 \description{
 Finds the intervention \code{alpha} on the intensity of the process \code{z_name}

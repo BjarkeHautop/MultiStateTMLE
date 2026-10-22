@@ -5,6 +5,20 @@ test_that("fit_initial() fits the illness-death example", {
     tau = 1
   )
 
+  expect_s3_class(fit, "initial_fit")
+  expect_equal(fit$n, length(unique(illness_death$id)))
+  expect_equal(fit$tau, 1)
+  expect_equal(
+    fit$processes,
+    data.table::data.table(
+      name = c("z", "death", "censoring"),
+      delta = c(2, 1, 0),
+      type = c("one_jump", "terminal", "terminal"),
+      model = c("~L0", "~L0 + z", "~L0"),
+      at_risk = c(TRUE, FALSE, FALSE)
+    )
+  )
+
   expect_equal(fit$process_names, c("z", "death", "censoring"))
   expect_equal(fit$process_deltas, c(2, 1, 0))
   expect_equal(

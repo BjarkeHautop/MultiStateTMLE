@@ -9,9 +9,9 @@
 #' This solves the calibration equation of Rytgaard and van der Laan, and is
 #' used by [calibrate_alpha()].
 #'
-#' @param fun A function of `alpha` returning a list with elements
-#'   `estimate` (a named vector containing `tmle_est` or `one_step_est`, and
-#'   `se`) and `eic`, such as a call to [tmle_alpha()].
+#' @param fun A function of `alpha` returning a [tmle_alpha()] fit, or a
+#'   list like it with elements `estimate` (a data frame with columns
+#'   `estimate` and `se`) and `eic` (a list with the influence curve).
 #' @param theta Number. The target value of the estimate.
 #' @param c_n Positive number. Tolerance; the search stops once the estimate
 #'   is within `c_n` of `theta`.
@@ -39,7 +39,7 @@
 #' # solve_alpha() should recover alpha = -log(1 - 0.3 / 0.6).
 #' fun <- function(alpha) {
 #'   psi <- 0.6 * (1 - exp(-alpha))
-#'   list(estimate = c(tmle_est = psi, se = 0.01), eic = rep(0, 10))
+#'   list(estimate = data.frame(estimate = psi, se = 0.01), eic = list(0))
 #' }
 #' res <- solve_alpha(fun, theta = 0.3, c_n = 1e-6)
 #' res$alpha_hat
@@ -117,8 +117,8 @@ solve_alpha <- function(
     out <- list(
       alpha = alpha,
       psi = .point_estimate(psi),
-      se = as.numeric(psi[["estimate"]][["se"]]),
-      eic = psi[["eic"]],
+      se = as.numeric(psi[["estimate"]][["se"]][1]),
+      eic = .eic(psi),
       cached = FALSE
     )
 

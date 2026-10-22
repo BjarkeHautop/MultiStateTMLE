@@ -52,16 +52,22 @@ respectively, instead of the risk; see \code{years_lost} in \code{\link[=tmle_al
 \item{...}{Further arguments passed on to \code{\link[=tmle_alpha]{tmle_alpha()}}.}
 }
 \value{
-A list with elements:
+An object of class \code{calibration_curve}, a list with elements:
 \itemize{
 \item \code{estimate}: a \code{data.table} with one row per value of \code{alpha_grid} and
-columns \code{alpha}, \code{exposure_est}, \code{exposure_se}, \code{target_est} and
-\code{target_se} (suffixed by \verb{_<target>} when there are several
-targets).
-\item \code{checks}: per value of \code{alpha_grid}, the estimated derivatives of the
-exposure and target estimates with respect to \code{alpha}.
-\item \code{eics}: per value of \code{alpha_grid}, the influence curves \code{alpha_eic},
-\code{calibration_eic}, \code{target_eic} and \code{eic}.
+\code{target}, and columns \code{alpha}, \code{target}, the risk of \code{z_name}
+(\code{exposure_estimate}, with standard error \code{exposure_se}), and the risk
+of \code{target} (\code{estimate}, with standard error \code{se} and the bounds
+\code{lower} and \code{upper} of a 95\% Wald confidence interval).
+\item \code{z_name} and \code{a}: as given.
+\item \code{checks}: a \code{data.table} with the estimated derivatives with respect
+to \code{alpha} of the exposure (\code{derivative_exposure}) and target
+(\code{derivative_target}) estimates, per \code{alpha} and \code{target}.
+\item \code{eic}: a list with, per value of \code{alpha_grid}, the influence curves of
+the exposure estimate (\code{exposure}), of \code{alpha} calibrated to it
+(\code{alpha}), and lists named by target of the target estimates treating
+\code{alpha} as known (\code{target}) and accounting for its calibration
+(\code{eic}).
 }
 }
 \description{

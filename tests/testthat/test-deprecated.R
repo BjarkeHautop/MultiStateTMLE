@@ -75,7 +75,7 @@ test_that("deprecated estimation functions warn and match their replacements", {
 test_that("deprecated helper functions warn and match their replacements", {
   withr::local_options(lifecycle_verbosity = "warning")
 
-  fun <- function(alpha, parameter) list(estimate = c(tmle_est = alpha^2))
+  fun <- function(alpha, parameter) fake.estimate(alpha^2)
   expect_warning(
     d <- estimate.derivative(alpha_hat = 3, fun = fun, h = 0.01),
     "estimate_derivative",
@@ -83,7 +83,7 @@ test_that("deprecated helper functions warn and match their replacements", {
   )
   expect_equal(d, 6)
 
-  fun <- function(alpha) list(estimate = c(tmle_est = alpha, se = 0.1), eic = 0)
+  fun <- function(alpha) fake.estimate(alpha, 0.1, 0)
   expect_warning(
     res <- estimate.alpha.fun(theta = 2, fun = fun, c_n = 1e-4),
     "solve_alpha",
@@ -91,9 +91,9 @@ test_that("deprecated helper functions warn and match their replacements", {
   )
   expect_equal(res, solve_alpha(fun, theta = 2, c_n = 1e-4))
 
-  treatment.fit <- list(estimate = c(tmle_est = 0.7), eic = c(0.1, -0.1))
-  placebo.fit <- list(estimate = c(tmle_est = 0.3), eic = c(0.2, -0.2))
-  calibrated.fit <- list(estimate = c(target_est = 0.5), eic = c(0, 0))
+  treatment.fit <- fake.tmle.fit(0.7, c(0.1, -0.1))
+  placebo.fit <- fake.tmle.fit(0.3, c(0.2, -0.2))
+  calibrated.fit <- fake.calibrated.fit(0.5, c(0, 0))
   expect_warning(
     contrasts <- make.calibrated.contrasts(
       treatment.fit = treatment.fit,
@@ -155,5 +155,8 @@ test_that("deprecated tmle.alpha.fun() builds the initial fit from dt", {
     use.cores = 1
   )
 
-  expect_equal(est, tmle_alpha(fixture.fit(30), target = "death"))
+  expect_equal(
+    est,
+    tmle_alpha(fixture.fit(30), target = "death", z_name = "z")
+  )
 })

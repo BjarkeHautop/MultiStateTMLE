@@ -62,10 +62,17 @@
 #' `penalize_time` (`FALSE`) and `verbose` (`FALSE`), with defaults in
 #' parentheses.
 #'
-#' @return A list containing, among others, `tmp_long` (the expanded data
-#'   with fitted hazards and clever weights), `depend_matrix` (the product
-#'   state space), `process_names`, `process_types`, `process_deltas`,
-#'   `cens_process_id` and `at_risks`.
+#' @return An object of class `initial_fit`, a list with elements:
+#'   * `n`: the number of individuals.
+#'   * `tau`, `treatment_model` and `a`: as given.
+#'   * `processes`: a `data.table` with one row per process and columns
+#'     `name`, `delta`, `type` (`"terminal"`, `"recurrent"` or
+#'     `"one_jump"`, inferred from the data), `model` and `at_risk`
+#'     (whether an `at_risk` function was given).
+#'
+#'   It also contains the internal elements used by [tmle_alpha()], among
+#'   them `tmp_long` (the expanded data with fitted hazards and clever
+#'   weights) and `depend_matrix` (the product state space).
 #'
 #' @examples
 #' # Illness-death data: z is an illness that can occur once, death is
@@ -127,6 +134,13 @@ fit_initial <- function(
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
+  # The inputs as given, to store in the result.
+  inputs <- list(
+    fit_types = fit_types,
+    treatment_model = treatment_model,
+    a = a
+  )
+
   fit_types <- Map(.normalize_fit_type, fit_types, names(fit_types))
 
   if (!is.list(treatment_model)) {
@@ -143,10 +157,7 @@ fit_initial <- function(
     treatment_model[["model"]] <- gsub(
       "\\s+",
       "",
-      paste(
-        deparse(treatment_model[["model"]], width.cutoff = 500L),
-        collapse = ""
-      )
+      .deparse_one_line(treatment_model[["model"]])
     )
     if (!identical(treatment_model[["fit"]], "glm")) {
       stop("Only fit = \"glm\" is supported for treatment_model.")
@@ -2886,15 +2897,36 @@ fit_initial <- function(
     with = FALSE
   ]
 
-  return(list(
-    tmp_long = tmp.long,
-    depend_matrix = depend.matrix,
-    process_names = process.names,
-    process_deltas = process.deltas,
-    process_types = process.types,
-    cens_process_id = cens.process.id,
-    at_risks = at.risks
-  ))
+  processes <- data.table(
+    name = process.names,
+    delta = process.deltas,
+    type = unlist(process.types, use.names = FALSE),
+    model = vapply(
+      inputs$fit_types,
+      function(spec) .deparse_one_line(spec$model),
+      character(1),
+      USE.NAMES = FALSE
+    ),
+    at_risk = process.names %in% names(at.risks)
+  )
+
+  structure(
+    list(
+      n = n,
+      tau = tau,
+      processes = processes,
+      treatment_model = inputs$treatment_model,
+      a = inputs$a,
+      tmp_long = tmp.long,
+      depend_matrix = depend.matrix,
+      process_names = process.names,
+      process_deltas = process.deltas,
+      process_types = process.types,
+      cens_process_id = cens.process.id,
+      at_risks = at.risks
+    ),
+    class = "initial_fit"
+  )
 }
 
 # Hash each row of a sparse matrix by its sparsity pattern and values, as a

@@ -23,19 +23,24 @@
 #'   see Description. Give exactly one.
 #' @param ... Further arguments passed on to [tmle_alpha()].
 #'
-#' @return A list with elements:
-#'   * `estimate`: a named vector with the calibrated `alpha_est` and its
-#'     `alpha_se`, the risk of `target` (`target_est`) with standard error
-#'     `target_se` (accounting for the estimation of alpha) and
-#'     `target_se_crude` (treating alpha as known), and the calibration
-#'     target `theta` with standard error `theta_se`.
-#'   * `checks`: diagnostics of the alpha search and derivative estimates.
-#'   * `alpha_eic`, `target_eic` and `eic`: the influence curves of the calibrated alpha, of the risk of `target`
-#'     treating alpha as known, and of the risk of `target`.
-#'
-#'   With several targets, the per-target entries of `estimate` and `checks`
-#'   are suffixed by the target name (e.g. `target_est_death`), and
-#'   `target_eic` and `eic` are lists named by target.
+#' @return An object of class `calibrate_alpha`, a list with elements:
+#'   * `estimate`: a `data.table` with one row per `target` and columns
+#'     `target`, the risk `estimate` under the calibrated intervention, its
+#'     standard error `se` (accounting for the estimation of alpha), the
+#'     bounds `lower` and `upper` of a 95% Wald confidence interval, and the
+#'     standard error `se_crude` treating alpha as known.
+#'   * `calibration`: a `data.table` with the calibrated `alpha` and the
+#'     calibration target `theta` (column `quantity`), with `estimate`, `se`,
+#'     `lower` and `upper`.
+#'   * `z_name` and `a`: as given.
+#'   * `eic`, `eic_alpha_known`: lists, named by target, of the influence
+#'     curves of the risk of `target`, accounting for the estimation of
+#'     alpha and treating it as known.
+#'   * `alpha_eic`: the influence curve of the calibrated alpha.
+#'   * `checks`: diagnostics of the alpha search (`converged`, `dist`,
+#'     `c_n`) and the estimated derivatives with respect to alpha of the risk
+#'     of `z_name` (`derivative_z`) and of each target
+#'     (`derivative_target`).
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -88,7 +93,7 @@ calibrate_alpha <- function(
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
-  n <- length(unique(initial_fit[["tmp_long"]][["id"]]))
+  n <- initial_fit$n
   a_fixed <- a
 
   fit_at <- function(alpha, parameter = z_name, a = a_fixed) {
@@ -107,15 +112,15 @@ calibrate_alpha <- function(
   if (!is.null(rho)) {
     est.aux.1 <- fit_at(alpha = 1)
     theta <- rho * .point_estimate(est.aux.1)
-    theta.eic <- rho * est.aux.1$eic
+    theta.eic <- rho * .eic(est.aux.1)
   } else if (!is.null(rho_1a)) {
     est.aux.1 <- fit_at(alpha = 1, a = 1 - a)
     theta <- rho_1a * .point_estimate(est.aux.1)
-    theta.eic <- rho_1a * est.aux.1$eic
+    theta.eic <- rho_1a * .eic(est.aux.1)
   } else if (!is.null(delta)) {
     est.aux.1 <- fit_at(alpha = 1)
     theta <- delta + .point_estimate(est.aux.1)
-    theta.eic <- est.aux.1$eic
+    theta.eic <- .eic(est.aux.1)
   } else {
     theta.eic <- 0
   }
@@ -180,10 +185,10 @@ calibrate_alpha <- function(
         h = h,
         parameter = target1
       )
-      eic <- target.est[["eic"]] + est.deriv.target * alpha.eic
+      eic <- .eic(target.est) + est.deriv.target * alpha.eic
     } else {
       est.deriv.target <- Inf
-      eic <- target.est[["eic"]]
+      eic <- .eic(target.est)
     }
     list(
       target.est = target.est,
@@ -191,50 +196,45 @@ calibrate_alpha <- function(
       eic = eic
     )
   })
-  names(out.target) <- if (length(target) > 1) target else ""
+  names(out.target) <- target
 
   per_target <- function(f) vapply(out.target, f, numeric(1))
 
-  out <- list(
-    estimate = c(
-      alpha_est = est.alpha$alpha_hat,
-      alpha_se = alpha.se,
-      .target_names(
-        per_target(function(x) .point_estimate(x$target.est)),
-        "target_est"
-      ),
-      .target_names(
-        per_target(function(x) sqrt(mean(x$eic^2) / n)),
-        "target_se"
-      ),
-      .target_names(
-        per_target(function(x) as.numeric(x$target.est[["estimate"]][["se"]])),
-        "target_se_crude"
-      ),
-      theta = theta,
-      theta_se = theta.se
-    ),
-    checks = c(
-      est_deriv_auxiliary = est.deriv.auxiliary,
-      est_alpha_converged = est.alpha$converged,
-      est_alpha_dist = est.alpha$dist,
-      est_alpha_c_n = est.alpha$c_n,
-      .target_names(
-        per_target(function(x) x$est.deriv.target),
-        "est_deriv_target"
-      )
-    )
+  estimate <- .wald_table(
+    target,
+    per_target(function(x) .point_estimate(x$target.est)),
+    per_target(function(x) sqrt(mean(x$eic^2) / n))
+  )
+  set(
+    estimate,
+    j = "se_crude",
+    value = per_target(function(x) x$target.est[["estimate"]][["se"]])
   )
 
-  target.eic <- lapply(out.target, function(x) x$target.est[["eic"]])
-  eic <- lapply(out.target, function(x) x$eic)
-  if (length(target) == 1) {
-    target.eic <- target.eic[[1]]
-    eic <- eic[[1]]
-  }
-  out$alpha_eic <- alpha.eic
-  out$target_eic <- target.eic
-  out$eic <- eic
+  calibration <- .wald_table(
+    c("alpha", "theta"),
+    c(est.alpha$alpha_hat, theta),
+    c(alpha.se, theta.se)
+  )
+  setnames(calibration, "target", "quantity")
 
-  out
+  structure(
+    list(
+      estimate = estimate,
+      calibration = calibration,
+      z_name = z_name,
+      a = a,
+      eic = lapply(out.target, function(x) x$eic),
+      eic_alpha_known = lapply(out.target, function(x) .eic(x$target.est)),
+      alpha_eic = alpha.eic,
+      checks = list(
+        converged = est.alpha$converged,
+        dist = est.alpha$dist,
+        c_n = est.alpha$c_n,
+        derivative_z = est.deriv.auxiliary,
+        derivative_target = per_target(function(x) x$est.deriv.target)
+      )
+    ),
+    class = "calibrate_alpha"
+  )
 }

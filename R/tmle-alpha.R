@@ -49,11 +49,16 @@
 #'   [parallel::mclapply()] for the per-individual computations.
 #' @param verbose Logical. If `TRUE`, print progress.
 #'
-#' @return A list with elements:
-#'   * `estimate`: a named vector with the estimate (`tmle_est`, or
-#'     `one_step_est` if `one_step = TRUE`), its standard error `se`, and the
-#'     initial plug-in estimate `g_est`.
-#'   * `eic`: the efficient influence curve, one value per individual.
+#' @return An object of class `tmle_alpha`, a list with elements:
+#'   * `estimate`: a `data.table` with columns `target`, `estimate`, its
+#'     standard error `se`, and the bounds `lower` and `upper` of a 95% Wald
+#'     confidence interval.
+#'   * `initial_estimate`: the initial plug-in estimate, before targeting.
+#'   * `method`: `"tmle"`, or `"one_step"` if `one_step = TRUE`.
+#'   * `alpha`, `z_name` and `a`: the intervention (`alpha` is `NULL` if
+#'     `alpha_list` is given).
+#'   * `eic`: a list, named by `target`, with the efficient influence curve,
+#'     one value per individual.
 #'   * `convergence`: a named vector with the number of iterations `iter`,
 #'     the absolute mean of the efficient influence curve `eic_solved_at`,
 #'     and whether the iterations `converged`. A warning is given if they
@@ -496,22 +501,28 @@ tmle_alpha <- function(
     )
   }
 
-  estimate <- if (one_step) {
-    c(one_step_est = one.step.est, se = target.se, g_est = g.est)
-  } else {
-    c(tmle_est = target.est, se = target.se, g_est = g.est)
-  }
-
-  list(
-    estimate = estimate,
-    eic = eic,
-    convergence = c(
-      iter = iter,
-      eic_solved_at = abs(mean(eic)),
-      converged = converged
+  structure(
+    list(
+      estimate = .wald_table(
+        target.name,
+        if (one_step) one.step.est else target.est,
+        target.se
+      ),
+      initial_estimate = g.est,
+      method = if (one_step) "one_step" else "tmle",
+      alpha = if (length(alpha_list) > 0) NULL else alpha,
+      z_name = if (is.finite(z.process.id)) z.name else NULL,
+      a = a,
+      eic = stats::setNames(list(eic), target.name),
+      convergence = c(
+        iter = iter,
+        eic_solved_at = abs(mean(eic)),
+        converged = converged
+      ),
+      weights = weights,
+      n_truncated = n.truncated
     ),
-    weights = weights,
-    n_truncated = n.truncated
+    class = "tmle_alpha"
   )
 }
 
@@ -555,18 +566,5 @@ tmle_alpha <- function(
 }
 
 .assert_initial_fit <- function(initial_fit) {
-  checkmate::assert_list(initial_fit, .var.name = "initial_fit")
-  checkmate::assert_names(
-    names(initial_fit),
-    must.include = c(
-      "tmp_long",
-      "depend_matrix",
-      "process_names",
-      "process_deltas",
-      "process_types",
-      "cens_process_id",
-      "at_risks"
-    ),
-    .var.name = "names(initial_fit)"
-  )
+  checkmate::assert_class(initial_fit, "initial_fit")
 }
