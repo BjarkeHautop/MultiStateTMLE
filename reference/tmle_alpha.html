@@ -77,7 +77,7 @@ likelihood estimation (TMLE).</p>
 
 
 <dt id="arg-target">target<a class="anchor" aria-label="anchor" href="#arg-target"></a></dt>
-<dd><p>String. Name of the target process.</p></dd>
+<dd><p>Character vector. Names of the target processes.</p></dd>
 
 
 <dt id="arg-z-name">z_name<a class="anchor" aria-label="anchor" href="#arg-z-name"></a></dt>
@@ -162,20 +162,21 @@ weights of the intervention are truncated. <code>Inf</code> is no truncation.</p
 </dl></div>
     <div class="section level2">
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
-    <p>An object of class <code>tmle_alpha</code>, a list with elements:</p><ul><li><p><code>estimate</code>: a <code>data.table</code> with columns <code>target</code>, <code>estimate</code>, its
-standard error <code>se</code>, and the bounds <code>lower</code> and <code>upper</code> of a 95% Wald
-confidence interval.</p></li>
-<li><p><code>initial_estimate</code>: the initial plug-in estimate, before targeting.</p></li>
+    <p>An object of class <code>tmle_alpha</code>, a list with elements:</p><ul><li><p><code>estimate</code>: a <code>data.table</code> with one row per <code>target</code> and columns
+<code>target</code>, <code>estimate</code>, its standard error <code>se</code>, and the bounds <code>lower</code>
+and <code>upper</code> of a 95% Wald confidence interval.</p></li>
+<li><p><code>initial_estimate</code>: the initial plug-in estimates, before targeting,
+named by target.</p></li>
 <li><p><code>method</code>: <code>"tmle"</code>, or <code>"one_step"</code> if <code>control$one_step = TRUE</code>.</p></li>
 <li><p><code>estimand</code>: as given.</p></li>
 <li><p><code>alpha</code>, <code>z_name</code> and <code>a</code>: the intervention (<code>alpha</code> is <code>NULL</code> if
 <code>alpha_list</code> is given).</p></li>
 <li><p><code>eic</code>: a list, named by <code>target</code>, with the efficient influence curve,
 one value per individual.</p></li>
-<li><p><code>checks</code>: a list of diagnostics:</p><ul><li><p><code>iter</code>: the number of iterations.</p></li>
-<li><p><code>eic_solved_at</code>: the absolute mean of the efficient influence curve.</p></li>
-<li><p><code>converged</code>: whether the iterations converged. A warning is given
-if they did not.</p></li>
+<li><p><code>checks</code>: a list of diagnostics:</p><ul><li><p><code>iter</code>, <code>eic_solved_at</code> and <code>converged</code>: vectors, named by target,
+of the number of iterations, the absolute mean of the efficient
+influence curve, and whether the iterations converged. A warning is
+given if they did not.</p></li>
 <li><p><code>weights</code>: a matrix with the quantiles (columns <code>q50</code>, <code>q90</code>, <code>q99</code>
 and <code>q100</code>) over individuals of each individual's maximal
 <code>intervention</code>, <code>censoring</code> and <code>treatment</code> weight, and of their
@@ -184,13 +185,17 @@ a positivity diagnostic. The intervention weights are those after
 truncation, and the treatment weights are 1 when <code>a</code> is not given.</p></li>
 <li><p><code>n_truncated</code>: the number of individuals whose initial intervention
 weight was truncated (0 if <code>control$truncate_weights = Inf</code>).</p></li>
-</ul></li>
+</ul><p><code>weights</code> and <code>n_truncated</code> are shared by the targets; with
+<code>only_first</code> and several targets, they are those of the first.</p></li>
 </ul></div>
     <div class="section level2">
     <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
     <p>By default the target parameter is the risk of a <code>target</code> event by the
 horizon <code>tau</code> given to <code><a href="fit_initial.html">fit_initial()</a></code> (or the expected number of events
-for a recurrent <code>target</code>).</p>
+for a recurrent <code>target</code>). Several targets are estimated separately,
+under the same intervention.</p>
+<p>The functions in <code>alpha_list</code> and <code>target_only_in_state</code> are called as
+described in the section "Functions in the arguments" of <code><a href="fit_initial.html">fit_initial()</a></code>.</p>
     </div>
 
     <div class="section level2">

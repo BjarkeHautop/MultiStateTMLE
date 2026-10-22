@@ -157,6 +157,33 @@ specifications, built from `cut_one_way`, `cut_tk`, `cut_tk_values` and
 `penalize_time` (`FALSE`) and `verbose` (`FALSE`), with defaults in
 parentheses.
 
+## Functions in the arguments
+
+The functions given to `fit_initial()` and
+[`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
+are called in different ways:
+
+- `at_risk` in `fit_types`, and the functions in `derived_vars`, are
+  called with a `data.table` and must return one value per row. They are
+  called both with the data, with a row per individual and time, and
+  with the state space, with a row per state and a column per process
+  that other processes depend on. So they may only use those process
+  columns, such as `dt[["z"]]`, the number of jumps of `z` so far.
+
+- The functions in `depend_time` are called with a numeric vector of
+  times and must return one value per time.
+
+- `target_only_in_state` in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
+  is called with the state space only, `initial_fit$depend_matrix`, and
+  must return one logical per state.
+
+- The functions in `alpha_list` in
+  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
+  are called with the columns of the expanded data
+  `initial_fit$tmp_long` named by their arguments, such as `time`, a
+  baseline covariate or a process, and must return one value per row.
+
 ## Examples
 
 ``` r

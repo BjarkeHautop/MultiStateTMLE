@@ -186,6 +186,27 @@ specifications, built from <code>cut_one_way</code>, <code>cut_tk</code>, <code>
 <code>penalize_time</code> (<code>FALSE</code>) and <code>verbose</code> (<code>FALSE</code>), with defaults in
 parentheses.</p>
     </div>
+    <div class="section level2">
+    <h2 id="functions-in-the-arguments">Functions in the arguments<a class="anchor" aria-label="anchor" href="#functions-in-the-arguments"></a></h2>
+
+
+<p>The functions given to <code>fit_initial()</code> and <code><a href="tmle_alpha.html">tmle_alpha()</a></code> are called in
+different ways:</p><ul><li><p><code>at_risk</code> in <code>fit_types</code>, and the functions in <code>derived_vars</code>, are
+called with a <code>data.table</code> and must return one value per row. They are
+called both with the data, with a row per individual and time, and with
+the state space, with a row per state and a column per process that
+other processes depend on. So they may only use those process columns,
+such as <code>dt[["z"]]</code>, the number of jumps of <code>z</code> so far.</p></li>
+<li><p>The functions in <code>depend_time</code> are called with a numeric vector of
+times and must return one value per time.</p></li>
+<li><p><code>target_only_in_state</code> in <code><a href="tmle_alpha.html">tmle_alpha()</a></code> is called with the state
+space only, <code>initial_fit$depend_matrix</code>, and must return one logical
+per state.</p></li>
+<li><p>The functions in <code>alpha_list</code> in <code><a href="tmle_alpha.html">tmle_alpha()</a></code> are called with the
+columns of the expanded data <code>initial_fit$tmp_long</code> named by their
+arguments, such as <code>time</code>, a baseline covariate or a process, and must
+return one value per row.</p></li>
+</ul></div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>

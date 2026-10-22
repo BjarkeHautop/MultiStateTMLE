@@ -35,7 +35,7 @@ tmle_alpha(
 
 - target:
 
-  String. Name of the target process.
+  Character vector. Names of the target processes.
 
 - z_name:
 
@@ -129,11 +129,12 @@ tmle_alpha(
 
 An object of class `tmle_alpha`, a list with elements:
 
-- `estimate`: a `data.table` with columns `target`, `estimate`, its
-  standard error `se`, and the bounds `lower` and `upper` of a 95% Wald
-  confidence interval.
+- `estimate`: a `data.table` with one row per `target` and columns
+  `target`, `estimate`, its standard error `se`, and the bounds `lower`
+  and `upper` of a 95% Wald confidence interval.
 
-- `initial_estimate`: the initial plug-in estimate, before targeting.
+- `initial_estimate`: the initial plug-in estimates, before targeting,
+  named by target.
 
 - `method`: `"tmle"`, or `"one_step"` if `control$one_step = TRUE`.
 
@@ -147,12 +148,10 @@ An object of class `tmle_alpha`, a list with elements:
 
 - `checks`: a list of diagnostics:
 
-  - `iter`: the number of iterations.
-
-  - `eic_solved_at`: the absolute mean of the efficient influence curve.
-
-  - `converged`: whether the iterations converged. A warning is given if
-    they did not.
+  - `iter`, `eic_solved_at` and `converged`: vectors, named by target,
+    of the number of iterations, the absolute mean of the efficient
+    influence curve, and whether the iterations converged. A warning is
+    given if they did not.
 
   - `weights`: a matrix with the quantiles (columns `q50`, `q90`, `q99`
     and `q100`) over individuals of each individual's maximal
@@ -164,12 +163,20 @@ An object of class `tmle_alpha`, a list with elements:
   - `n_truncated`: the number of individuals whose initial intervention
     weight was truncated (0 if `control$truncate_weights = Inf`).
 
+  `weights` and `n_truncated` are shared by the targets; with
+  `only_first` and several targets, they are those of the first.
+
 ## Details
 
 By default the target parameter is the risk of a `target` event by the
 horizon `tau` given to
 [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
-(or the expected number of events for a recurrent `target`).
+(or the expected number of events for a recurrent `target`). Several
+targets are estimated separately, under the same intervention.
+
+The functions in `alpha_list` and `target_only_in_state` are called as
+described in the section "Functions in the arguments" of
+[`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
 
 ## Examples
 
