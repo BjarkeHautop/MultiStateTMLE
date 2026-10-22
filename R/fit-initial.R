@@ -69,6 +69,25 @@
 #' `penalize_time` (`FALSE`) and `verbose` (`FALSE`), with defaults in
 #' parentheses.
 #'
+#' @section Functions in the arguments:
+#' The functions given to `fit_initial()` and [tmle_alpha()] are called in
+#' different ways:
+#' * `at_risk` in `fit_types`, and the functions in `derived_vars`, are
+#'   called with a `data.table` and must return one value per row. They are
+#'   called both with the data, with a row per individual and time, and with
+#'   the state space, with a row per state and a column per process that
+#'   other processes depend on. So they may only use those process columns,
+#'   such as `dt[["z"]]`, the number of jumps of `z` so far.
+#' * The functions in `depend_time` are called with a numeric vector of
+#'   times and must return one value per time.
+#' * `target_only_in_state` in [tmle_alpha()] is called with the state
+#'   space only, `initial_fit$depend_matrix`, and must return one logical
+#'   per state.
+#' * The functions in `alpha_list` in [tmle_alpha()] are called with the
+#'   columns of the expanded data `initial_fit$tmp_long` named by their
+#'   arguments, such as `time`, a baseline covariate or a process, and must
+#'   return one value per row.
+#'
 #' @return An object of class `initial_fit`, a list with elements:
 #'   * `n`: the number of individuals.
 #'   * `tau`, `treatment_model` and `arms`: as given (`arms` with its
@@ -409,7 +428,7 @@ fit_initial <- function(
       data = dt[idN == 1],
       family = binomial
     )
-    if (verbose) print(summary(fit.A0))
+    if (verbose) .message_print(summary(fit.A0))
   }
 
   #--------------------------------
@@ -460,7 +479,7 @@ fit_initial <- function(
       message(paste0("fit.type = ", names(fit_types)[fit.type.jj]))
     }
     if (verbose) {
-      print(tmp.cox)
+      .message_print(tmp.cox)
     }
     tmp.type <- suppressWarnings(setDT(basehaz(
       tmp.cox,
@@ -1425,7 +1444,7 @@ fit_initial <- function(
       }
 
       if (verbose) {
-        print(paste0(hal.jj, "/", length(hal.sl), " (hal-sl)"))
+        message(paste0(hal.jj, "/", length(hal.sl), " (hal-sl)"))
       }
 
       hal.formula.main <- make.hal.formula(
@@ -1638,7 +1657,7 @@ fit_initial <- function(
           message("--------------------------------------------")
           message(paste0("delta = ", fh$delta.value))
           message("--------------------------------------------")
-          print(coef(fh$hal.fit, s = fh$lambda.cv))
+          .message_print(coef(fh$hal.fit, s = fh$lambda.cv))
         })
       }
     } else if (length(fit.hals.list) > 1) {
@@ -1659,7 +1678,7 @@ fit_initial <- function(
           })
           picked <- (1:length(inner.cve))[inner.cve == min(inner.cve)]
           if (verbose) {
-            print(inner.cve)
+            .message_print(inner.cve)
           }
           if (verbose) {
             message(paste0("picked hal: ", picked))
@@ -1679,7 +1698,7 @@ fit_initial <- function(
             }
           }
           if (verbose) {
-            print(coef(fh$hal.fit, s = fh$lambda.cv))
+            .message_print(coef(fh$hal.fit, s = fh$lambda.cv))
           }
           return(fh)
         }

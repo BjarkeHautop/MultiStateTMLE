@@ -22,7 +22,7 @@ tmle_alpha(
 \arguments{
 \item{initial_fit}{An initial fit, as returned by \code{\link[=fit_initial]{fit_initial()}}.}
 
-\item{target}{String. Name of the target process.}
+\item{target}{Character vector. Names of the target processes.}
 
 \item{z_name}{String. Name of the process in \code{initial_fit} whose
 intensity \code{alpha} scales. Required unless \code{alpha = 1} or \code{alpha_list}
@@ -89,10 +89,11 @@ weights of the intervention are truncated. \code{Inf} is no truncation.
 \value{
 An object of class \code{tmle_alpha}, a list with elements:
 \itemize{
-\item \code{estimate}: a \code{data.table} with columns \code{target}, \code{estimate}, its
-standard error \code{se}, and the bounds \code{lower} and \code{upper} of a 95\% Wald
-confidence interval.
-\item \code{initial_estimate}: the initial plug-in estimate, before targeting.
+\item \code{estimate}: a \code{data.table} with one row per \code{target} and columns
+\code{target}, \code{estimate}, its standard error \code{se}, and the bounds \code{lower}
+and \code{upper} of a 95\% Wald confidence interval.
+\item \code{initial_estimate}: the initial plug-in estimates, before targeting,
+named by target.
 \item \code{method}: \code{"tmle"}, or \code{"one_step"} if \code{control$one_step = TRUE}.
 \item \code{estimand}: as given.
 \item \code{alpha}, \code{z_name} and \code{a}: the intervention (\code{alpha} is \code{NULL} if
@@ -101,10 +102,10 @@ confidence interval.
 one value per individual.
 \item \code{checks}: a list of diagnostics:
 \itemize{
-\item \code{iter}: the number of iterations.
-\item \code{eic_solved_at}: the absolute mean of the efficient influence curve.
-\item \code{converged}: whether the iterations converged. A warning is given
-if they did not.
+\item \code{iter}, \code{eic_solved_at} and \code{converged}: vectors, named by target,
+of the number of iterations, the absolute mean of the efficient
+influence curve, and whether the iterations converged. A warning is
+given if they did not.
 \item \code{weights}: a matrix with the quantiles (columns \code{q50}, \code{q90}, \code{q99}
 and \code{q100}) over individuals of each individual's maximal
 \code{intervention}, \code{censoring} and \code{treatment} weight, and of their
@@ -114,6 +115,9 @@ truncation, and the treatment weights are 1 when \code{a} is not given.
 \item \code{n_truncated}: the number of individuals whose initial intervention
 weight was truncated (0 if \code{control$truncate_weights = Inf}).
 }
+
+\code{weights} and \code{n_truncated} are shared by the targets; with
+\code{only_first} and several targets, they are those of the first.
 }
 }
 \description{
@@ -126,7 +130,11 @@ likelihood estimation (TMLE).
 \details{
 By default the target parameter is the risk of a \code{target} event by the
 horizon \code{tau} given to \code{\link[=fit_initial]{fit_initial()}} (or the expected number of events
-for a recurrent \code{target}).
+for a recurrent \code{target}). Several targets are estimated separately,
+under the same intervention.
+
+The functions in \code{alpha_list} and \code{target_only_in_state} are called as
+described in the section "Functions in the arguments" of \code{\link[=fit_initial]{fit_initial()}}.
 }
 \examples{
 fit <- fit_initial(

@@ -253,3 +253,23 @@ test_that("tmle_alpha() only accepts a values prepared by fit_initial()", {
     "reference_a must be one of"
   )
 })
+
+test_that("tmle_alpha() estimates several targets separately", {
+  fit <- fixture.fit(30)
+
+  both <- tmle_alpha(fit, target = c("death", "z"), z_name = "z", alpha = 2)
+  death <- tmle_alpha(fit, target = "death", z_name = "z", alpha = 2)
+  z <- tmle_alpha(fit, target = "z", z_name = "z", alpha = 2)
+
+  expect_equal(both$estimate, rbind(death$estimate, z$estimate))
+  expect_equal(
+    both$initial_estimate,
+    c(death$initial_estimate, z$initial_estimate)
+  )
+  expect_equal(both$eic, c(death$eic, z$eic))
+  expect_named(both$checks$converged, c("death", "z"))
+  expect_equal(both$checks$weights, death$checks$weights)
+  expect_equal(coef(both), c(death = coef(death), z = coef(z)), ignore_attr = TRUE)
+  expect_output(print(both), "z: Initial estimate")
+  expect_error(tmle_alpha(fit, target = c("death", "death")), "target")
+})

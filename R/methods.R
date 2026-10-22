@@ -75,16 +75,23 @@ print.tmle_alpha <- function(x, ...) {
     sep = ""
   )
   print(x$estimate)
-  cat("\nInitial estimate:", format(x$initial_estimate, digits = 4))
-  if (x$method == "tmle") {
-    iter <- x$checks$iter
-    if (x$checks$converged) {
-      cat("; converged after", iter, "iterations")
-    } else {
-      cat("; did not converge in", iter, "iterations")
-    }
-  }
   cat("\n")
+  targets <- names(x$initial_estimate)
+  for (target in targets) {
+    if (length(targets) > 1) {
+      cat(target, ": ", sep = "")
+    }
+    cat("Initial estimate:", format(x$initial_estimate[[target]], digits = 4))
+    if (x$method == "tmle") {
+      iter <- x$checks$iter[[target]]
+      if (x$checks$converged[[target]]) {
+        cat("; converged after", iter, "iterations")
+      } else {
+        cat("; did not converge in", iter, "iterations")
+      }
+    }
+    cat("\n")
+  }
   invisible(x)
 }
 

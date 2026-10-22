@@ -8,10 +8,14 @@
 #'
 #' By default the target parameter is the risk of a `target` event by the
 #' horizon `tau` given to [fit_initial()] (or the expected number of events
-#' for a recurrent `target`).
+#' for a recurrent `target`). Several targets are estimated separately,
+#' under the same intervention.
+#'
+#' The functions in `alpha_list` and `target_only_in_state` are called as
+#' described in the section "Functions in the arguments" of [fit_initial()].
 #'
 #' @param initial_fit An initial fit, as returned by [fit_initial()].
-#' @param target String. Name of the target process.
+#' @param target Character vector. Names of the target processes.
 #' @param z_name String. Name of the process in `initial_fit` whose
 #'   intensity `alpha` scales. Required unless `alpha = 1` or `alpha_list`
 #'   is given.
@@ -65,10 +69,11 @@
 #' @param verbose Logical. If `TRUE`, print progress.
 #'
 #' @return An object of class `tmle_alpha`, a list with elements:
-#'   * `estimate`: a `data.table` with columns `target`, `estimate`, its
-#'     standard error `se`, and the bounds `lower` and `upper` of a 95% Wald
-#'     confidence interval.
-#'   * `initial_estimate`: the initial plug-in estimate, before targeting.
+#'   * `estimate`: a `data.table` with one row per `target` and columns
+#'     `target`, `estimate`, its standard error `se`, and the bounds `lower`
+#'     and `upper` of a 95% Wald confidence interval.
+#'   * `initial_estimate`: the initial plug-in estimates, before targeting,
+#'     named by target.
 #'   * `method`: `"tmle"`, or `"one_step"` if `control$one_step = TRUE`.
 #'   * `estimand`: as given.
 #'   * `alpha`, `z_name` and `a`: the intervention (`alpha` is `NULL` if
@@ -76,10 +81,10 @@
 #'   * `eic`: a list, named by `target`, with the efficient influence curve,
 #'     one value per individual.
 #'   * `checks`: a list of diagnostics:
-#'     * `iter`: the number of iterations.
-#'     * `eic_solved_at`: the absolute mean of the efficient influence curve.
-#'     * `converged`: whether the iterations converged. A warning is given
-#'       if they did not.
+#'     * `iter`, `eic_solved_at` and `converged`: vectors, named by target,
+#'       of the number of iterations, the absolute mean of the efficient
+#'       influence curve, and whether the iterations converged. A warning is
+#'       given if they did not.
 #'     * `weights`: a matrix with the quantiles (columns `q50`, `q90`, `q99`
 #'       and `q100`) over individuals of each individual's maximal
 #'       `intervention`, `censoring` and `treatment` weight, and of their
@@ -88,6 +93,9 @@
 #'       truncation, and the treatment weights are 1 when `a` is not given.
 #'     * `n_truncated`: the number of individuals whose initial intervention
 #'       weight was truncated (0 if `control$truncate_weights = Inf`).
+#'
+#'     `weights` and `n_truncated` are shared by the targets; with
+#'     `only_first` and several targets, they are those of the first.
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -124,7 +132,12 @@ tmle_alpha <- function(
 ) {
   .assert_initial_fit(initial_fit)
   .assert_a(a, initial_fit)
-  checkmate::assert_string(target)
+  checkmate::assert_character(
+    target,
+    min.len = 1,
+    any.missing = FALSE,
+    unique = TRUE
+  )
   checkmate::assert_string(z_name, null.ok = TRUE)
   checkmate::assert_number(alpha, lower = 0, finite = TRUE)
   checkmate::assert_list(
@@ -142,6 +155,26 @@ tmle_alpha <- function(
   control <- .tmle_control(control)
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
+
+  if (length(target) > 1) {
+    fits <- lapply(target, function(target1) {
+      tmle_alpha(
+        initial_fit,
+        target = target1,
+        z_name = z_name,
+        alpha = alpha,
+        alpha_list = alpha_list,
+        a = a,
+        estimand = estimand,
+        only_first = only_first,
+        target_only_in_state = target_only_in_state,
+        control = control,
+        cores = cores,
+        verbose = verbose
+      )
+    })
+    return(.combine_targets(fits))
+  }
 
   one_step <- control$one_step
   block_size <- control$block_size
@@ -505,7 +538,9 @@ tmle_alpha <- function(
 
   if (!one_step && !converged) {
     warning(
-      "TMLE did not converge in control$max_iter = ",
+      "TMLE for target '",
+      target.name,
+      "' did not converge in control$max_iter = ",
       max_iter,
       " iterations; the mean of the efficient influence curve is ",
       signif(abs(mean(eic)), 3),
@@ -520,7 +555,7 @@ tmle_alpha <- function(
         if (one_step) one.step.est else target.est,
         target.se
       ),
-      initial_estimate = g.est,
+      initial_estimate = stats::setNames(g.est, target.name),
       method = if (one_step) "one_step" else "tmle",
       estimand = estimand,
       alpha = if (length(alpha_list) > 0) NULL else alpha,
@@ -528,15 +563,33 @@ tmle_alpha <- function(
       a = a,
       eic = stats::setNames(list(eic), target.name),
       checks = list(
-        iter = iter,
-        eic_solved_at = abs(mean(eic)),
-        converged = converged,
+        iter = stats::setNames(iter, target.name),
+        eic_solved_at = stats::setNames(abs(mean(eic)), target.name),
+        converged = stats::setNames(converged, target.name),
         weights = weights,
         n_truncated = n.truncated
       )
     ),
     class = "tmle_alpha"
   )
+}
+
+# Combine single-target tmle_alpha() fits under the same intervention into
+# one. The weight diagnostics are those of the first target; they only
+# differ between targets with only_first, which drops rows by target.
+.combine_targets <- function(fits) {
+  out <- fits[[1]]
+  out$estimate <- rbindlist(lapply(fits, function(fit) fit$estimate))
+  out$initial_estimate <- unlist(lapply(fits, function(fit) {
+    fit$initial_estimate
+  }))
+  out$eic <- unlist(lapply(fits, function(fit) fit$eic), recursive = FALSE)
+  for (check in c("iter", "eic_solved_at", "converged")) {
+    out$checks[[check]] <- unlist(lapply(fits, function(fit) {
+      fit$checks[[check]]
+    }))
+  }
+  out
 }
 
 # Clever weight of the intervention alpha on process z.name:

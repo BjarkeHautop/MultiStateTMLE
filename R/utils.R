@@ -161,3 +161,8 @@
 .eic <- function(fit) {
   fit[["eic"]][[1]]
 }
+
+# Print an object through message() so verbose output can be suppressed.
+.message_print <- function(x) {
+  message(paste(utils::capture.output(print(x)), collapse = "\n"))
+}

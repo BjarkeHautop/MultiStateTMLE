@@ -189,8 +189,10 @@ test_that("fit_initial() fits a treatment model and propensities under 'a'", {
   ))
 })
 
-test_that("fit_initial() prints fit diagnostics when verbose = TRUE", {
-  expect_output(suppressMessages(fixture.fit(20, verbose = TRUE)))
+test_that("fit_initial() reports fit diagnostics as messages when verbose = TRUE", {
+  msgs <- capture_messages(fixture.fit(20, verbose = TRUE))
+  expect_true(any(grepl("coxph", msgs)))
+  expect_silent(suppressMessages(fixture.fit(20, verbose = TRUE)))
 })
 
 test_that("fit_initial()'s HAL setup identifies the process for its own delta", {

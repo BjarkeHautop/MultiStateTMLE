@@ -121,6 +121,29 @@ specifications, built from \code{cut_one_way}, \code{cut_tk}, \code{cut_tk_value
 \code{penalize_time} (\code{FALSE}) and \code{verbose} (\code{FALSE}), with defaults in
 parentheses.
 }
+\section{Functions in the arguments}{
+
+The functions given to \code{fit_initial()} and \code{\link[=tmle_alpha]{tmle_alpha()}} are called in
+different ways:
+\itemize{
+\item \code{at_risk} in \code{fit_types}, and the functions in \code{derived_vars}, are
+called with a \code{data.table} and must return one value per row. They are
+called both with the data, with a row per individual and time, and with
+the state space, with a row per state and a column per process that
+other processes depend on. So they may only use those process columns,
+such as \code{dt[["z"]]}, the number of jumps of \code{z} so far.
+\item The functions in \code{depend_time} are called with a numeric vector of
+times and must return one value per time.
+\item \code{target_only_in_state} in \code{\link[=tmle_alpha]{tmle_alpha()}} is called with the state
+space only, \code{initial_fit$depend_matrix}, and must return one logical
+per state.
+\item The functions in \code{alpha_list} in \code{\link[=tmle_alpha]{tmle_alpha()}} are called with the
+columns of the expanded data \code{initial_fit$tmp_long} named by their
+arguments, such as \code{time}, a baseline covariate or a process, and must
+return one value per row.
+}
+}
+
 \examples{
 # Illness-death data: z is an illness that can occur once, death is
 # terminal, and delta = 0 is censoring.
