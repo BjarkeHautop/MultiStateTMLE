@@ -65,29 +65,28 @@ nu[3] <- nu[3]
 
 set.seed(2020115)
 
-plotEventData(
-  dt <- simRecurrentTreatment(
-    N = N,
-    eta = eta,
-    nu = nu,
-    beta_L_Z = 1.5,
-    beta_L_D = 1.25,
-    beta_W_Z = 1.5,
-    beta_W_D = 1.25,
-    #beta_Z_D = -0.5, beta_Z_L = -1.25, beta_Z_W = -1.25, beta_Z_D2 = -0.5,
-    beta_Z_D = 0,
-    beta_Z_L = 0,
-    beta_Z_W = 0,
-    beta_Z_D2 = 0,
-    beta_L0_L = 1,
-    beta_L0_W = 1,
-    beta_W_L = 1.5,
-    beta_L_W = 0.5,
-    beta_L0_Z = 1,
-    lower = 10^(-150),
-    upper = 1e3
-  )
+dt <- simRecurrentTreatment(
+  N = N,
+  eta = eta,
+  nu = nu,
+  beta_L_Z = 1.5,
+  beta_L_D = 1.25,
+  beta_W_Z = 1.5,
+  beta_W_D = 1.25,
+  #beta_Z_D = -0.5, beta_Z_L = -1.25, beta_Z_W = -1.25, beta_Z_D2 = -0.5,
+  beta_Z_D = 0,
+  beta_Z_L = 0,
+  beta_Z_W = 0,
+  beta_Z_D2 = 0,
+  beta_L0_L = 1,
+  beta_L0_W = 1,
+  beta_W_L = 1.5,
+  beta_L_W = 0.5,
+  beta_L0_Z = 1,
+  lower = 10^(-150),
+  upper = 1e3
 )
+plotEventData(dt)
 
 setnames(dt, "ID", "id")
 setnames(dt, "Time", "time")
@@ -225,22 +224,21 @@ for (alpha in which.alphas) {
     return(tmp.out)
   })
 
-  print(
-    truth.out <- c(
-      truth_1 = mean(
-        sapply(int_effect, function(rep) rep$effect_1),
-        na.rm = TRUE
-      ),
-      truth_2 = mean(
-        sapply(int_effect, function(rep) rep$effect_2),
-        na.rm = TRUE
-      ),
-      truth_z = mean(
-        sapply(int_effect, function(rep) rep$effect_z),
-        na.rm = TRUE
-      )
+  truth.out <- c(
+    truth_1 = mean(
+      sapply(int_effect, function(rep) rep$effect_1),
+      na.rm = TRUE
+    ),
+    truth_2 = mean(
+      sapply(int_effect, function(rep) rep$effect_2),
+      na.rm = TRUE
+    ),
+    truth_z = mean(
+      sapply(int_effect, function(rep) rep$effect_z),
+      na.rm = TRUE
     )
   )
+  print(truth.out)
 
   saveRDS(
     truth.out,

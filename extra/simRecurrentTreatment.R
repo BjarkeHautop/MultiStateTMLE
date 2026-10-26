@@ -176,11 +176,13 @@ simRecurrentTreatment <- function(
       upper = upper,
       term_deltas = c(0, 1, 5),
       override_beta = list(
-        "N2 >= 1" = c("N2" = 0.75),
-        "N2 >= 1" = c("N1" = -0.5),
-        "N2 >= 1" = c("N3" = -1.25),
-        "N2 >= 1" = c("N4" = -1.25),
-        "N2 >= 1" = c("N5" = -0.5)
+        "N2 >= 1" = c(
+          "N2" = 0.75,
+          "N1" = -0.5,
+          "N3" = -1.25,
+          "N4" = -1.25,
+          "N5" = -0.5
+        )
       ),
       lower = lower
     )

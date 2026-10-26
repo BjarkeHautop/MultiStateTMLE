@@ -24,33 +24,33 @@ run.master()
 ## simulate 1 dataset and apply function
 #-------------------------------------------------------------------------------------------#
 
+# jarl-ignore unreachable_code: example to run interactively
 if (FALSE) {
   N <- 500
   eta <- c(0.1, 0.025, 0.085, 0.1, 0.1, 0.025)
 
   set.seed(20205)
 
-  plotEventData(
-    dt <- simTreatmentCR(
-      N = N,
-      eta = eta,
-      nu = rep(1.1, 6),
-      beta_L_Z = 1.5,
-      beta_L_D = 1.25,
-      beta_W_Z = 1.5,
-      beta_W_D = 1.25,
-      beta_Z_D = -0.5,
-      beta_Z_L = -1.25,
-      beta_Z_W = -1.25,
-      beta_L0_L = 1,
-      beta_L0_W = 1,
-      beta_W_L = 0.5,
-      beta_L_W = 0.5,
-      beta_L0_Z = 1,
-      lower = 10^(-150),
-      upper = 1e3
-    )
+  dt <- simTreatmentCR(
+    N = N,
+    eta = eta,
+    nu = rep(1.1, 6),
+    beta_L_Z = 1.5,
+    beta_L_D = 1.25,
+    beta_W_Z = 1.5,
+    beta_W_D = 1.25,
+    beta_Z_D = -0.5,
+    beta_Z_L = -1.25,
+    beta_Z_W = -1.25,
+    beta_L0_L = 1,
+    beta_L0_W = 1,
+    beta_W_L = 0.5,
+    beta_L_W = 0.5,
+    beta_L0_Z = 1,
+    lower = 10^(-150),
+    upper = 1e3
   )
+  plotEventData(dt)
 
   setnames(dt, "ID", "id")
   setnames(dt, "Time", "time")
@@ -136,31 +136,31 @@ for (misspecify in list(c(), which.misspecify)) {
 
   model.1 <- "Surv(tstart, tstop, delta == 1)~L0+Z+W+L"
 
-  if (("1" %in% misspecify) & ("W" %in% misspecify)) {
+  if ("1" %in% misspecify && "W" %in% misspecify) {
     model.1 <- gsub("\\+W", "", model.1)
   }
 
-  if (("1" %in% misspecify) & ("L" %in% misspecify)) {
+  if ("1" %in% misspecify && "L" %in% misspecify) {
     model.1 <- gsub("\\+L", "", model.1)
   }
 
   model.2 <- "Surv(tstart, tstop, delta == 5)~L0+Z+W+L"
 
-  if (("1" %in% misspecify) & ("W" %in% misspecify)) {
+  if ("1" %in% misspecify && "W" %in% misspecify) {
     model.2 <- gsub("\\+W", "", model.2)
   }
 
-  if (("1" %in% misspecify) & ("L" %in% misspecify)) {
+  if ("1" %in% misspecify && "L" %in% misspecify) {
     model.2 <- gsub("\\+L", "", model.2)
   }
 
   model.Z <- "Surv(tstart, tstop, delta == 2)~L0+L+W"
 
-  if (("Z" %in% misspecify) & ("W" %in% misspecify)) {
+  if ("Z" %in% misspecify && "W" %in% misspecify) {
     model.Z <- gsub("\\+W", "", model.Z)
   }
 
-  if (("Z" %in% misspecify) & ("L" %in% misspecify)) {
+  if ("Z" %in% misspecify && "L" %in% misspecify) {
     model.Z <- gsub("\\+L", "", model.Z)
   }
 
@@ -348,18 +348,17 @@ for (alpha in which.alphas) {
     return(tmp.out)
   })
 
-  print(
-    truth.out <- c(
-      truth_1 = mean(
-        sapply(int_effect, function(rep) rep$effect_1),
-        na.rm = TRUE
-      ),
-      truth_z = mean(
-        sapply(int_effect, function(rep) rep$effect_z),
-        na.rm = TRUE
-      )
+  truth.out <- c(
+    truth_1 = mean(
+      sapply(int_effect, function(rep) rep$effect_1),
+      na.rm = TRUE
+    ),
+    truth_z = mean(
+      sapply(int_effect, function(rep) rep$effect_z),
+      na.rm = TRUE
     )
   )
+  print(truth.out)
 
   saveRDS(
     truth.out,

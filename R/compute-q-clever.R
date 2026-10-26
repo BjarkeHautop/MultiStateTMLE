@@ -33,14 +33,14 @@
   }
 
   # state columns (exclude 'at.risk', the state index and successor columns)
-  sstates <- names(states)[substr(names(states), 1, 2) == "s."]
+  sstates <- names(states)[startsWith(names(states), "s.")]
   state_cols_all <- setdiff(
     names(states),
     c("at.risk", state_idx_col, "target.only.in.state", sstates)
   )
   state_processes <- state_cols_all
 
-  time_var_match <- names(states)[substr(names(states), 1, 5) == "time."]
+  time_var_match <- names(states)[startsWith(names(states), "time.")]
 
   derived_processes <- state_processes[
     !(state_processes %in% names(process_types))

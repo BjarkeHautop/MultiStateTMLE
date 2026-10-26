@@ -140,6 +140,7 @@ init.fit <- prepare.initial(
 ###################################################
 ## estimation of calibrated target parameters
 
+# jarl-ignore unreachable_code: alternative analysis, kept for reference
 if (FALSE) {
   ## (((we don't use this, but we could have)))
   est.placebo.at.sema.burden <- calibration.fun(
@@ -234,6 +235,7 @@ est.cr1.placebo <- tmle.alpha.fun(
     calibrated.fit = est.sema.at.placebo.burden
   ))
 
+# jarl-ignore unreachable_code: alternative analysis, kept for reference
 if (FALSE) {
   ### doing the same as above, but manually
 
@@ -339,6 +341,7 @@ if (FALSE) {
 ###################################################
 ## estimation of target parameters, varying alphas
 
+# jarl-ignore unreachable_code: alternative analysis, kept for reference
 if (FALSE) {
   use.cores <- 30
 
@@ -388,6 +391,7 @@ if (FALSE) {
 ###################################################
 ## estimation of target parameters, varying alphas
 
+# jarl-ignore unreachable_code: alternative analysis, kept for reference
 if (FALSE) {
   tmle.est.list <- list()
 

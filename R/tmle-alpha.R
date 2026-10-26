@@ -520,7 +520,7 @@ tmle_alpha <- function(
       update_weights()
     }
 
-    names.P <- names(tmp.long)[substr(names(tmp.long), 1, 2) == "P."]
+    names.P <- names(tmp.long)[startsWith(names(tmp.long), "P.")]
 
     for (name.P in names.P) {
       if (any(tmp.long[[name.P]] > 1)) {

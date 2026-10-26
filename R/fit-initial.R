@@ -204,9 +204,8 @@ fit_initial <- function(
 
   n <- length(unique(dt[["id"]]))
 
-  any.hal <- any(
-    which.hal <- sapply(fit_types, function(fit.type) fit.type$fit == "hal")
-  )
+  which.hal <- sapply(fit_types, function(fit.type) fit.type$fit == "hal")
+  any.hal <- any(which.hal)
   if (any.hal && !exists("fit.hal", mode = "function")) {
     stop(
       "fit = \"hal\" requires a fit.hal() function on the search path, ",
@@ -214,7 +213,7 @@ fit_initial <- function(
     )
   }
 
-  at.risk.ids <- (1:length(fit_types))[sapply(fit_types, function(fit.type) {
+  at.risk.ids <- (seq_along(fit_types))[sapply(fit_types, function(fit.type) {
     ("at.risk" %in% names(fit.type))
   })]
 
@@ -262,13 +261,14 @@ fit_initial <- function(
 
   #-- remove time vars for now
   if (length(depend_time) > 0) {
-    for (time.jj in 1:length(depend_time)) {
+    for (time.jj in seq_along(depend_time)) {
       varnames <- setdiff(varnames, paste0("T.", names(depend_time)[time.jj]))
     }
   }
 
   #-- in case of interactions:
-  if (length(interaction.names <- grep(":", varnames, value = TRUE)) > 0) {
+  interaction.names <- grep(":", varnames, value = TRUE)
+  if (length(interaction.names) > 0) {
     varnames <- unique(c(
       varnames[!varnames %in% interaction.names],
       strsplit(interaction.names, ":", fixed = TRUE)[[1]]
@@ -297,7 +297,7 @@ fit_initial <- function(
   state.deltas <- process.deltas[process.names %in% state.names]
 
   #-- process types
-  process.types <- lapply(1:length(process.names), function(process.jj) {
+  process.types <- lapply(seq_along(process.names), function(process.jj) {
     delta.jj <- process.deltas[process.jj]
     is.terminal <- all(
       dt[, (delta == delta.jj) * (time < max(time)), by = "id"][[2]] == 0
@@ -354,7 +354,7 @@ fit_initial <- function(
 
   ### this added June 4
   if (length(state.names) > 0) {
-    for (process.jj in 1:length(state.names[
+    for (process.jj in seq_along(state.names[
       state.names %in% names(fit_types)
     ])) {
       dt[,
@@ -382,7 +382,7 @@ fit_initial <- function(
   }
 
   if (length(derived_vars) > 0) {
-    for (derived.jj in 1:length(derived_vars)) {
+    for (derived.jj in seq_along(derived_vars)) {
       derived.var <- names(derived_vars)[derived.jj]
       derived.fun <- derived_vars[[derived.jj]]
       dt[, (derived.var) := derived.fun(dt)]
@@ -391,7 +391,7 @@ fit_initial <- function(
   }
 
   if (length(depend_time) > 0) {
-    for (time.jj in 1:length(depend_time)) {
+    for (time.jj in seq_along(depend_time)) {
       time.var <- names(depend_time)[time.jj]
       time.fun <- depend_time[[time.jj]]
       suppressWarnings(
@@ -419,7 +419,7 @@ fit_initial <- function(
   #-- intervention part; for clever weight estimation:
   # (we start with cox models, if HAL is specified this is fitted later)
 
-  cens.process.id <- (1:length(process.deltas))[process.deltas == 0]
+  cens.process.id <- (seq_along(process.deltas))[process.deltas == 0]
 
   dt[, idN := 1:.N, by = "id"]
   if (length(treatment_model) > 0) {
@@ -434,10 +434,10 @@ fit_initial <- function(
   #--------------------------------
   #-- outcome / clever covariate part:
   # (we start with cox models, if HAL is specified this is fitted later)
-  fit.cox.types <- lapply(1:length(fit_types), function(fit.type.jj) {
+  fit.cox.types <- lapply(seq_along(fit_types), function(fit.type.jj) {
     model.jj <- fit_types[[fit.type.jj]][["model"]]
     if (length(depend_time) > 0) {
-      for (time.jj in 1:length(depend_time)) {
+      for (time.jj in seq_along(depend_time)) {
         model.jj <-
           gsub(
             paste0("T.", names(depend_time)[time.jj]),
@@ -556,7 +556,7 @@ fit_initial <- function(
 
   tmp.long[, final.time := max(time.obs), by = "id"]
 
-  for (fit.type.jj in 1:length(fit_types)) {
+  for (fit.type.jj in seq_along(fit_types)) {
     tmp.long[
       is.na(get(paste0("dhazard.", names(fit_types)[fit.type.jj]))),
       (paste0("dhazard.", names(fit_types)[fit.type.jj])) := 0
@@ -564,7 +564,7 @@ fit_initial <- function(
   }
 
   if (length(state.names) > 0) {
-    for (process.jj in 1:length(state.names[
+    for (process.jj in seq_along(state.names[
       state.names %in% names(fit_types)
     ])) {
       tmp.long[,
@@ -596,7 +596,7 @@ fit_initial <- function(
   }
 
   if (length(derived_vars) > 0) {
-    for (derived.jj in 1:length(derived_vars)) {
+    for (derived.jj in seq_along(derived_vars)) {
       derived.var <- names(derived_vars)[derived.jj]
       derived.fun <- derived_vars[[derived.jj]]
       tmp.long[, (derived.var) := derived.fun(tmp.long)]
@@ -606,7 +606,7 @@ fit_initial <- function(
   tmp.long[, tstart := c(0, time[-.N]), by = "id"]
 
   if (length(depend_time) > 0) {
-    for (time.jj in 1:length(depend_time)) {
+    for (time.jj in seq_along(depend_time)) {
       time.var <- names(depend_time)[time.jj]
       time.value <- as.numeric(strsplit(time.var, "\\.")[[1]][2])
       if (is.na(time.value)) {
@@ -757,7 +757,7 @@ fit_initial <- function(
 
     for (delta.value in deltas.hal) {
       name.hal <- names(which.hal)[which.hal][deltas.hal == delta.value]
-      is.name.hal.at.risk <- (1:length(fit_types))[
+      is.name.hal.at.risk <- (seq_along(fit_types))[
         names(fit_types) == name.hal
       ] %in%
         at.risk.ids
@@ -820,7 +820,7 @@ fit_initial <- function(
       names(grid.baseline.vars) <- baseline.vars
 
       if (!all(T.vars == "")) {
-        if (length(cut.Tk.values) > 0 & length(cut.Tk.values[[1]]) > 0) {
+        if (length(cut.Tk.values) > 0 && length(cut.Tk.values[[1]]) > 0) {
           grid.T.vars <- lapply(T.vars, function(T.var) {
             cut.Tk.values
           })
@@ -905,7 +905,7 @@ fit_initial <- function(
         )
       )
 
-      if (length(two.way) > 0 & length(two.way[[1]]) > 0) {
+      if (length(two.way) > 0 && length(two.way[[1]]) > 0) {
         two.way.matrix <- do.call(
           "rbind",
           lapply(two.way, function(two.way.jj) {
@@ -996,8 +996,8 @@ fit_initial <- function(
                   ),
               ]
             if (
-              substr(two.way.jj[1], 1, 2) == "T." &
-                substr(two.way.jj[2], 1, 2) == "T."
+              startsWith(two.way.jj[1], "T.") &&
+                startsWith(two.way.jj[2], "T.")
             ) {
               two.way.inner <-
                 two.way.inner[
@@ -1024,8 +1024,8 @@ fit_initial <- function(
                 ]
             }
             if (
-              substr(two.way.jj[1], 1, 9) == "time" &
-                substr(two.way.jj[2], 1, 2) == "T."
+              two.way.jj[1] == "time" &&
+                startsWith(two.way.jj[2], "T.")
             ) {
               two.way.inner <-
                 two.way.inner[
@@ -1052,8 +1052,8 @@ fit_initial <- function(
                 ]
             }
             if (
-              substr(two.way.jj[2], 1, 9) == "time" &
-                substr(two.way.jj[1], 1, 2) == "T."
+              two.way.jj[2] == "time" &&
+                startsWith(two.way.jj[1], "T.")
             ) {
               two.way.inner <-
                 two.way.inner[
@@ -1229,7 +1229,8 @@ fit_initial <- function(
 
       if (sum(names(hal.jj) %in% c("components", "interactions")) > 0) {
         hal.out <- c()
-        if (length(baseline <- hal.jj[["components"]][["baseline"]]) > 0) {
+        baseline <- hal.jj[["components"]][["baseline"]]
+        if (length(baseline) > 0) {
           if (baseline$complexity == "medium") {
             hal.out <- c(hal.out, cut.one.way = 20)
           } else if (baseline$complexity == "high") {
@@ -1238,7 +1239,8 @@ fit_initial <- function(
             hal.out <- c(hal.out, cut.one.way = 10)
           }
         }
-        if (length(history <- hal.jj[["components"]][["history"]]) > 0) {
+        history <- hal.jj[["components"]][["history"]]
+        if (length(history) > 0) {
           if (history$complexity == "medium") {
             hal.out <- c(hal.out, max.count = min(3, NK), cut.Tk = 5)
           } else if (history$complexity == "high") {
@@ -1260,7 +1262,9 @@ fit_initial <- function(
                 value = TRUE
               )
             )
-          } else if (history$time.mode == "first" & hal.out["max.count"] >= 1) {
+          } else if (
+            history$time.mode == "first" && hal.out["max.count"] >= 1
+          ) {
             hal.out <- c(
               hal.out,
               T.vars = grep(
@@ -1273,32 +1277,30 @@ fit_initial <- function(
             hal.out <- c(hal.out, T.vars = "")
           }
         }
-        if (TRUE) {
-          ## this is test, not recommended
-          if (length(time <- hal.jj[["components"]][["time"]]) > 0) {
-            if ("complexity" %in% names(time) > 0) {
-              if (time$complexity == "medium") {
-                hal.out <- c(hal.out, penalize.time = 0.4)
-              } else if (time$complexity == "high") {
-                hal.out <- c(hal.out, penalize.time = 0)
-              } else if (time$complexity == "none") {
-                hal.out <- c(hal.out, penalize.time = 1)
-              } else {
-                hal.out <- c(hal.out, penalize.time = 0.7)
-              }
+        ## this is test, not recommended
+        time <- hal.jj[["components"]][["time"]]
+        if (length(time) > 0) {
+          if ("complexity" %in% names(time)) {
+            if (time$complexity == "medium") {
+              hal.out <- c(hal.out, penalize.time = 0.4)
+            } else if (time$complexity == "high") {
+              hal.out <- c(hal.out, penalize.time = 0)
+            } else if (time$complexity == "none") {
+              hal.out <- c(hal.out, penalize.time = 1)
+            } else {
+              hal.out <- c(hal.out, penalize.time = 0.7)
             }
-            if ("use.times" %in% names(time) > 0) {
-              hal.out <- c(hal.out, use.times = time$use.times)
-            }
+          }
+          if ("use.times" %in% names(time)) {
+            hal.out <- c(hal.out, use.times = time$use.times)
           }
         }
 
         if (sum(names(hal.jj) %in% c("interactions")) > 0) {
           two.way.out <- list()
 
-          if (
-            length(time.with <- hal.jj[["interactions"]][["time.with"]]) > 0
-          ) {
+          time.with <- hal.jj[["interactions"]][["time.with"]]
+          if (length(time.with) > 0) {
             if ("history" %in% time.with) {
               for (T.var in hal.out[grep("T.vars", names(hal.out))]) {
                 two.way.out[[length(two.way.out) + 1]] <-
@@ -1324,17 +1326,12 @@ fit_initial <- function(
           }
 
           ### fix: need to make this:
-          if (
-            length(history.with <- hal.jj[["interactions"]][["history.with"]]) >
-              0
-          ) {
+          history.with <- hal.jj[["interactions"]][["history.with"]]
+          if (length(history.with) > 0) {
             if ("history" %in% history.with) {
-              if (
-                (length.T.vars <- length(
-                  T.vars <- hal.out[grep("T.vars", names(hal.out))]
-                )) >
-                  1
-              ) {
+              T.vars <- hal.out[grep("T.vars", names(hal.out))]
+              length.T.vars <- length(T.vars)
+              if (length.T.vars > 1) {
                 for (tt1 in 1:(length.T.vars - 1)) {
                   for (tt2 in (tt1 + 1):length(T.vars)) {
                     two.way.out[[length(two.way.out) + 1]] <-
@@ -1375,19 +1372,12 @@ fit_initial <- function(
             }
           }
 
-          if (
-            length(
-              baseline.with <- hal.jj[["interactions"]][["baseline.with"]]
-            ) >
-              0
-          ) {
+          baseline.with <- hal.jj[["interactions"]][["baseline.with"]]
+          if (length(baseline.with) > 0) {
             if ("baseline" %in% baseline.with) {
-              if (
-                (length.baseline <- length(
-                  baseline.covars <- setdiff(baseline.vars, A0.name)
-                )) >
-                  1
-              ) {
+              baseline.covars <- setdiff(baseline.vars, A0.name)
+              length.baseline <- length(baseline.covars)
+              if (length.baseline > 1) {
                 for (baseline.j1 in 1:(length.baseline - 1)) {
                   for (baseline.j2 in (baseline.j1 + 1):length(
                     baseline.covars
@@ -1404,9 +1394,8 @@ fit_initial <- function(
             }
             if (length(A0.name) > 0) {
               if (A0.name %in% baseline.with) {
-                for (baseline.j1 in 1:(length(
-                  baseline.covars <- setdiff(baseline.vars, A0.name)
-                ))) {
+                baseline.covars <- setdiff(baseline.vars, A0.name)
+                for (baseline.j1 in seq_along(baseline.covars)) {
                   two.way.out[[length(two.way.out) + 1]] <-
                     c(baseline.covars[baseline.j1], A0.name, 10)
                 }
@@ -1424,7 +1413,7 @@ fit_initial <- function(
     }
 
     ## FIX! need to make this work
-    fit.hals.list <- lapply(1:length(hal.sl), function(hal.jj) {
+    fit.hals.list <- lapply(seq_along(hal.sl), function(hal.jj) {
       hal.parameters <- make.hal(hal.jj = hal.sl[[hal.jj]])
 
       if (length(grep("penalize.time", names(hal.parameters))) > 0) {
@@ -1465,9 +1454,8 @@ fit_initial <- function(
         } else {
           cut.Tk.values
         },
-        two.way = if (
-          length(which.two.way <- grep("two.way", names(hal.parameters))) > 0
-        ) {
+        two.way = if (any(grepl("two.way", names(hal.parameters)))) {
+          which.two.way <- grep("two.way", names(hal.parameters))
           lapply(which.two.way, function(tw) hal.parameters[[tw]])
         } else {
           two.way
@@ -1501,31 +1489,6 @@ fit_initial <- function(
 
       x.vector <- hash_sparse_rows_dgC(X)
       tmp.long.reduced[, x := x.vector]
-
-      if (FALSE) {
-        mf <- model.frame(
-          formula(hal.formula.main),
-          data = tmp.long.reduced,
-          na.action = na.omit
-        )
-
-        dim(mf)
-
-        attr(mf, "na.action")
-        length(attr(mf, "na.action"))
-
-        mf <- model.frame(
-          formula(hal.formula.main),
-          data = tmp.long.reduced,
-          na.action = na.pass
-        )
-
-        dim(mf)
-
-        vars <- all.vars(formula(hal.formula.main))
-        vars
-        colSums(is.na(tmp.long.reduced[, vars, drop = FALSE]))
-      }
 
       if (length(seed.hal) == 0) {
         seed.hal <- sample(1e8, 1)
@@ -1618,7 +1581,7 @@ fit_initial <- function(
             sparse = TRUE
           )
           return(
-            second.hal <- fit.hal(
+            fit.hal(
               hal.pseudo.dt = tmp.long.reduced[tmp.long.reduced[[paste0(
                 "at.risk.",
                 delta.value
@@ -1652,7 +1615,7 @@ fit_initial <- function(
 
     if (length(fit.hals.list) == 1) {
       fit.hals <- fit.hals.list[[1]]
-      if ((!verbose.hal) & verbose) {
+      if (!verbose.hal && verbose) {
         lapply(fit.hals, function(fh) {
           message("--------------------------------------------")
           message(paste0("delta = ", fh$delta.value))
@@ -1662,7 +1625,7 @@ fit_initial <- function(
       }
     } else if (length(fit.hals.list) > 1) {
       fit.hals <- lapply(
-        1:length(fit.hals.list[[1]]),
+        seq_along(fit.hals.list[[1]]),
         function(fh.process.index) {
           if (verbose) {
             message("--------------------------------------------")
@@ -1676,7 +1639,7 @@ fit_initial <- function(
           inner.cve <- sapply(fit.hals.list, function(fh) {
             fh[[fh.process.index]]$cve
           })
-          picked <- (1:length(inner.cve))[inner.cve == min(inner.cve)]
+          picked <- (seq_along(inner.cve))[inner.cve == min(inner.cve)]
           if (verbose) {
             .message_print(inner.cve)
           }
@@ -1684,19 +1647,6 @@ fit_initial <- function(
             message(paste0("picked hal: ", picked))
           }
           fh <- fit.hals.list[[picked]][[fh.process.index]]
-          fh.coef <- try(coef(fh$hal.fit, s = fh$lambda.cv))
-          if (FALSE & inherits(fh.coef, "try-error")) {
-            inner.cve <- inner.cve[-picked]
-            picked <- (1:length(inner.cve))[inner.cve == min(inner.cve)]
-            fh <- fit.hals.list[[picked]][[fh.process.index]]
-            fh.coef <- try(coef(fh$hal.fit, s = fh$lambda.cv))
-            if (inherits(fh.coef, "try-error")) {
-              inner.cve <- inner.cve[-picked]
-              picked <- (1:length(inner.cve))[inner.cve == min(inner.cve)]
-              fh <- fit.hals.list[[picked]][[fh.process.index]]
-              fh.coef <- try(coef(fh$hal.fit, s = fh$lambda.cv))
-            }
-          }
           if (verbose) {
             .message_print(coef(fh$hal.fit, s = fh$lambda.cv))
           }
@@ -1726,7 +1676,8 @@ fit_initial <- function(
 
     non.zero.state.vars <- lapply(N.vars, function(N.var) {
       tmp.vars <- gsub("TRUE", "", grep(N.var, non.zero.vars, value = TRUE))
-      if (length((tmp.interaction <- grep(":", tmp.vars, value = TRUE)) > 0)) {
+      tmp.interaction <- grep(":", tmp.vars, value = TRUE)
+      if (length(tmp.interaction) > 0) {
         tmp.interaction.vars <- unlist(lapply(
           strsplit(tmp.interaction, ":"),
           function(interaction.split) {
@@ -1766,7 +1717,7 @@ fit_initial <- function(
       }
     }
     ##message("FIX: CHECK this below")
-    non.zero.state.vars <- non.zero.state.vars[(1:length(
+    non.zero.state.vars <- non.zero.state.vars[(seq_along(
       non.zero.state.vars
     ))[sapply(non.zero.state.vars, function(non.zero) {
       length(non.zero) > 0
@@ -1779,7 +1730,7 @@ fit_initial <- function(
   tmp.long <- tmp.long[time <= tau]
 
   if (any.hal) {
-    hal.vars.list <- lapply(1:length(fit.hals), function(kk) {
+    hal.vars.list <- lapply(seq_along(fit.hals), function(kk) {
       test.get.beta <- try(
         out.beta <- fit.hals[[kk]][["hal.fit"]]$beta@Dimnames[[1]],
         silent = TRUE
@@ -1796,10 +1747,7 @@ fit_initial <- function(
 
     hal.vars <- unique(c(unlist(hal.vars.list)))
 
-    if (
-      length(A0.name) > 0 &
-        length(interaction.vars <- grep(":", hal.vars, value = TRUE)) > 0
-    ) {
+    if (length(A0.name) > 0 && any(grepl(":", hal.vars))) {
       hal.vars.A0.dynamic <- unlist(sapply(N.vars, function(N.var) {
         tmp.vars <- #gsub("TRUE", "", grep(N.var, unlist(hal.vars.list), value = TRUE))
           grep(N.var, unlist(hal.vars.list), value = TRUE)
@@ -1850,59 +1798,29 @@ fit_initial <- function(
       )
     )
 
-    if (FALSE) {
-      ## may want to change to TRUE
-      flip.interactions <- function(X.mat, var.vec) {
-        if (length(cols.diff <- setdiff(colnames(X.mat), var.vec)) > 0) {
-          if (
-            length(
-              cols.diff <- setdiff(gsub("TRUE|FALSE", "", cols.diff), var.vec)
-            ) >
-              0
-          ) {
-            colnames(X.mat)[
-              gsub("TRUE|FALSE", "", colnames(X.mat)) %in% cols.diff
-            ] <-
-              sapply(
-                colnames(X.mat)[
-                  gsub("TRUE|FALSE", "", colnames(X.mat)) %in% cols.diff
-                ],
-                function(x) {
-                  if (!grepl(":", x)) {
-                    return(x)
-                  }
-                  parts <- strsplit(x, ":", fixed = TRUE)[[1]]
-                  paste(rev(parts), collapse = ":")
-                }
-              )
+    flip.interactions <- function(X.mat, var.vec) {
+      cols.diff <- setdiff(var.vec, colnames(X.mat))
+      if (length(cols.diff) > 0) {
+        cols.diff.rev <- sapply(cols.diff, function(x) {
+          if (!grepl(":", x)) {
+            return(x)
           }
+          parts <- strsplit(x, ":", fixed = TRUE)[[1]]
+          paste(rev(parts), collapse = ":")
+        })
+        cols.diff.TF <- grep("TRUE|FALSE", cols.diff, value = TRUE)
+        if (length(cols.diff.TF) > 0) {
+          idx <- match(cols.diff.rev, colnames(X.mat))
+          valid <- !is.na(idx)
+          colnames(X.mat)[idx[valid]] <- cols.diff[valid]
         }
-        return(X.mat)
-      }
-    } else {
-      flip.interactions <- function(X.mat, var.vec) {
-        if (length(cols.diff <- setdiff(var.vec, colnames(X.mat))) > 0) {
-          cols.diff.rev <- sapply(cols.diff, function(x) {
-            if (!grepl(":", x)) {
-              return(x)
-            }
-            parts <- strsplit(x, ":", fixed = TRUE)[[1]]
-            paste(rev(parts), collapse = ":")
-          })
-          cols.diff.TF <- grep("TRUE|FALSE", cols.diff, value = TRUE)
-          if (length(cols.diff.TF) > 0) {
-            idx <- match(cols.diff.rev, colnames(X.mat))
-            valid <- !is.na(idx)
-            colnames(X.mat)[idx[valid]] <- cols.diff[valid]
-          }
-          if (length(cols.diff.TF) < length(cols.diff)) {
-            idx <- match(cols.diff.rev, gsub("TRUE|FALSE", "", colnames(X.mat)))
-            valid <- !is.na(idx)
-            colnames(X.mat)[idx[valid]] <- cols.diff[valid]
-          }
+        if (length(cols.diff.TF) < length(cols.diff)) {
+          idx <- match(cols.diff.rev, gsub("TRUE|FALSE", "", colnames(X.mat)))
+          valid <- !is.na(idx)
+          colnames(X.mat)[idx[valid]] <- cols.diff[valid]
         }
-        return(X.mat)
       }
+      return(X.mat)
     }
 
     X.hal.static <- Matrix(
@@ -2005,7 +1923,7 @@ fit_initial <- function(
   #--------------------------------
   #-- compute needed quantities for (initial) estimation and targeting
 
-  for (fit.type.jj in 1:length(fit_types)) {
+  for (fit.type.jj in seq_along(fit_types)) {
     if (fit.type.jj %in% at.risk.ids) {
       tmp.long[,
         (paste0("at.risk.", names(fit_types)[fit.type.jj])) := fit_types[[
@@ -2014,7 +1932,7 @@ fit_initial <- function(
       ]
     }
     if (fit_types[[fit.type.jj]]$fit == "hal") {
-      hal.index <- (1:length(which.hal))[
+      hal.index <- (seq_along(which.hal))[
         names(which.hal) == names(fit_types)[fit.type.jj]
       ]
       ##delta.value <- fit.hals[[hal.index]][["delta.value"]]
@@ -2076,17 +1994,12 @@ fit_initial <- function(
     if (any.hal) {
       if (length(non.zero.state.vars) > 0) {
         grid.list <- lapply(
-          1:length(non.zero.state.vars),
+          seq_along(non.zero.state.vars),
           function(non.zero.jj) {
-            if (
-              (non.zero.var <- names(non.zero.state.vars)[non.zero.jj]) %in%
-                names(derived_vars)
-            ) {
+            non.zero.var <- names(non.zero.state.vars)[non.zero.jj]
+            if (non.zero.var %in% names(derived_vars)) {
               return(0) #(unique(tmp.long[[non.zero.var]]))
-            } else if (
-              (non.zero.var <- names(non.zero.state.vars)[non.zero.jj]) %in%
-                setdiff(N.vars, T.vars)
-            ) {
+            } else if (non.zero.var %in% setdiff(N.vars, T.vars)) {
               return(
                 0:max(as.numeric(gsub(
                   paste0(non.zero.var, ">="),
@@ -2098,7 +2011,7 @@ fit_initial <- function(
               return(c(
                 0,
                 sapply(
-                  1:length(non.zero.state.vars[[non.zero.var]]),
+                  seq_along(non.zero.state.vars[[non.zero.var]]),
                   function(sss) {
                     return(as.numeric(gsub(
                       paste0(paste0(non.zero.var, ">=")),
@@ -2114,12 +2027,8 @@ fit_initial <- function(
         depend.matrix <- as.data.table(do.call(expand.grid, grid.list))
         setnames(depend.matrix, names(non.zero.state.vars))
         #names(depend.matrix) <- names(non.zero.state.vars)
-        if (
-          length(
-            T.vars <- grep("T.", names(non.zero.state.vars), value = TRUE)
-          ) >
-            0
-        ) {
+        T.vars <- grep("T.", names(non.zero.state.vars), value = TRUE)
+        if (length(T.vars) > 0) {
           for (T.var in T.vars) {
             time.var <- strsplit(T.var, "\\.")[[1]][2]
             time.value <- as.numeric(strsplit(T.var, "\\.")[[1]][3])
@@ -2133,7 +2042,7 @@ fit_initial <- function(
           }
         }
 
-        for (non.zero.jj in (1:length(non.zero.state.vars))[
+        for (non.zero.jj in (seq_along(non.zero.state.vars))[
           names(non.zero.state.vars) %in% T.vars
         ]) {
           non.zero.var <- names(non.zero.state.vars)[non.zero.jj]
@@ -2152,7 +2061,7 @@ fit_initial <- function(
             )),
             (gsub("T.", "time.", non.zero.var)) := 0
           ]
-          for (each.jj in 1:length(non.zero.var.states)) {
+          for (each.jj in seq_along(non.zero.var.states)) {
             value.jj <- as.numeric(gsub(
               paste0(paste0(non.zero.var, ">=")),
               "",
@@ -2176,7 +2085,7 @@ fit_initial <- function(
         }
       }
     } else if (length(depend_time) > 0) {
-      for (time.jj in 1:length(depend_time)) {
+      for (time.jj in seq_along(depend_time)) {
         time.var <- names(depend_time)[time.jj]
         time.value <- as.numeric(strsplit(time.var, "\\.")[[1]][2])
         if (is.na(time.value)) {
@@ -2194,7 +2103,7 @@ fit_initial <- function(
       }
     }
     if (length(derived_vars) > 0) {
-      for (derived.jj in 1:length(derived_vars)) {
+      for (derived.jj in seq_along(derived_vars)) {
         derived.var <- names(derived_vars)[derived.jj]
         derived.fun <- derived_vars[[derived.jj]]
         if (derived.var %in% names(depend.matrix)) {
@@ -2204,9 +2113,10 @@ fit_initial <- function(
           ]
         }
         depend.matrix[, derived.var := derived.fun(depend.matrix)]
+        derived.cols <- extract_dt_cols(derived.fun)
         if (
           any(sapply(
-            derived.cols <- extract_dt_cols(derived.fun),
+            derived.cols,
             function(varname) max_count < max(unique(tmp.long[[varname]]))
           ))
         ) {
@@ -2262,7 +2172,7 @@ fit_initial <- function(
 
   if (prune_states) {
     ## this was added to handle the case that some jumps are not admissible/possible
-    for (fit.type.jj in 1:length(fit_types)) {
+    for (fit.type.jj in seq_along(fit_types)) {
       if (fit.type.jj %in% at.risk.ids) {
         depend.matrix[,
           (paste0("at.risk.", names(fit_types)[fit.type.jj])) := fit_types[[
@@ -2330,7 +2240,7 @@ fit_initial <- function(
       tmp.long[,
         (paste0("clever.weight.a", aa)) := clever.weight *
           (A0.obs == aa) /
-          ((pi.A0.1^(A0.obs == 1) * (1 - pi.A0.1)^(A0.obs == 0)))
+          (pi.A0.1^(A0.obs == 1) * (1 - pi.A0.1)^(A0.obs == 0))
       ]
 
       if (any.hal) {
@@ -2383,9 +2293,9 @@ fit_initial <- function(
           )
         }
 
-        for (fit.type.jj in (1:length(fit_types))[-cens.process.id]) {
+        for (fit.type.jj in (seq_along(fit_types))[-cens.process.id]) {
           if (fit_types[[fit.type.jj]]$fit == "hal") {
-            hal.index <- (1:length(which.hal))[
+            hal.index <- (seq_along(which.hal))[
               names(which.hal) == names(fit_types)[fit.type.jj]
             ]
             tmp.long[,
@@ -2410,7 +2320,7 @@ fit_initial <- function(
           }
         }
       } else {
-        for (fit.type.jj in (1:length(fit_types))[-cens.process.id]) {
+        for (fit.type.jj in (seq_along(fit_types))[-cens.process.id]) {
           tmp.long[,
             (paste0(
               "exp.a",
@@ -2583,7 +2493,7 @@ fit_initial <- function(
             )
           }
 
-          for (fit.type.jj in (1:length(fit_types))[-cens.process.id]) {
+          for (fit.type.jj in (seq_along(fit_types))[-cens.process.id]) {
             if (intervene.A0) {
               colname <- paste0(
                 "P.a",
@@ -2602,7 +2512,7 @@ fit_initial <- function(
               )
             }
             if (fit_types[[fit.type.jj]]$fit == "hal") {
-              hal.index <- (1:length(which.hal))[
+              hal.index <- (seq_along(which.hal))[
                 names(which.hal) == names(fit_types)[fit.type.jj]
               ]
               ##message("fit.type.jj ", fit.type.jj, " for state ", state.jj)
@@ -2673,10 +2583,10 @@ fit_initial <- function(
     }
   }
 
-  names.P <- names(tmp.long)[substr(names(tmp.long), 1, 2) == "P."]
+  names.P <- names(tmp.long)[startsWith(names(tmp.long), "P.")]
 
   for (name.P in names.P) {
-    if (any(tmp.long[[name.P]] > 1) | use_exponential) {
+    if (any(tmp.long[[name.P]] > 1) || use_exponential) {
       if (!use_exponential) {
         if (verbose) {
           message(
@@ -2691,7 +2601,7 @@ fit_initial <- function(
   }
 
   if (length(derived_vars) > 0) {
-    for (derived.jj in 1:length(derived_vars)) {
+    for (derived.jj in seq_along(derived_vars)) {
       derived.var <- names(derived_vars)[derived.jj]
       derived.fun <- derived_vars[[derived.jj]]
       derived.cols <- extract_dt_cols(derived.fun)
@@ -2710,19 +2620,16 @@ fit_initial <- function(
   process.depend <- var.depend[var.depend %in% process.names]
 
   if (any.hal) {
-    if (
-      length(T.vars <- grep("T.", names(non.zero.state.vars), value = TRUE)) > 0
-    ) {
+    T.vars <- grep("T.", names(non.zero.state.vars), value = TRUE)
+    if (length(T.vars) > 0) {
       for (time.var in T.vars) {
         varname <- strsplit(time.var, "\\.")[[1]][2]
         count.value <- as.numeric(strsplit(time.var, "\\.")[[1]][3])
         if (is.na(count.value)) {
           count.value <- 1
         }
-        time.values <- unique(c(
-          0,
-          tmp.long[[time.var2 <- gsub("T.", "time.", time.var)]]
-        ))
+        time.var2 <- gsub("T.", "time.", time.var)
+        time.values <- unique(c(0, tmp.long[[time.var2]]))
         depend.matrix[[time.var2]] <- Inf
         depend.matrix[depend.matrix[[varname]] == count.value - 1][[
           time.var2
@@ -2757,9 +2664,8 @@ fit_initial <- function(
           if (is.na(count.value)) {
             count.value <- 1
           }
-          time.values <- unique(tmp.long[[
-            time.var2 <- gsub("T.", "time.", time.var)
-          ]])
+          time.var2 <- gsub("T.", "time.", time.var)
+          time.values <- unique(tmp.long[[time.var2]])
           depend.matrix[[time.var2]] <- Inf
           depend.matrix[depend.matrix[[varname]] == count.value - 1][[
             time.var2
@@ -2801,17 +2707,12 @@ fit_initial <- function(
 
       if (any.hal) {
         ##
-        if (
-          length(
-            T.varname.vars <-
-              grep(
-                paste0("T.", varname),
-                names(non.zero.state.vars),
-                value = TRUE
-              )
-          ) >
-            0
-        ) {
+        T.varname.vars <- grep(
+          paste0("T.", varname),
+          names(non.zero.state.vars),
+          value = TRUE
+        )
+        if (length(T.varname.vars) > 0) {
           for (time.var in T.varname.vars) {
             count.value <- as.numeric(strsplit(time.var, "\\.")[[1]][3])
             if (is.na(count.value)) {
@@ -2868,25 +2769,21 @@ fit_initial <- function(
       }
 
       # # # # # #
-      if (
-        length(
-          state.1 <- unique(
-            merge(
-              depend.state.jj[,
-                (names(depend.state.jj) %in% c("state.row.index", var.depend)),
-                with = FALSE
-              ],
-              unique(depend.matrix[,
-                (names(depend.matrix) != "state.row.index" &
-                  names(depend.state.jj) %in% c("state", var.depend)),
-                with = FALSE
-              ]),
-              by = var.depend
-            )
-          )[order(state.row.index)][["state"]]
-        ) >
-          0
-      ) {
+      state.1 <- unique(
+        merge(
+          depend.state.jj[,
+            (names(depend.state.jj) %in% c("state.row.index", var.depend)),
+            with = FALSE
+          ],
+          unique(depend.matrix[,
+            (names(depend.matrix) != "state.row.index" &
+              names(depend.state.jj) %in% c("state", var.depend)),
+            with = FALSE
+          ]),
+          by = var.depend
+        )
+      )[order(state.row.index)][["state"]]
+      if (length(state.1) > 0) {
         depend.matrix[state == state.jj, (paste0("s.", varname)) := state.1]
       } else {
         depend.matrix[state == state.jj, (paste0("s.", varname)) := state.jj]

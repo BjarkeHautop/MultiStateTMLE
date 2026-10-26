@@ -87,7 +87,7 @@ fixture.fit <- function(n = 40, ...) {
 # fixture.data() with a binary baseline treatment A0.
 fixture.data.treated <- function(n = 40) {
   data <- fixture.data(n)
-  withr::with_seed(1, a0 <- rbinom(n, 1, 0.5))
+  a0 <- withr::with_seed(1, rbinom(n, 1, 0.5))
   data$A0 <- a0[data$id]
   data
 }

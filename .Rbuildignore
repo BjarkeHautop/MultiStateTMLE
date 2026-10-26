@@ -16,6 +16,7 @@
 ^\.github$
 ^air\.toml$
 ^panache\.toml$
+^jarl\.toml$
 ^\.git-blame-ignore-revs$
 ^README\.Rmd$
 ^\.output$

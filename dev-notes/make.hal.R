@@ -73,7 +73,8 @@ make.hal <- function(hal.jj) {
 
   if (sum(names(hal.jj) %in% c("components", "interactions")) > 0) {
     hal.out <- c()
-    if (length(baseline <- hal.jj[["components"]][["baseline"]]) > 0) {
+    baseline <- hal.jj[["components"]][["baseline"]]
+    if (length(baseline) > 0) {
       if (baseline$complexity == "medium") {
         hal.out <- c(hal.out, cut.one.way = 20)
       } else if (baseline$complexity == "high") {
@@ -82,7 +83,8 @@ make.hal <- function(hal.jj) {
         hal.out <- c(hal.out, cut.one.way = 10)
       }
     }
-    if (length(history <- hal.jj[["components"]][["history"]]) > 0) {
+    history <- hal.jj[["components"]][["history"]]
+    if (length(history) > 0) {
       if (history$complexity == "medium") {
         hal.out <- c(hal.out, max.count = 3)
       } else if (history$complexity == "high") {
@@ -105,9 +107,10 @@ make.hal <- function(hal.jj) {
         hal.out <- c(hal.out, T.vars = "")
       }
     }
+    # jarl-ignore unreachable_code: time components are not supported yet
     if (FALSE) {
-      ## not supported yet
-      if (length(time <- hal.jj[["components"]][["time"]]) > 0) {
+      time <- hal.jj[["components"]][["time"]]
+      if (length(time) > 0) {
         if (time$complexity == "medium") {
           hal.out <- c(hal.out, cut.time = 20)
         } else if (time$complexity == "high") {
@@ -120,7 +123,8 @@ make.hal <- function(hal.jj) {
     if (sum(names(hal.jj) %in% c("interactions")) > 0) {
       two.way.out <- list()
 
-      if (length(time.with <- hal.jj[["interactions"]][["time.with"]]) > 0) {
+      time.with <- hal.jj[["interactions"]][["time.with"]]
+      if (length(time.with) > 0) {
         if ("history" %in% time.with) {
           for (T.var in hal.out[grep("T.vars", names(hal.out))]) {
             two.way.out[[length(two.way.out) + 1]] <-
@@ -143,14 +147,11 @@ make.hal <- function(hal.jj) {
         }
       }
 
-      if (
-        length(baseline.with <- hal.jj[["interactions"]][["baseline.with"]]) > 0
-      ) {
+      baseline.with <- hal.jj[["interactions"]][["baseline.with"]]
+      if (length(baseline.with) > 0) {
+        baseline.covars <- setdiff(baseline.vars, A0.name)
         if ("baseline" %in% baseline.with) {
-          for (baseline.j1 in 1:(length(
-            baseline.covars <- setdiff(baseline.vars, A0.name)
-          ) -
-            1)) {
+          for (baseline.j1 in 1:(length(baseline.covars) - 1)) {
             for (baseline.j2 in (baseline.j1 + 1):length(baseline.covars)) {
               two.way.out[[length(two.way.out) + 1]] <-
                 c(
@@ -162,9 +163,7 @@ make.hal <- function(hal.jj) {
           }
         }
         if (A0.name %in% baseline.with) {
-          for (baseline.j1 in 1:(length(
-            baseline.covars <- setdiff(baseline.vars, A0.name)
-          ))) {
+          for (baseline.j1 in seq_along(baseline.covars)) {
             two.way.out[[length(two.way.out) + 1]] <-
               c(baseline.covars[baseline.j1], A0.name, 10)
           }

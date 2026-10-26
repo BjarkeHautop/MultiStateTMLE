@@ -1,0 +1,7 @@
+[lint]
+
+[lint.undesirable_operator]
+# `<<-` is intended: it updates enclosing state from closures (collecting
+# columns in extract_dt_cols(), recording iterates in solve_alpha()) and
+# records calls in test mocks.
+operators = ["->>", ":::"]

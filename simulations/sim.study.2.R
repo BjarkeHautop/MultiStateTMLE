@@ -25,12 +25,13 @@ run.master()
 ## simulate 1 dataset and apply function
 #-------------------------------------------------------------------------------------------#
 
+# jarl-ignore unreachable_code: example to run interactively
 if (FALSE) {
   N <- 500
 
   set.seed(20205)
 
-  plotEventData((dt <- simDropin(
+  dt <- simDropin(
     N = 500,
     beta_L_D = 1.1,
     beta_L_Z = 5,
@@ -40,7 +41,8 @@ if (FALSE) {
     eta = c(0.25, 0.5 * 0.05, 0.05, 4 * 0.25),
     nu = c(1.1, 0.8 * 1.0, 0.2 * 0.2, 1.1),
     beta_A0_D = -0.5
-  ))[Time <= 4])
+  )
+  plotEventData(dt[Time <= 4])
 
   setnames(dt, "ID", "id")
   setnames(dt, "Time", "time")
@@ -146,13 +148,13 @@ for (a in which.as) {
 
     model.1 <- "Surv(tstart, tstop, delta == 1)~L0+A0+Z+L"
 
-    if (("1" %in% misspecify) & ("L" %in% misspecify)) {
+    if ("1" %in% misspecify && "L" %in% misspecify) {
       model.1 <- gsub("\\+A0", "", gsub("\\+L", "", model.1))
     }
 
     model.Z <- "Surv(tstart, tstop, delta == 2)~L0+A0+L"
 
-    if (("Z" %in% misspecify) & ("L" %in% misspecify)) {
+    if ("Z" %in% misspecify && "L" %in% misspecify) {
       model.Z <- gsub("\\+L", "", model.Z)
     }
 
@@ -323,18 +325,17 @@ for (alpha in which.alphas) {
       return(tmp.out)
     })
 
-    print(
-      truth.out <- c(
-        truth_1 = mean(
-          sapply(int_effect, function(rep) rep$effect_1),
-          na.rm = TRUE
-        ),
-        truth_z = mean(
-          sapply(int_effect, function(rep) rep$effect_z),
-          na.rm = TRUE
-        )
+    truth.out <- c(
+      truth_1 = mean(
+        sapply(int_effect, function(rep) rep$effect_1),
+        na.rm = TRUE
+      ),
+      truth_z = mean(
+        sapply(int_effect, function(rep) rep$effect_z),
+        na.rm = TRUE
       )
     )
+    print(truth.out)
 
     saveRDS(
       truth.out,
