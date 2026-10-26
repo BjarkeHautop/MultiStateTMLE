@@ -61,8 +61,8 @@ The pipeline has three main steps:
   effect into mediated and calibrated contrasts.
 
 For example, with the simulated illness-death data `illness_death`, where an
-illness `z` raises the risk of `death`, the risk of death by time 1 if
-the intensity of the illness were halved is estimated by:
+illness `z` raises the risk of `death`, the risk of death by time 1 if the
+intensity of the illness were halved is estimated by:
 
 ```{r}
 #| label: example

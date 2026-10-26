@@ -10,13 +10,13 @@ knitr:
     comment: "#>"
 ---
 
-MultiStateTMLE estimates causal parameters of multistate event processes
-under *stochastic intensity interventions*: hypothetical interventions that
-scale the intensity of one event process (for example, an illness) by a
-factor `alpha`, and ask how the risk of another process (for example, death)
-would change. Estimation uses targeted maximum likelihood estimation (TMLE),
-which updates an initial fit of the hazards so that the resulting estimator
-is efficient and comes with influence curve based standard errors.
+MultiStateTMLE estimates causal parameters of multistate event processes under
+*stochastic intensity interventions*: hypothetical interventions that scale the
+intensity of one event process (for example, an illness) by a factor `alpha`,
+and ask how the risk of another process (for example, death) would change.
+Estimation uses targeted maximum likelihood estimation (TMLE), which updates an
+initial fit of the hazards so that the resulting estimator is efficient and
+comes with influence curve based standard errors.
 
 This vignette walks through the main workflow:
 
@@ -30,6 +30,7 @@ This vignette walks through the main workflow:
 
 ```{r}
 #| label: setup
+
 library(MultiStateTMLE)
 ```
 
@@ -37,11 +38,12 @@ library(MultiStateTMLE)
 
 The package ships with `illness_death`, simulated event history data for 150
 individuals at risk of an illness `z`, which can occur at most once, and of
-`death`. The illness raises the hazard of death, and both hazards
-depend on a baseline covariate `L0`. Follow-up is subject to censoring.
+`death`. The illness raises the hazard of death, and both hazards depend on a
+baseline covariate `L0`. Follow-up is subject to censoring.
 
 ```{r}
 #| label: data
+
 head(illness_death)
 ```
 
@@ -53,30 +55,32 @@ The data are in long format with one row per event and the columns:
   censoring. Here `1` is death and `2` is illness.
 - Baseline covariates, here `L0`.
 
-An individual who dies without falling ill has a single row, while one who
-falls ill and later dies has two rows. For example, individual 3 dies, while
+An individual who dies without falling ill has a single row, while one who falls
+ill and later dies has two rows. For example, individual 3 dies, while
 individual 4 falls ill and then dies:
 
 ```{r}
 #| label: data-example
+
 illness_death[illness_death$id %in% c(3, 4), ]
 ```
 
 ## Step 1: Fit the initial hazard models
 
-`fit_initial()` fits one hazard model per event process, expands the data to
-the grid of observed event times up to the horizon `tau`, and builds the
-discrete state space that the targeting step works on.
+`fit_initial()` fits one hazard model per event process, expands the data to the
+grid of observed event times up to the horizon `tau`, and builds the discrete
+state space that the targeting step works on.
 
-Each process is specified in `fit_types` by its code in the `delta` column
-and a one-sided formula of the covariates of its hazard. Other processes can
-be used as covariates by name, here the death hazard depends on whether the
-individual has fallen ill (`z`). Because the illness can occur at most once,
-we say that individuals are only at risk of `z` while `z == 0`. Exactly one
-process must be the censoring process (`delta = 0`).
+Each process is specified in `fit_types` by its code in the `delta` column and a
+one-sided formula of the covariates of its hazard. Other processes can be used
+as covariates by name, here the death hazard depends on whether the individual
+has fallen ill (`z`). Because the illness can occur at most once, we say that
+individuals are only at risk of `z` while `z == 0`. Exactly one process must be
+the censoring process (`delta = 0`).
 
 ```{r}
 #| label: fit-initial
+
 fit_types <- list(
   z = list(
     delta = 2,
@@ -91,8 +95,8 @@ fit <- fit_initial(illness_death, fit_types = fit_types, tau = 1)
 fit
 ```
 
-The `type` of each process is inferred from the data: death and censoring
-end follow-up, and the illness occurs at most once.
+The `type` of each process is inferred from the data: death and censoring end
+follow-up, and the illness occurs at most once.
 
 By default the hazards are fitted with Cox models. Setting `fit = "hal"` in a
 process's entry uses the highly adaptive lasso instead (experimental).
@@ -101,47 +105,51 @@ process's entry uses the highly adaptive lasso instead (experimental).
 
 `tmle_alpha()` estimates the risk of the `target` process by time `tau` under
 the intervention that multiplies the intensity of `z_name` by `alpha`. With
-`alpha = 1` there is no intervention, so this is the observed risk of death
-by time 1:
+`alpha = 1` there is no intervention, so this is the observed risk of death by
+time 1:
 
 ```{r}
 #| label: tmle-observed
+
 observed <- tmle_alpha(fit, target = "death", alpha = 1)
 observed
 ```
 
-The printed table gives the targeted estimate with its standard error and a
-95% confidence interval, and it is stored as `observed$estimate`. Halving the
+The printed table gives the targeted estimate with its standard error and a 95%
+confidence interval, and it is stored as `observed$estimate`. Halving the
 intensity of the illness gives:
 
 ```{r}
 #| label: tmle-halved
+
 halved <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
 halved
 ```
 
-`coef()` and `confint()` extract the estimate and confidence intervals at
-other levels:
+`coef()` and `confint()` extract the estimate and confidence intervals at other
+levels:
 
 ```{r}
 #| label: tmle-ci
+
 coef(halved)
 confint(halved, level = 0.9)
 ```
 
-Setting `alpha = 0` removes the illness altogether, while `alpha > 1`
-increases its intensity.
+Setting `alpha = 0` removes the illness altogether, while `alpha > 1` increases
+its intensity.
 
 ## Step 3: Trace the calibration curve
 
-An intensity scaling `alpha` is not always easy to interpret. It is often
-more natural to ask what happens to the outcome when the *risk* of the
-exposure is changed by a given amount. `calibration_curve()` evaluates a grid
-of interventions and, for each, estimates both the risk of the exposure `z`
-and the risk of the target:
+An intensity scaling `alpha` is not always easy to interpret. It is often more
+natural to ask what happens to the outcome when the *risk* of the exposure is
+changed by a given amount. `calibration_curve()` evaluates a grid of
+interventions and, for each, estimates both the risk of the exposure `z` and the
+risk of the target:
 
 ```{r}
 #| label: calibration-curve
+
 curve <- calibration_curve(
   fit,
   target = "death",
@@ -151,15 +159,16 @@ curve <- calibration_curve(
 curve$estimate
 ```
 
-Plotting the target risk against the exposure risk traces out the
-calibration curve:
+Plotting the target risk against the exposure risk traces out the calibration
+curve:
 
 ```{r}
 #| label: calibration-plot
 #| fig-alt: >
 #|   Estimated risk of death plotted against the estimated risk of illness
-#|   across interventions on the illness intensity, with 95% confidence
-#|   bands. The risk of death increases with the risk of illness.
+#|   across interventions on the illness intensity, with 95% confidence bands.
+#|   The risk of death increases with the risk of illness.
+
 ce <- curve$estimate
 
 plot(
@@ -178,19 +187,20 @@ arrows(ce$exposure_estimate, ce$lower, ce$exposure_estimate, ce$upper,
 
 ## Step 4: Calibrate the intervention
 
-`calibrate_alpha()` solves for the `alpha` that achieves a given exposure
-risk `theta` and estimates the target risk under that intervention. The
-calibration target is given by a `value` on a `scale`:
+`calibrate_alpha()` solves for the `alpha` that achieves a given exposure risk
+`theta` and estimates the target risk under that intervention. The calibration
+target is given by a `value` on a `scale`:
 
 - `"absolute"`: `theta = value`.
 - `"ratio"`: `theta` is `value` times the observed risk of `z_name`.
 - `"difference"`: `theta` is `value` plus the observed risk of `z_name`.
 
-For example, the risk of death if the risk of illness were reduced to 80% of
-its observed value:
+For example, the risk of death if the risk of illness were reduced to 80% of its
+observed value:
 
 ```{r}
 #| label: calibrate-alpha
+
 cal <- calibrate_alpha(
   fit,
   target = "death",
@@ -201,17 +211,18 @@ cal <- calibrate_alpha(
 cal
 ```
 
-The first table gives the calibrated intervention `alpha` and the exposure
-risk `theta` it achieves, and the second the risk of death under it. Its
-standard error `se` accounts for `alpha` being estimated, whereas `se_crude`
-treats it as known.
+The first table gives the calibrated intervention `alpha` and the exposure risk
+`theta` it achieves, and the second the risk of death under it. Its standard
+error `se` accounts for `alpha` being estimated, whereas `se_crude` treats it as
+known.
 
-The target can also be the expected years of life lost before `tau` rather
-than the risk of death, with `estimand = "years_lost"`. The exposure is
-still calibrated on its risk, unless `exposure_estimand` says otherwise:
+The target can also be the expected years of life lost before `tau` rather than
+the risk of death, with `estimand = "years_lost"`. The exposure is still
+calibrated on its risk, unless `exposure_estimand` says otherwise:
 
 ```{r}
 #| label: calibrate-years-lost
+
 calibrate_alpha(
   fit,
   target = "death",
@@ -224,11 +235,11 @@ calibrate_alpha(
 
 ## Step 5: Decompose a treatment effect
 
-With a baseline treatment `A0`, the total effect of treatment on the outcome
-can be split into the part that goes through its effect on the exposure and
-the remainder. The calibrated intervention sets the treated individuals'
-exposure risk to what it would have been under placebo, and
-`calibrated_contrasts()` then decomposes the total effect into:
+With a baseline treatment `A0`, the total effect of treatment on the outcome can
+be split into the part that goes through its effect on the exposure and the
+remainder. The calibrated intervention sets the treated individuals' exposure
+risk to what it would have been under placebo, and `calibrated_contrasts()` then
+decomposes the total effect into:
 
 - a *mediated* contrast: treatment versus the calibrated intervention, and
 - a *calibrated* contrast: the calibrated intervention versus placebo.
@@ -240,6 +251,7 @@ treatment values, `a = 0` and `a = 1`.
 
 ```{r}
 #| label: treatment-data
+
 set.seed(1)
 treated <- illness_death
 a0 <- rbinom(max(treated$id), 1, 0.5)
@@ -261,13 +273,14 @@ fit_treated <- fit_initial(
 )
 ```
 
-The contrasts are computed from the influence curves that each fit
-returns. In the calibrated arm we set `a = 1` and calibrate to a ratio of 1
-to the risk of illness under placebo, `reference_a = 0`, so the risk of
-illness under treatment is calibrated to equal that under placebo:
+The contrasts are computed from the influence curves that each fit returns. In
+the calibrated arm we set `a = 1` and calibrate to a ratio of 1 to the risk of
+illness under placebo, `reference_a = 0`, so the risk of illness under treatment
+is calibrated to equal that under placebo:
 
 ```{r}
 #| label: contrasts
+
 treatment_fit <- tmle_alpha(fit_treated, target = "death", a = 1)
 placebo_fit <- tmle_alpha(fit_treated, target = "death", a = 0)
 calibrated_fit <- calibrate_alpha(
@@ -283,13 +296,13 @@ calibrated_fit <- calibrate_alpha(
 calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
 ```
 
-The treatment was randomised without any effect, so the confidence intervals
-of all three contrasts cover zero, as expected.
+The treatment was randomised without any effect, so the confidence intervals of
+all three contrasts cover zero, as expected.
 
 ## Further reading
 
-- The function reference documents further options, such as recurrent
-  targets, only counting first events (`only_first`), and time-varying
-  interventions (`alpha_list`).
+- The function reference documents further options, such as recurrent targets,
+  only counting first events (`only_first`), and time-varying interventions
+  (`alpha_list`).
 - To simulate multistate event history data, see the
   [simevent](https://github.com/BjarkeHautop/simevent) package.

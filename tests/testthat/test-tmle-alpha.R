@@ -269,7 +269,11 @@ test_that("tmle_alpha() estimates several targets separately", {
   expect_equal(both$eic, c(death$eic, z$eic))
   expect_named(both$checks$converged, c("death", "z"))
   expect_equal(both$checks$weights, death$checks$weights)
-  expect_equal(coef(both), c(death = coef(death), z = coef(z)), ignore_attr = TRUE)
+  expect_equal(
+    coef(both),
+    c(death = coef(death), z = coef(z)),
+    ignore_attr = TRUE
+  )
   expect_output(print(both), "z: Initial estimate")
   expect_error(tmle_alpha(fit, target = c("death", "death")), "target")
 })

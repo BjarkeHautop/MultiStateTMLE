@@ -151,7 +151,11 @@ test_that("calibrated_contrasts() checks that the fits belong together", {
     "same target"
   )
   expect_error(
-    calibrated_contrasts(treatment.fit, fake.tmle.fit(0.3, eic), calibrated.fit),
+    calibrated_contrasts(
+      treatment.fit,
+      fake.tmle.fit(0.3, eic),
+      calibrated.fit
+    ),
     "different baseline treatments"
   )
   expect_error(

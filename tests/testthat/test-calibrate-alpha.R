@@ -110,7 +110,9 @@ test_that("calibrate_alpha() handles several targets", {
   expect_equal(both$estimate$estimate[2], 0.2, tolerance = 0.1)
   expect_named(both$eic, c("death", "z"))
   expect_named(both$checks$derivative_target, c("death", "z"))
-  expect_equal(coef(both), c(death = single$estimate$estimate, z = 0.2),
+  expect_equal(
+    coef(both),
+    c(death = single$estimate$estimate, z = 0.2),
     tolerance = 0.1
   )
 })
