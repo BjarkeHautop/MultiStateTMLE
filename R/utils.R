@@ -4,7 +4,7 @@
   use_exponential = FALSE
 )
 
-# Defaults for the `control` argument of tmle_alpha().
+# Defaults for the `control` argument of tmle_estimate().
 .tmle_control_defaults <- list(
   one_step = FALSE,
   block_size = 10,
@@ -15,7 +15,8 @@
   truncate_weights = Inf
 )
 
-# Validate the `control` argument of tmle_alpha() and fill in its defaults.
+# Validate the `control` argument of tmle_estimate() and fill in its
+# defaults.
 .tmle_control <- function(control) {
   checkmate::assert_list(control, names = "unique")
   checkmate::assert_subset(names(control), names(.tmle_control_defaults))
@@ -152,12 +153,12 @@
   )
 }
 
-# The point estimate of a tmle_alpha() fit.
+# The point estimate of a tmle_estimate() or .tmle_fixed() fit.
 .point_estimate <- function(fit) {
   as.numeric(fit[["estimate"]][["estimate"]][1])
 }
 
-# The efficient influence curve of a tmle_alpha() fit.
+# The efficient influence curve of a tmle_estimate() or .tmle_fixed() fit.
 .eic <- function(fit) {
   fit[["eic"]][[1]]
 }
@@ -165,4 +166,31 @@
 # Print an object through message() so verbose output can be suppressed.
 .message_print <- function(x) {
   message(paste(utils::capture.output(print(x)), collapse = "\n"))
+}
+
+# Whether a tmle_estimate() fit is under a calibrate() intervention.
+.is_calibrated <- function(fit) {
+  !is.null(fit$intervention) && fit$intervention$type == "calibrate"
+}
+
+# Error unless `formula` is one-sided; `name` describes it.
+.assert_one_sided <- function(formula, name) {
+  if (length(formula) != 2) {
+    stop(name, " must be a one-sided formula.", call. = FALSE)
+  }
+  invisible(formula)
+}
+
+# A function of a numeric vector `time` evaluating the one-sided `formula`
+# in it, one value per time.
+.time_function <- function(formula) {
+  expr <- formula[[2]]
+  env <- environment(formula)
+  function(time) {
+    values <- eval(expr, list(time = time), env)
+    if (length(values) == 1) {
+      values <- rep(values, length(time))
+    }
+    values
+  }
 }

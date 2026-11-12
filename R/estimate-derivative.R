@@ -3,7 +3,7 @@
 #' Approximates the derivative with respect to `alpha` of the estimate
 #' returned by `fun`, by a symmetric finite difference at `alpha`.
 #'
-#' @param fun A function of `alpha` (and `...`) returning a [tmle_alpha()]
+#' @param fun A function of `alpha` (and `...`) returning a `.tmle_fixed()`
 #'   fit, or a list like it with an element `estimate`, a data frame with a
 #'   column `estimate`.
 #' @param alpha Positive number. The point at which to estimate the

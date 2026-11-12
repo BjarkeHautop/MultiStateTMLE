@@ -210,6 +210,23 @@ test_that("calibrated_contrasts() defaults to the treatment fit's target", {
   )
   expect_error(
     calibrated_contrasts(list(), fake.tmle.fit(0.3, eic), calibrated.fit),
-    "tmle_alpha"
+    "tmle_estimate"
+  )
+  expect_error(
+    calibrated_contrasts(
+      fake.tmle.fit(0.7, eic),
+      fake.tmle.fit(0.3, eic, a = 0),
+      fake.tmle.fit(0.5, eic)
+    ),
+    "calibrate() intervention",
+    fixed = TRUE
+  )
+  expect_error(
+    calibrated_contrasts(
+      fake.calibrated.fit(0.7, eic),
+      fake.tmle.fit(0.3, eic, a = 0),
+      calibrated.fit
+    ),
+    "must not be under calibrate"
   )
 })

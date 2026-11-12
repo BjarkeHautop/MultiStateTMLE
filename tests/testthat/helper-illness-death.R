@@ -56,7 +56,7 @@ simulate.recovery.fit <- function(alpha, n, seed) {
     models = illness.death.models,
     tau = 1
   )
-  tmle_alpha(initial_fit, target = "death", alpha = alpha, z_name = "z")
+  tmle_estimate(initial_fit, risk(death), scale_intensity(z = alpha))
 }
 
 # The first n individuals of illness_death, for fast unit tests.
@@ -81,9 +81,9 @@ fixture.data.treated <- function(n = 40) {
   data
 }
 
-# Minimal tmle_alpha() and calibrate_alpha() results with the given
-# estimates and influence curves, for unit tests of calibrated_contrasts().
-# For calibrate_alpha(), `estimate` and `eic` have one entry per target.
+# Minimal tmle_estimate() results with the given estimates and influence
+# curves, for unit tests of calibrated_contrasts(). For fake.calibrated.fit(),
+# `estimate` and `eic` have one entry per target.
 fake.tmle.fit <- function(
   estimate,
   eic,
@@ -94,11 +94,11 @@ fake.tmle.fit <- function(
   structure(
     list(
       estimate = data.table::data.table(target = target, estimate = estimate),
-      estimand = estimand,
+      target = do.call(estimand, as.list(target)),
       a = a,
       eic = stats::setNames(list(eic), target)
     ),
-    class = "tmle_alpha"
+    class = "tmle_estimate"
   )
 }
 
@@ -115,15 +115,16 @@ fake.calibrated.fit <- function(
   structure(
     list(
       estimate = data.table::data.table(target = target, estimate = estimate),
+      target = do.call(estimand, as.list(target)),
+      intervention = calibrate(risk(z), relative_change(1)),
       a = a,
-      estimand = estimand,
       eic = stats::setNames(eic, target)
     ),
-    class = "calibrate_alpha"
+    class = "tmle_estimate"
   )
 }
 
-# What solve_alpha() and estimate_derivative() read from a tmle_alpha() fit.
+# What solve_alpha() and estimate_derivative() read from a .tmle_fixed() fit.
 fake.estimate <- function(estimate, se = NA, eic = 0) {
   list(estimate = data.frame(estimate = estimate, se = se), eic = list(eic))
 }

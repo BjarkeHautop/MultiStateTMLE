@@ -21,11 +21,11 @@ comes with influence curve based standard errors.
 This vignette walks through the main workflow:
 
 1. Fit the initial hazard models with `fit_initial()`.
-2. Target a single intervention with `tmle_alpha()`.
+2. Estimate a target, such as `risk(death)`, under a fixed intensity scaling,
+   `scale_intensity()`, with `tmle_estimate()`.
 3. Trace how the outcome risk depends on the exposure risk with
-   `calibration_curve()`.
-4. Calibrate the intervention to a target exposure risk with
-   `calibrate_alpha()`.
+   `intervention_curve()`.
+4. Calibrate the intervention to a target exposure risk with `calibrate()`.
 5. Decompose a treatment effect with `calibrated_contrasts()`.
 
 ```{r}
@@ -104,28 +104,27 @@ restrict when individuals are at risk with a condition on the processes, such as
 `at_risk = ~ z == 0`, and `fit = "hal"` uses the highly adaptive lasso instead
 (experimental).
 
-## Step 2: Target a single intervention
+## Step 2: Estimate under a fixed intervention
 
-`tmle_alpha()` estimates the risk of the `target` process by time `tau` under
-the intervention that multiplies the intensity of `z_name` by `alpha`. With
-`alpha = 1` there is no intervention, so this is the observed risk of death by
-time 1:
+`tmle_estimate()` estimates a target parameter under an intervention. The target
+is given by `risk()`, here the risk of death by time `tau`. Without an
+intervention, this is the observed risk of death by time 1:
 
 ```{r}
 #| label: tmle-observed
 
-observed <- tmle_alpha(fit, target = "death", alpha = 1)
+observed <- tmle_estimate(fit, risk(death))
 observed
 ```
 
 The printed table gives the targeted estimate with its standard error and a 95%
-confidence interval, and it is stored as `observed$estimate`. Halving the
-intensity of the illness gives:
+confidence interval, and it is stored as `observed$estimate`. The intervention
+`scale_intensity(z = 0.5)` halves the intensity of the illness:
 
 ```{r}
 #| label: tmle-halved
 
-halved <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
+halved <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
 halved
 ```
 
@@ -139,34 +138,45 @@ coef(halved)
 confint(halved, level = 0.9)
 ```
 
-Setting `alpha = 0` removes the illness altogether, while `alpha > 1` increases
-its intensity.
-
-## Step 3: Trace the calibration curve
-
-An intensity scaling `alpha` is not always easy to interpret. It is often more
-natural to ask what happens to the outcome when the *risk* of the exposure is
-changed by a given amount. `calibration_curve()` evaluates a grid of
-interventions and, for each, estimates both the risk of the exposure `z` and the
-risk of the target:
+A factor of `0` removes the illness altogether, while a factor above `1`
+increases its intensity. The factor can also vary over time, given as a formula
+in `time`, baseline covariates and the processes:
 
 ```{r}
-#| label: calibration-curve
+#| label: tmle-time-varying
 
-curve <- calibration_curve(
+tmle_estimate(
   fit,
-  target = "death",
-  z_name = "z",
-  alpha_grid = c(0, 0.25, 0.5, 1, 1.5, 2)
+  risk(death),
+  scale_intensity(z = ~ ifelse(time < 0.5, 0.5, 1))
+)$estimate
+```
+
+## Step 3: Trace the intervention curve
+
+An intensity scaling is not always easy to interpret. It is often more natural
+to ask what happens to the outcome when the *risk* of the exposure is changed by
+a given amount. `intervention_curve()` evaluates a grid of scalings `alpha` of
+the exposure's intensity and, for each, estimates both the exposure, here the
+risk of the illness, and the target:
+
+```{r}
+#| label: intervention-curve
+
+curve <- intervention_curve(
+  fit,
+  risk(death),
+  exposure = risk(z),
+  alpha = c(0, 0.25, 0.5, 1, 1.5, 2)
 )
 curve$estimate
 ```
 
-Plotting the target risk against the exposure risk traces out the calibration
-curve:
+Plotting the target risk against the exposure risk shows how the risk of death
+responds to the risk of illness:
 
 ```{r}
-#| label: calibration-plot
+#| label: intervention-plot
 #| fig-alt: >
 #|   Estimated risk of death plotted against the estimated risk of illness
 #|   across interventions on the illness intensity, with 95% confidence bands.
@@ -196,49 +206,39 @@ arrows(
 
 ## Step 4: Calibrate the intervention
 
-`calibrate_alpha()` solves for the `alpha` that achieves a given exposure risk
-`theta` and estimates the target risk under that intervention. The calibration
-target is given by a `value` on a `scale`:
+`calibrate()` describes a calibrated intervention: the scaling of the exposure's
+intensity is chosen so that the exposure attains a given value, and the target
+is estimated under it. The value is given by a calibration rule:
 
-- `"absolute"`: `theta = value`.
-- `"ratio"`: `theta` is `value` times the observed risk of `z_name`.
-- `"difference"`: `theta` is `value` plus the observed risk of `z_name`.
+- `level(theta)`: the exposure equals `theta`.
+- `absolute_change(delta)`: the exposure is `delta` plus its observed value.
+- `relative_change(rho)`: the exposure is `rho` times its observed value.
 
 For example, the risk of death if the risk of illness were reduced to 80% of its
 observed value:
 
 ```{r}
-#| label: calibrate-alpha
+#| label: calibrate
 
-cal <- calibrate_alpha(
-  fit,
-  target = "death",
-  z_name = "z",
-  value = 0.8,
-  scale = "ratio"
-)
+cal <- tmle_estimate(fit, risk(death), calibrate(risk(z), relative_change(0.8)))
 cal
 ```
 
-The first table gives the calibrated intervention `alpha` and the exposure risk
-`theta` it achieves, and the second the risk of death under it. Its standard
+The first table gives the calibrated scaling `alpha` and the exposure risk
+`theta` it attains, and the second the risk of death under it. Its standard
 error `se` accounts for `alpha` being estimated, whereas `se_crude` treats it as
 known.
 
-The target can also be the expected years of life lost before `tau` rather than
-the risk of death, with `estimand = "years_lost"`. The exposure is still
-calibrated on its risk, unless `exposure_estimand` says otherwise:
+The target can also be the expected years of life lost before `tau`, with
+`years_lost()`, while the exposure is still calibrated on its risk:
 
 ```{r}
 #| label: calibrate-years-lost
 
-calibrate_alpha(
+tmle_estimate(
   fit,
-  target = "death",
-  z_name = "z",
-  value = 0.8,
-  scale = "ratio",
-  estimand = "years_lost"
+  years_lost(death),
+  calibrate(risk(z), relative_change(0.8))
 )$estimate
 ```
 
@@ -279,23 +279,20 @@ fit_treated <- fit_initial(
 ```
 
 The contrasts are computed from the influence curves that each fit returns. In
-the calibrated arm we set `a = 1` and calibrate to a ratio of 1 to the risk of
-illness under placebo, `reference_a = 0`, so the risk of illness under treatment
-is calibrated to equal that under placebo:
+the calibrated arm we set `a = 1` and calibrate to a relative change of 1 from
+the risk of illness under placebo, `reference_a = 0`, so the risk of illness
+under treatment is calibrated to equal that under placebo:
 
 ```{r}
 #| label: contrasts
 
-treatment_fit <- tmle_alpha(fit_treated, target = "death", a = 1)
-placebo_fit <- tmle_alpha(fit_treated, target = "death", a = 0)
-calibrated_fit <- calibrate_alpha(
+treatment_fit <- tmle_estimate(fit_treated, risk(death), a = 1)
+placebo_fit <- tmle_estimate(fit_treated, risk(death), a = 0)
+calibrated_fit <- tmle_estimate(
   fit_treated,
-  target = "death",
-  z_name = "z",
-  value = 1,
-  scale = "ratio",
-  a = 1,
-  reference_a = 0
+  risk(death),
+  calibrate(risk(z), relative_change(1), reference_a = 0),
+  a = 1
 )
 
 calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
@@ -307,7 +304,8 @@ all three contrasts cover zero, as expected.
 ## Further reading
 
 - The function reference documents further options, such as recurrent targets,
-  only counting first events (`only_first`), and time-varying interventions
-  (`alpha_list`).
+  only counting events in some states (`risk(death, when = ~ z == 0)`), only
+  counting first events (`only_first`), and intervening on several processes at
+  once (`scale_intensity(z = 0.5, w = 2)`).
 - To simulate multistate event history data, see the
   [simevent](https://github.com/BjarkeHautop/simevent) package.

@@ -20,17 +20,19 @@ reference:
 
 - title: Targeted estimation
   desc: >
-    Targeting the initial fit under a stochastic intensity intervention.
+    Estimating a target parameter under a stochastic intensity intervention,
+    fixed or calibrated.
   contents:
-  - tmle_alpha
+  - tmle_estimate
+  - target-parameters
+  - interventions
 
 - title: Calibration
   desc: >
-    Calibrating an intensity intervention to a target effect size, and
-    decomposing treatment effects into calibrated contrasts.
+    Tracing the intervention curve, and decomposing treatment effects into
+    calibrated contrasts.
   contents:
-  - calibrate_alpha
-  - calibration_curve
+  - intervention_curve
   - calibrated_contrasts
 
 - title: Results

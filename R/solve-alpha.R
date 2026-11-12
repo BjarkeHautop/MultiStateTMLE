@@ -7,9 +7,9 @@
 #' evaluations of `fun` along the way.
 #'
 #' This solves the calibration equation of Rytgaard and van der Laan, and is
-#' used by [calibrate_alpha()].
+#' used by [calibrate()] interventions in [tmle_estimate()].
 #'
-#' @param fun A function of `alpha` returning a [tmle_alpha()] fit, or a
+#' @param fun A function of `alpha` returning a `.tmle_fixed()` fit, or a
 #'   list like it with elements `estimate` (a data frame with columns
 #'   `estimate` and `se`) and `eic` (a list with the influence curve).
 #' @param theta Number. The target value of the estimate.

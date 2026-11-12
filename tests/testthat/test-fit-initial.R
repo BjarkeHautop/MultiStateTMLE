@@ -60,8 +60,54 @@ test_that("fit_initial() accepts plain formulas, named lists and any order", {
     tau = 1
   )
   expect_equal(
-    tmle_alpha(reordered, target = "death", alpha = 0.5, z_name = "z")$estimate,
-    tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")$estimate
+    tmle_estimate(reordered, risk(death), scale_intensity(z = 0.5))$estimate,
+    tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))$estimate
+  )
+})
+
+test_that("fit_initial() takes derived_vars and depend_time as formulas", {
+  # A derived variable becomes the function of the data that
+  # .fit_initial_impl() expects, reading state variables from it.
+  ill <- .state_function(
+    quote(1 * (z > threshold)),
+    c("z", "death"),
+    list2env(list(threshold = 0)),
+    "ill"
+  )
+  expect_equal(
+    ill(data.table::data.table(z = c(0, 1, 2))),
+    c(0, 1, 1)
+  )
+
+  timed <- fit_initial(
+    fixture.data(40),
+    models = list(
+      hazard_model(z ~ L0, limit = 1),
+      death ~ L0 + z + T.z,
+      censoring ~ L0
+    ),
+    tau = 1,
+    depend_time = list(z = ~ 1 * (time > 0.5))
+  )
+  expect_true(all(timed$tmp_long$T.z %in% c(0, 1)))
+
+  expect_error(
+    fit_initial(
+      fixture.data(40),
+      models = illness.death.models,
+      tau = 1,
+      derived_vars = list(ill = ill ~ z > 0)
+    ),
+    "derived_vars\\$ill must be a one-sided formula"
+  )
+  expect_error(
+    fit_initial(
+      fixture.data(40),
+      models = illness.death.models,
+      tau = 1,
+      derived_vars = list(ill = ~ L0 > 0)
+    ),
+    "The derived variable ill uses L0"
   )
 })
 
@@ -186,7 +232,7 @@ test_that("fit_initial() validates its arguments", {
       illness_death,
       models = m,
       tau = 1,
-      derived_vars = list(function(dt) dt[["z"]])
+      derived_vars = list(~z)
     ),
     "derived_vars"
   )

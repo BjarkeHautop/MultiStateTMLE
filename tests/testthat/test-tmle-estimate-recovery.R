@@ -1,4 +1,4 @@
-test_that("tmle_alpha() recovers the true risk with no intervention (alpha=1)", {
+test_that("tmle_estimate() recovers the true risk with no intervention (alpha=1)", {
   skip_on_cran()
   skip_if_not_installed("simevent")
 
@@ -11,7 +11,7 @@ test_that("tmle_alpha() recovers the true risk with no intervention (alpha=1)", 
   )
 })
 
-test_that("tmle_alpha() recovers the true risk under a shape intervention (alpha=0.5)", {
+test_that("tmle_estimate() recovers the true risk under a shape intervention (alpha=0.5)", {
   skip_on_cran()
   skip_if_not_installed("simevent")
 

@@ -8,11 +8,13 @@ calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit, level = 0.95)
 }
 \arguments{
 \item{treatment_fit, placebo_fit}{Fits for the treatment and placebo arms,
-as returned by \code{\link[=tmle_alpha]{tmle_alpha()}} with different baseline treatments \code{a}.}
+as returned by \code{\link[=tmle_estimate]{tmle_estimate()}} with different baseline treatments \code{a}
+and no calibrated intervention.}
 
-\item{calibrated_fit}{Fit for the calibrated intervention, as returned by
-\code{\link[=calibrate_alpha]{calibrate_alpha()}} with the \code{a} of \code{treatment_fit}. It may contain
-estimates for several targets; the one of \code{treatment_fit} is used.}
+\item{calibrated_fit}{Fit under a \code{\link[=calibrate]{calibrate()}} intervention, as returned
+by \code{\link[=tmle_estimate]{tmle_estimate()}} with the \code{a} of \code{treatment_fit}. It may contain
+estimates for several target processes; the one of \code{treatment_fit} is
+used.}
 
 \item{level}{Number between 0 and 1. Confidence level of the intervals.}
 }
@@ -31,8 +33,8 @@ zero up to numerical error.
 }
 \description{
 Given estimates of the risk of an outcome under treatment, under placebo,
-and under a calibrated intervention (as returned by \code{\link[=tmle_alpha]{tmle_alpha()}} and
-\code{\link[=calibrate_alpha]{calibrate_alpha()}}), computes the total treatment effect and its
+and under a calibrated intervention (as returned by \code{\link[=tmle_estimate]{tmle_estimate()}}),
+computes the total treatment effect and its
 decomposition into a mediated contrast (treatment versus calibrated) and
 a calibrated contrast (calibrated versus placebo), with Wald confidence
 intervals based on the influence curves.
@@ -56,17 +58,16 @@ fit <- fit_initial(
 
 # How much of the effect of treatment on death is mediated by its effect
 # on the risk of z?
+# The calibrated intervention brings the risk of z under treatment to its
+# risk under placebo.
 calibrated_contrasts(
-  treatment_fit = tmle_alpha(fit, target = "death", a = 1),
-  placebo_fit = tmle_alpha(fit, target = "death", a = 0),
-  calibrated_fit = calibrate_alpha(
+  treatment_fit = tmle_estimate(fit, risk(death), a = 1),
+  placebo_fit = tmle_estimate(fit, risk(death), a = 0),
+  calibrated_fit = tmle_estimate(
     fit,
-    target = "death",
-    z_name = "z",
-    value = 1,
-    scale = "ratio",
-    a = 1,
-    reference_a = 0
+    risk(death),
+    calibrate(risk(z), relative_change(1), reference_a = 0),
+    a = 1
   )
 )
 }

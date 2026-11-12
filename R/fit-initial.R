@@ -4,8 +4,8 @@
 #' models, or HAL), and the baseline treatment model if requested, and
 #' expands the data to the grid of all observed event times up to `tau`. It
 #' also builds the discrete product state space of the processes that other
-#' processes' hazards depend on. The result is the input to [tmle_alpha()],
-#' [calibrate_alpha()] and [calibration_curve()].
+#' processes' hazards depend on. The result is the input to
+#' [tmle_estimate()] and [intervention_curve()].
 #'
 #' @param data A `data.frame` of observed event history data in long format,
 #'   with one row per event and columns `id`, `time` and `event` (the name of
@@ -25,20 +25,24 @@
 #'   `arms` is given.
 #' @param arms Integer vector of the baseline treatment values (`0`/`1`) to
 #'   prepare interventional hazards and clever weights for. Each value can
-#'   then be passed as `a` to [tmle_alpha()], [calibrate_alpha()] and
-#'   [calibration_curve()]. Defaults to both values, `0:1`, when
+#'   then be passed as `a` to [tmle_estimate()] and
+#'   [intervention_curve()]. Defaults to both values, `0:1`, when
 #'   `treatment_model` is given.
 #' @param max_count Positive integer. Maximum number of jumps tracked per
 #'   recurrent process in the state space.
-#' @param derived_vars Named list of functions of the data, each deriving an
-#'   additional state variable, named by the list, that can be used in
-#'   `models`.
-#' @param depend_time Experimental, and may change. Named list of functions
-#'   making hazards depend on the time of a jump. Each is named by a state
-#'   variable: a process `z` that jumps once, or `z.k` for the `k`th jump of
-#'   a recurrent process `z`. It adds the covariate `T.<name>`, `0` before
-#'   that jump and the function applied to the time of the jump after it,
-#'   which can be used (as a factor) in `models`.
+#' @param derived_vars Experimental, and may change. Named list of
+#'   one-sided formulas, each deriving an additional state variable, named by the list, that can be used in
+#'   `models`, such as `list(ill = ~ z > 0)`. They may use the processes
+#'   that hazards depend on (their number of events so far) and earlier
+#'   derived variables.
+#' @param depend_time Experimental, and may change. Named list of one-sided
+#'   formulas in `time`, making hazards depend on the time of a jump. Each is
+#'   named by a state variable: a process `z` that jumps once, or `z.k` for
+#'   the `k`th jump of a recurrent process `z`. It adds the covariate
+#'   `T.<name>`, `0` before that jump and the formula evaluated at the time
+#'   of the jump after it, which can be used (as a factor) in `models`. For
+#'   example, `list(z = ~ time > 0.5)` distinguishes early from late
+#'   jumps.
 #' @param control A named list of tuning settings:
 #'   * `prune_states` (`FALSE`): if `TRUE`, prune states not admissible
 #'     under the at-risk conditions of `models`.
@@ -67,26 +71,6 @@
 #' [simevent::simulate_events()] adds, are ignored: the counts are
 #' recomputed from `event`.
 #'
-#' @section Functions in the arguments:
-#' The functions given to `fit_initial()` and [tmle_alpha()] are called in
-#' different ways:
-#' * The functions in `derived_vars` are called with a `data.table` and
-#'   must return one value per row. They are called both with the data, with
-#'   a row per individual and time, and with the state space, with a row per
-#'   state and a column per process that other processes depend on. So they
-#'   may only use those process columns, such as `dt[["z"]]`, the number of
-#'   jumps of `z` so far. The same holds for the `at_risk` conditions of
-#'   [hazard_model()].
-#' * The functions in `depend_time` are called with a numeric vector of
-#'   times and must return one value per time.
-#' * `target_only_in_state` in [tmle_alpha()] is called with the state
-#'   space only, `initial_fit$depend_matrix`, and must return one logical
-#'   per state.
-#' * The functions in `alpha_list` in [tmle_alpha()] are called with the
-#'   columns of the expanded data `initial_fit$tmp_long` named by their
-#'   arguments, such as `time`, a baseline covariate or a process, and must
-#'   return one value per row.
-#'
 #' @return An object of class `initial_fit`, a list with elements:
 #'   * `n`: the number of individuals.
 #'   * `tau`, `treatment_model` and `arms`: as given (`arms` with its
@@ -98,7 +82,7 @@
 #'     from the data), `model` and `at_risk` (whether the process has a
 #'     `limit` or `at_risk` condition).
 #'
-#'   It also contains the internal elements used by [tmle_alpha()], among
+#'   It also contains the internal elements used by [tmle_estimate()], among
 #'   them `tmp_long` (the expanded data with fitted hazards and clever
 #'   weights) and `depend_matrix` (the product state space).
 #'
@@ -147,7 +131,8 @@ fit_initial <- function(
       "\"; give it one, or name the censoring process in `censoring`."
     )
   }
-  checkmate::assert_list(derived_vars, types = "function", names = "unique")
+  checkmate::assert_list(derived_vars, types = "formula", names = "unique")
+  checkmate::assert_list(depend_time, types = "formula", names = "unique")
 
   events <- as.character(data[["event"]])
   if (anyNA(events)) {
@@ -176,6 +161,27 @@ fit_initial <- function(
   data[["event"]] <- NULL
 
   state_vars <- c(names(models), names(derived_vars))
+  derived_vars <- Map(
+    function(formula, name) {
+      .assert_one_sided(formula, paste0("derived_vars$", name))
+      .state_function(
+        formula[[2]],
+        state_vars,
+        environment(formula),
+        paste("The derived variable", name)
+      )
+    },
+    derived_vars,
+    names(derived_vars)
+  )
+  depend_time <- Map(
+    function(formula, name) {
+      .assert_one_sided(formula, paste0("depend_time$", name))
+      .time_function(formula)
+    },
+    depend_time,
+    names(depend_time)
+  )
   fit_types <- Map(
     .hazard_model_to_fit_type,
     models,

@@ -1,17 +1,19 @@
 #' Decompose a treatment effect into mediated and calibrated contrasts
 #'
 #' Given estimates of the risk of an outcome under treatment, under placebo,
-#' and under a calibrated intervention (as returned by [tmle_alpha()] and
-#' [calibrate_alpha()]), computes the total treatment effect and its
+#' and under a calibrated intervention (as returned by [tmle_estimate()]),
+#' computes the total treatment effect and its
 #' decomposition into a mediated contrast (treatment versus calibrated) and
 #' a calibrated contrast (calibrated versus placebo), with Wald confidence
 #' intervals based on the influence curves.
 #'
 #' @param treatment_fit,placebo_fit Fits for the treatment and placebo arms,
-#'   as returned by [tmle_alpha()] with different baseline treatments `a`.
-#' @param calibrated_fit Fit for the calibrated intervention, as returned by
-#'   [calibrate_alpha()] with the `a` of `treatment_fit`. It may contain
-#'   estimates for several targets; the one of `treatment_fit` is used.
+#'   as returned by [tmle_estimate()] with different baseline treatments `a`
+#'   and no calibrated intervention.
+#' @param calibrated_fit Fit under a [calibrate()] intervention, as returned
+#'   by [tmle_estimate()] with the `a` of `treatment_fit`. It may contain
+#'   estimates for several target processes; the one of `treatment_fit` is
+#'   used.
 #' @param level Number between 0 and 1. Confidence level of the intervals.
 #'
 #' @return An object of class `calibrated_contrasts`, a list with elements:
@@ -43,17 +45,16 @@
 #'
 #' # How much of the effect of treatment on death is mediated by its effect
 #' # on the risk of z?
+#' # The calibrated intervention brings the risk of z under treatment to its
+#' # risk under placebo.
 #' calibrated_contrasts(
-#'   treatment_fit = tmle_alpha(fit, target = "death", a = 1),
-#'   placebo_fit = tmle_alpha(fit, target = "death", a = 0),
-#'   calibrated_fit = calibrate_alpha(
+#'   treatment_fit = tmle_estimate(fit, risk(death), a = 1),
+#'   placebo_fit = tmle_estimate(fit, risk(death), a = 0),
+#'   calibrated_fit = tmle_estimate(
 #'     fit,
-#'     target = "death",
-#'     z_name = "z",
-#'     value = 1,
-#'     scale = "ratio",
-#'     a = 1,
-#'     reference_a = 0
+#'     risk(death),
+#'     calibrate(risk(z), relative_change(1), reference_a = 0),
+#'     a = 1
 #'   )
 #' )
 #' @export
@@ -63,10 +64,16 @@ calibrated_contrasts <- function(
   calibrated_fit,
   level = 0.95
 ) {
-  checkmate::assert_class(treatment_fit, "tmle_alpha")
-  checkmate::assert_class(placebo_fit, "tmle_alpha")
-  checkmate::assert_class(calibrated_fit, "calibrate_alpha")
+  checkmate::assert_class(treatment_fit, "tmle_estimate")
+  checkmate::assert_class(placebo_fit, "tmle_estimate")
+  checkmate::assert_class(calibrated_fit, "tmle_estimate")
   checkmate::assert_number(level, lower = 0, upper = 1)
+  if (.is_calibrated(treatment_fit) || .is_calibrated(placebo_fit)) {
+    stop("treatment_fit and placebo_fit must not be under calibrate().")
+  }
+  if (!.is_calibrated(calibrated_fit)) {
+    stop("calibrated_fit must be under a calibrate() intervention.")
+  }
 
   target <- treatment_fit$estimate$target
   if (!identical(placebo_fit$estimate$target, target)) {
@@ -91,9 +98,9 @@ calibrated_contrasts <- function(
     )
   }
   estimands <- c(
-    treatment_fit$estimand,
-    placebo_fit$estimand,
-    calibrated_fit$estimand
+    treatment_fit$target$estimand,
+    placebo_fit$target$estimand,
+    calibrated_fit$target$estimand
   )
   if (length(unique(estimands)) != 1) {
     stop(

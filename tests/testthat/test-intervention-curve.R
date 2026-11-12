@@ -1,18 +1,13 @@
-test_that("calibration_curve() returns one row per alpha", {
+test_that("intervention_curve() returns one row per alpha", {
   fit <- fit_initial(
     illness_death,
     models = illness.death.models,
     tau = 1
   )
 
-  curve <- calibration_curve(
-    fit,
-    z_name = "z",
-    target = c("death", "z"),
-    alpha_grid = c(0, 1)
-  )
+  curve <- intervention_curve(fit, risk(death, z), risk(z), alpha = c(0, 1))
 
-  expect_s3_class(curve, "calibration_curve")
+  expect_s3_class(curve, "intervention_curve")
   expect_equal(curve$estimate$alpha, c(0, 0, 1, 1))
   expect_equal(curve$estimate$target, c("death", "z", "death", "z"))
   expect_named(
@@ -33,7 +28,7 @@ test_that("calibration_curve() returns one row per alpha", {
   # alpha = 1 is no intervention.
   expect_equal(
     curve$estimate$estimate[3],
-    tmle_alpha(fit, target = "death")$estimate$estimate
+    tmle_estimate(fit, risk(death))$estimate$estimate
   )
   # The exposure is itself a target here.
   expect_equal(curve$estimate$estimate[4], curve$estimate$exposure_estimate[4])
@@ -47,73 +42,55 @@ test_that("calibration_curve() returns one row per alpha", {
   expect_false(anyNA(curve$eic[["alpha = 0"]]$eic$death))
 })
 
-test_that("calibration_curve() validates its arguments", {
+test_that("intervention_curve() validates its arguments", {
   fit <- fixture.fit(30)
 
   expect_error(
-    calibration_curve(
-      fit,
-      z_name = "z",
-      target = "death",
-      alpha_grid = numeric(0)
-    ),
-    "alpha_grid"
+    intervention_curve(fit, risk(death), risk(z), alpha = numeric(0)),
+    "alpha"
   )
-  expect_error(calibration_curve(fit, z_name = "z", target = 1), "target")
+  expect_error(intervention_curve(fit, "death", risk(z)), "target")
+  expect_error(intervention_curve(fit, risk(death), "z"), "exposure")
   expect_error(
-    calibration_curve(
+    intervention_curve(fit, risk(death), risk(z, death)),
+    "single process"
+  )
+  expect_error(
+    intervention_curve(fit, risk(death), risk(w)),
+    "w.*not in initial_fit"
+  )
+  expect_error(
+    intervention_curve(
       fit,
-      z_name = "z",
-      target = "death",
+      risk(death),
+      risk(z),
       control = list(min_iter = -1)
     ),
     "control\\$min_iter"
   )
-  expect_error(
-    calibration_curve(fit, z_name = "z", target = "death", min_iter = 1),
-    "unused argument"
-  )
 })
 
-test_that("calibration_curve() reports progress only when verbose = TRUE", {
+test_that("intervention_curve() reports progress only when verbose = TRUE", {
   fit <- fixture.fit(30)
 
   msgs <- capture_messages(
-    calibration_curve(
-      fit,
-      z_name = "z",
-      target = "death",
-      alpha_grid = 1,
-      verbose = TRUE
-    )
+    intervention_curve(fit, risk(death), risk(z), alpha = 1, verbose = TRUE)
   )
   expect_true(any(grepl("TMLE iteration 1", msgs)))
-  expect_silent(
-    calibration_curve(fit, z_name = "z", target = "death", alpha_grid = 1)
-  )
+  expect_silent(intervention_curve(fit, risk(death), risk(z), alpha = 1))
 })
 
-test_that("calibration_curve() has separate exposure and target estimands", {
+test_that("intervention_curve() has separate exposure and target estimands", {
   fit <- fixture.fit(30)
 
-  curve <- calibration_curve(
-    fit,
-    z_name = "z",
-    target = "death",
-    alpha_grid = 1,
-    estimand = "years_lost"
-  )
+  curve <- intervention_curve(fit, years_lost(death), risk(z), alpha = 1)
 
   expect_equal(
     curve$estimate$exposure_estimate,
-    tmle_alpha(fit, target = "z")$estimate$estimate
+    tmle_estimate(fit, risk(z))$estimate$estimate
   )
   expect_equal(
     curve$estimate$estimate,
-    tmle_alpha(
-      fit,
-      target = "death",
-      estimand = "years_lost"
-    )$estimate$estimate
+    tmle_estimate(fit, years_lost(death))$estimate$estimate
   )
 })

@@ -44,23 +44,27 @@ baseline treatment, a two-sided formula such as \code{A0 ~ L0}. Required when
 
 \item{arms}{Integer vector of the baseline treatment values (\code{0}/\code{1}) to
 prepare interventional hazards and clever weights for. Each value can
-then be passed as \code{a} to \code{\link[=tmle_alpha]{tmle_alpha()}}, \code{\link[=calibrate_alpha]{calibrate_alpha()}} and
-\code{\link[=calibration_curve]{calibration_curve()}}. Defaults to both values, \code{0:1}, when
+then be passed as \code{a} to \code{\link[=tmle_estimate]{tmle_estimate()}} and
+\code{\link[=intervention_curve]{intervention_curve()}}. Defaults to both values, \code{0:1}, when
 \code{treatment_model} is given.}
 
 \item{max_count}{Positive integer. Maximum number of jumps tracked per
 recurrent process in the state space.}
 
-\item{derived_vars}{Named list of functions of the data, each deriving an
-additional state variable, named by the list, that can be used in
-\code{models}.}
+\item{derived_vars}{Experimental, and may change. Named list of
+one-sided formulas, each deriving an additional state variable, named by the list, that can be used in
+\code{models}, such as \code{list(ill = ~ z > 0)}. They may use the processes
+that hazards depend on (their number of events so far) and earlier
+derived variables.}
 
-\item{depend_time}{Experimental, and may change. Named list of functions
-making hazards depend on the time of a jump. Each is named by a state
-variable: a process \code{z} that jumps once, or \code{z.k} for the \code{k}th jump of
-a recurrent process \code{z}. It adds the covariate \verb{T.<name>}, \code{0} before
-that jump and the function applied to the time of the jump after it,
-which can be used (as a factor) in \code{models}.}
+\item{depend_time}{Experimental, and may change. Named list of one-sided
+formulas in \code{time}, making hazards depend on the time of a jump. Each is
+named by a state variable: a process \code{z} that jumps once, or \code{z.k} for
+the \code{k}th jump of a recurrent process \code{z}. It adds the covariate
+\verb{T.<name>}, \code{0} before that jump and the formula evaluated at the time
+of the jump after it, which can be used (as a factor) in \code{models}. For
+example, \code{list(z = ~ time > 0.5)} distinguishes early from late
+jumps.}
 
 \item{control}{A named list of tuning settings:
 \itemize{
@@ -93,7 +97,7 @@ from the data), \code{model} and \code{at_risk} (whether the process has a
 \code{limit} or \code{at_risk} condition).
 }
 
-It also contains the internal elements used by \code{\link[=tmle_alpha]{tmle_alpha()}}, among
+It also contains the internal elements used by \code{\link[=tmle_estimate]{tmle_estimate()}}, among
 them \code{tmp_long} (the expanded data with fitted hazards and clever
 weights) and \code{depend_matrix} (the product state space).
 }
@@ -102,8 +106,8 @@ Fits the initial (nuisance) hazard model for each event process (Cox
 models, or HAL), and the baseline treatment model if requested, and
 expands the data to the grid of all observed event times up to \code{tau}. It
 also builds the discrete product state space of the processes that other
-processes' hazards depend on. The result is the input to \code{\link[=tmle_alpha]{tmle_alpha()}},
-\code{\link[=calibrate_alpha]{calibrate_alpha()}} and \code{\link[=calibration_curve]{calibration_curve()}}.
+processes' hazards depend on. The result is the input to
+\code{\link[=tmle_estimate]{tmle_estimate()}} and \code{\link[=intervention_curve]{intervention_curve()}}.
 }
 \details{
 HAL fits are experimental and require a \code{fit.hal()} function to be
@@ -121,30 +125,6 @@ Columns of \code{data} named after a process, such as the event counts that
 \code{\link[simevent:simulate_events]{simevent::simulate_events()}} adds, are ignored: the counts are
 recomputed from \code{event}.
 }
-\section{Functions in the arguments}{
-
-The functions given to \code{fit_initial()} and \code{\link[=tmle_alpha]{tmle_alpha()}} are called in
-different ways:
-\itemize{
-\item The functions in \code{derived_vars} are called with a \code{data.table} and
-must return one value per row. They are called both with the data, with
-a row per individual and time, and with the state space, with a row per
-state and a column per process that other processes depend on. So they
-may only use those process columns, such as \code{dt[["z"]]}, the number of
-jumps of \code{z} so far. The same holds for the \code{at_risk} conditions of
-\code{\link[=hazard_model]{hazard_model()}}.
-\item The functions in \code{depend_time} are called with a numeric vector of
-times and must return one value per time.
-\item \code{target_only_in_state} in \code{\link[=tmle_alpha]{tmle_alpha()}} is called with the state
-space only, \code{initial_fit$depend_matrix}, and must return one logical
-per state.
-\item The functions in \code{alpha_list} in \code{\link[=tmle_alpha]{tmle_alpha()}} are called with the
-columns of the expanded data \code{initial_fit$tmp_long} named by their
-arguments, such as \code{time}, a baseline covariate or a process, and must
-return one value per row.
-}
-}
-
 \examples{
 # Illness-death data: z is an illness that can occur once, death ends
 # follow-up, and so does censoring.

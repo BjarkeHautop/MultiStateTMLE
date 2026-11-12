@@ -140,38 +140,35 @@ print.hazard_model <- function(x, ...) {
     conditions <- c(conditions, list(model$at_risk[[2]]))
   }
   if (length(conditions) > 0) {
-    out$at_risk <- .condition_function(
+    out$at_risk <- .state_function(
       Reduce(function(x, y) call("&", x, y), conditions),
       state_vars,
       env,
-      model$name
+      paste("The at-risk condition of", model$name)
     )
   }
   out
 }
 
-# A function of a data.table `dt` evaluating `expr`, with the state
-# variables in `expr` read as `dt[["<name>"]]`. Writing them out this way
-# lets .fit_initial_impl() find the state variables an `at_risk` function
-# uses.
-.condition_function <- function(expr, state_vars, env, name) {
+# A function of a data.table `dt` (the data or the state space) evaluating
+# `expr`, with the state variables in `expr` read as `dt[["<name>"]]` and
+# other variables from `env`. Writing the state variables out this way lets
+# .fit_initial_impl() find the ones an `at_risk` function uses. `what`
+# describes `expr` in error messages.
+.state_function <- function(expr, state_vars, env, what) {
   vars <- all.vars(expr)
   unknown <- vars[
     !vars %in% state_vars &
-      !vapply(
-        vars,
-        exists,
-        logical(1),
-        envir = env
-      )
+      !vapply(vars, exists, logical(1), envir = env)
   ]
   if (length(unknown) > 0) {
     stop(
-      "The at-risk condition of ",
-      name,
+      what,
       " uses ",
       paste(unknown, collapse = ", "),
-      ", but it may only use processes and derived_vars."
+      ", but it may only use the processes and derived_vars that hazards ",
+      "depend on.",
+      call. = FALSE
     )
   }
   in_state <- vars[vars %in% state_vars]

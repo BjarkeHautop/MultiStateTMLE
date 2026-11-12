@@ -3,53 +3,44 @@
 \name{result-methods}
 \alias{result-methods}
 \alias{print.initial_fit}
-\alias{print.tmle_alpha}
-\alias{print.calibrate_alpha}
-\alias{print.calibration_curve}
+\alias{print.tmle_estimate}
+\alias{print.intervention_curve}
 \alias{print.calibrated_contrasts}
-\alias{coef.tmle_alpha}
-\alias{coef.calibrate_alpha}
-\alias{confint.tmle_alpha}
-\alias{confint.calibrate_alpha}
+\alias{coef.tmle_estimate}
+\alias{confint.tmle_estimate}
 \title{Methods for the result objects}
 \usage{
 \method{print}{initial_fit}(x, ...)
 
-\method{print}{tmle_alpha}(x, ...)
+\method{print}{tmle_estimate}(x, ...)
 
-\method{print}{calibrate_alpha}(x, ...)
-
-\method{print}{calibration_curve}(x, ...)
+\method{print}{intervention_curve}(x, ...)
 
 \method{print}{calibrated_contrasts}(x, ...)
 
-\method{coef}{tmle_alpha}(object, ...)
+\method{coef}{tmle_estimate}(object, ...)
 
-\method{coef}{calibrate_alpha}(object, ...)
-
-\method{confint}{tmle_alpha}(object, parm, level = 0.95, ...)
-
-\method{confint}{calibrate_alpha}(object, parm, level = 0.95, ...)
+\method{confint}{tmle_estimate}(object, parm, level = 0.95, ...)
 }
 \arguments{
 \item{x, object}{A result object.}
 
 \item{...}{Ignored.}
 
-\item{parm}{Optional character vector of targets to compute confidence
-intervals for. Defaults to all.}
+\item{parm}{Optional character vector of target processes to compute
+confidence intervals for. Defaults to all.}
 
 \item{level}{Number between 0 and 1. Confidence level.}
 }
 \value{
 \code{print()} returns \code{x} invisibly. \code{coef()} returns a numeric vector
-of estimates named by target, and \code{confint()} a matrix of Wald
-confidence intervals with one row per target.
+of estimates named by target process, and \code{confint()} a matrix of Wald
+confidence intervals with one row per target process.
 }
 \description{
 Print, extract the estimates of, and compute confidence intervals for the
-objects returned by \code{\link[=fit_initial]{fit_initial()}}, \code{\link[=tmle_alpha]{tmle_alpha()}}, \code{\link[=calibrate_alpha]{calibrate_alpha()}},
-\code{\link[=calibration_curve]{calibration_curve()}} and \code{\link[=calibrated_contrasts]{calibrated_contrasts()}}.
+objects returned by \code{\link[=fit_initial]{fit_initial()}}, \code{\link[=tmle_estimate]{tmle_estimate()}},
+\code{\link[=intervention_curve]{intervention_curve()}} and \code{\link[=calibrated_contrasts]{calibrated_contrasts()}}.
 }
 \examples{
 fit <- fit_initial(
@@ -63,7 +54,7 @@ fit <- fit_initial(
 )
 fit
 
-est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
+est <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
 est
 coef(est)
 confint(est, level = 0.9)

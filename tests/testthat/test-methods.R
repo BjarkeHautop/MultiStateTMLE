@@ -3,23 +3,23 @@ test_that("print methods summarise the result objects", {
   expect_output(print(fit), "Initial fit of 30 individuals up to tau = 1")
   expect_output(print(fit), "one_jump")
 
-  est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
-  expect_output(print(est), "TMLE estimate under alpha = 0.5 on z")
+  est <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+  expect_output(print(est), "TMLE estimate of risk(death)", fixed = TRUE)
+  expect_output(print(est), "under scale_intensity(z = 0.5)", fixed = TRUE)
   expect_output(print(est), "converged after")
   expect_output(
     print(
-      tmle_alpha(fit, target = "death", control = list(one_step = TRUE))
+      tmle_estimate(fit, risk(death), control = list(one_step = TRUE))
     ),
-    "One-step estimate without intervention"
+    "One-step estimate of risk(death)\nwithout intervention",
+    fixed = TRUE
   )
 
-  curve <- calibration_curve(
-    fit,
-    target = "death",
-    z_name = "z",
-    alpha_grid = 1
+  curve <- intervention_curve(fit, risk(death), risk(z), alpha = 1)
+  expect_output(
+    print(curve),
+    "over 1 scalings of the intensity of z"
   )
-  expect_output(print(curve), "Calibration curve over 1 interventions on z")
 })
 
 test_that("print shows the treatment model of an initial fit", {

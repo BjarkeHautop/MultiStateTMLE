@@ -1,56 +1,30 @@
 #' Targeted estimation under a stochastic intensity intervention
 #'
-#' Estimates a target parameter under a stochastic intensity intervention
-#' that scales the intensity of the process `z_name` by `alpha`, optionally
-#' combined with an intervention `a` on the baseline treatment. The initial
-#' fit from [fit_initial()] is updated by iterative targeted maximum
-#' likelihood estimation (TMLE).
+#' Estimates a target parameter, such as the risk of death by the horizon
+#' `tau` of the initial fit, under a stochastic intensity intervention,
+#' optionally combined with an intervention `a` on the baseline treatment.
+#' The initial fit from [fit_initial()] is updated by iterative targeted
+#' maximum likelihood estimation (TMLE).
 #'
-#' By default the target parameter is the risk of a `target` event by the
-#' horizon `tau` given to [fit_initial()] (or the expected number of events
-#' for a recurrent `target`). Several targets are estimated separately,
-#' under the same intervention.
-#'
-#' The functions in `alpha_list` and `target_only_in_state` are called as
-#' described in the section "Functions in the arguments" of [fit_initial()].
+#' The intervention is either a fixed intensity scaling,
+#' [scale_intensity()], or a calibrated one, [calibrate()], whose scaling
+#' is chosen to bring an exposure to a given value. Under a calibrated
+#' intervention the target is a composite parameter, and its standard error
+#' accounts for the scaling being estimated.
 #'
 #' @param initial_fit An initial fit, as returned by [fit_initial()].
-#' @param target Character vector. Names of the target processes.
-#' @param z_name String. Name of the process in `initial_fit` whose
-#'   intensity `alpha` scales. Required unless `alpha = 1` or `alpha_list`
-#'   is given.
-#' @param alpha Non-negative number. Multiplicative intervention on the
-#'   intensity of `z_name`. `alpha = 1` is no intervention.
-#' @param alpha_list Experimental, and may change. Optional named list of
-#'   functions, one per process, giving a time-varying multiplicative
-#'   intervention on that process's intensity. Each function is called with
-#'   the columns of `initial_fit$tmp_long` named by its arguments, e.g.
-#'   `time`, a baseline covariate such as `L0`, or a process such as `z`
-#'   (its number of jumps so far), and must return one non-negative factor
-#'   per row. For example, `list(z = function(time) ifelse(time < 0.5, 0.5,
-#'   1))` halves the intensity of `z` before time 0.5. Cannot be combined
-#'   with `alpha` and `z_name`.
+#' @param target The target parameter: [risk()] or [years_lost()] of one or
+#'   more processes, each estimated separately under the same intervention.
+#' @param intervention The intervention: [scale_intensity()],
+#'   [calibrate()], or `NULL` (default) for none.
 #' @param a Optional baseline treatment value (`0` or `1`) to intervene on.
 #'   Must be one of the `arms` prepared by [fit_initial()].
-#' @param estimand The target parameter: `"risk"`, the risk of `target` by
-#'   `tau` (or the expected number of events for a recurrent `target`), or
-#'   `"years_lost"`, the expected time lost, i.e. the integral of the risk
-#'   of `target` up to `tau`.
-#' @param only_first Logical. If `TRUE`, only the first `target` event
-#'   counts, and only the first jump of `z_name` is intervened on.
-#' @param target_only_in_state Experimental, and may change. Optional
-#'   function of the state space `initial_fit$depend_matrix`, a data frame
-#'   with one row per state and a column per process that other processes
-#'   depend on (its number of jumps), returning a logical vector marking the
-#'   states in which `target` events count. For example,
-#'   `function(states) states[["z"]] == 0` counts only deaths before
-#'   illness.
 #' @param control A named list of settings for how the estimate is
 #'   computed:
 #'   * `one_step` (`FALSE`): if `TRUE`, return the one-step estimator
 #'     instead of iterating the TMLE update.
-#'   * `block_size` (`10`): positive integer. For `estimand = "years_lost"`,
-#'     the integral is approximated by evaluating the risk once per block of
+#'   * `block_size` (`10`): positive integer. For [years_lost()], the
+#'     integral is approximated by evaluating the risk once per block of
 #'     `block_size` consecutive time points. `1` gives the exact integral of
 #'     the estimated risk; the computation time is roughly proportional to
 #'     `1 / block_size`.
@@ -68,23 +42,21 @@
 #'   [parallel::mclapply()] for the per-individual computations.
 #' @param verbose Logical. If `TRUE`, print progress.
 #'
-#' @return An object of class `tmle_alpha`, a list with elements:
-#'   * `estimate`: a `data.table` with one row per `target` and columns
-#'     `target`, `estimate`, its standard error `se`, and the bounds `lower`
-#'     and `upper` of a 95% Wald confidence interval.
-#'   * `initial_estimate`: the initial plug-in estimates, before targeting,
-#'     named by target.
+#' @return An object of class `tmle_estimate`, a list with elements:
+#'   * `estimate`: a `data.table` with one row per target process and
+#'     columns `target`, `estimate`, its standard error `se`, and the bounds
+#'     `lower` and `upper` of a 95% Wald confidence interval. Under a
+#'     calibrated intervention, `se_crude` is the standard error that treats
+#'     the scaling as known.
+#'   * `target`, `intervention` and `a`: as given.
 #'   * `method`: `"tmle"`, or `"one_step"` if `control$one_step = TRUE`.
-#'   * `estimand`: as given.
-#'   * `alpha`, `z_name` and `a`: the intervention (`alpha` is `NULL` if
-#'     `alpha_list` is given).
-#'   * `eic`: a list, named by `target`, with the efficient influence curve,
-#'     one value per individual.
+#'   * `eic`: a list, named by target process, with the efficient influence
+#'     curve, one value per individual.
 #'   * `checks`: a list of diagnostics:
-#'     * `iter`, `eic_solved_at` and `converged`: vectors, named by target,
-#'       of the number of iterations, the absolute mean of the efficient
-#'       influence curve, and whether the iterations converged. A warning is
-#'       given if they did not.
+#'     * `iter`, `eic_solved_at` and `converged`: vectors, named by target
+#'       process, of the number of iterations, the absolute mean of the
+#'       efficient influence curve, and whether the iterations converged. A
+#'       warning is given if they did not.
 #'     * `weights`: a matrix with the quantiles (columns `q50`, `q90`, `q99`
 #'       and `q100`) over individuals of each individual's maximal
 #'       `intervention`, `censoring` and `treatment` weight, and of their
@@ -94,8 +66,21 @@
 #'     * `n_truncated`: the number of individuals whose initial intervention
 #'       weight was truncated (0 if `control$truncate_weights = Inf`).
 #'
-#'     `weights` and `n_truncated` are shared by the targets; with
-#'     `only_first` and several targets, they are those of the first.
+#'     `weights` and `n_truncated` are those of the first target process.
+#'
+#'   Without a calibrated intervention it also has `initial_estimate`, the
+#'   initial plug-in estimates before targeting, named by target process.
+#'   With one, it has:
+#'   * `calibration`: a `data.table` with the estimated scaling `alpha` and
+#'     the exposure `theta` it attains, with standard errors and confidence
+#'     intervals.
+#'   * `eic_alpha_known`: as `eic`, treating the scaling as known.
+#'   * `alpha_eic`: the efficient influence curve of the scaling.
+#'   * `checks$calibration`: a list with `converged` (whether a scaling
+#'     attaining `theta` was found), `dist` (how far from `theta` it is),
+#'     `c_n` (the tolerance), and the estimated derivatives with respect to
+#'     the scaling of the exposure, `derivative_exposure`, and of the
+#'     targets, `derivative_target`.
 #'
 #' @examples
 #' fit <- fit_initial(
@@ -109,68 +94,87 @@
 #' )
 #'
 #' # Risk of death by tau = 1 if the intensity of z were halved.
-#' est <- tmle_alpha(fit, target = "death", z_name = "z", alpha = 0.5)
-#' est$estimate
+#' tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+#'
+#' # Risk of death if the risk of z fell to 80% of its observed value.
+#' tmle_estimate(fit, risk(death), calibrate(risk(z), relative_change(0.8)))
 #' @export
-tmle_alpha <- function(
+tmle_estimate <- function(
   initial_fit,
   target,
-  z_name = NULL,
-  alpha = 1,
-  alpha_list = NULL,
+  intervention = NULL,
   a = NULL,
-  estimand = c("risk", "years_lost"),
-  only_first = FALSE,
-  target_only_in_state = NULL,
   control = list(),
   cores = 1,
   verbose = FALSE
 ) {
   .assert_initial_fit(initial_fit)
+  .assert_target(target, initial_fit)
+  .assert_intervention(intervention, initial_fit)
   .assert_a(a, initial_fit)
-  checkmate::assert_character(
-    target,
-    min.len = 1,
-    any.missing = FALSE,
-    unique = TRUE
-  )
-  checkmate::assert_string(z_name, null.ok = TRUE)
-  checkmate::assert_number(alpha, lower = 0, finite = TRUE)
-  checkmate::assert_list(
-    alpha_list,
-    types = "function",
-    names = "unique",
-    null.ok = TRUE
-  )
-  if (length(alpha_list) > 0 && (alpha != 1 || !is.null(z_name))) {
-    stop("Give either alpha_list, or alpha and z_name, not both.")
-  }
-  estimand <- match.arg(estimand)
-  checkmate::assert_flag(only_first)
-  checkmate::assert_function(target_only_in_state, null.ok = TRUE)
   control <- .tmle_control(control)
   checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
-  if (length(target) > 1) {
-    fits <- lapply(target, function(target1) {
-      tmle_alpha(
-        initial_fit,
-        target = target1,
-        z_name = z_name,
-        alpha = alpha,
-        alpha_list = alpha_list,
-        a = a,
-        estimand = estimand,
-        only_first = only_first,
-        target_only_in_state = target_only_in_state,
-        control = control,
-        cores = cores,
-        verbose = verbose
-      )
-    })
-    return(.combine_targets(fits))
+  if (!is.null(intervention) && intervention$type == "calibrate") {
+    return(.tmle_calibrated(
+      initial_fit,
+      target,
+      intervention,
+      a,
+      control,
+      cores,
+      verbose
+    ))
   }
+
+  fits <- lapply(target$processes, function(process) {
+    .tmle_fixed(
+      initial_fit,
+      process,
+      target,
+      intervention,
+      a,
+      control,
+      cores,
+      verbose
+    )
+  })
+  out <- .combine_targets(fits)
+  out$target <- target
+  out$intervention <- intervention
+  out$a <- a
+  structure(
+    out[c(
+      "estimate",
+      "initial_estimate",
+      "target",
+      "intervention",
+      "a",
+      "method",
+      "eic",
+      "checks"
+    )],
+    class = "tmle_estimate"
+  )
+}
+
+# The TMLE of `target` for the single target process `process` under the
+# fixed intervention `intervention` (scale_intensity() or NULL). Returns a
+# list with elements estimate, initial_estimate, method, eic and checks.
+.tmle_fixed <- function(
+  initial_fit,
+  process,
+  target,
+  intervention,
+  a,
+  control,
+  cores,
+  verbose
+) {
+  alpha <- if (is.null(intervention)) list() else intervention$alpha
+  intervention_only_first <- !is.null(intervention) &&
+    intervention$only_first
 
   one_step <- control$one_step
   block_size <- control$block_size
@@ -191,39 +195,8 @@ tmle_alpha <- function(
 
   at.risks <- initial_fit$at_risks
 
-  target.id <- match(target, process.names)
-  if (is.na(target.id)) {
-    stop(
-      "target must be one of the processes in initial_fit: ",
-      paste(process.names, collapse = ", "),
-      "."
-    )
-  }
-  target.name <- process.names[target.id]
-
-  if (is.null(z_name)) {
-    if (length(alpha_list) == 0 && !identical(alpha, 1)) {
-      stop("z_name is required when alpha != 1.")
-    }
-    z.process.id <- integer(0)
-  } else {
-    z.process.id <- match(z_name, process.names)
-    if (is.na(z.process.id)) {
-      stop(
-        "z_name must be one of the processes in initial_fit: ",
-        paste(process.names, collapse = ", "),
-        "."
-      )
-    }
-  }
-
-  if (length(z.process.id) == 1) {
-    z.name <- process.names[z.process.id]
-  } else {
-    z.process.id <- Inf
-    z.name <- "not.applied"
-  }
-  z.present <- length(alpha_list) > 0 || is.finite(z.process.id)
+  target.name <- process
+  z.present <- length(alpha) > 0
 
   #--------------------------------
   #-- initialization step:
@@ -232,7 +205,16 @@ tmle_alpha <- function(
   state.names <- names(states)
   setkeyv(states, c("state", state.names[state.names %in% process.names]))
 
-  if (only_first) {
+  # A terminal or one-jump target has at most one event already.
+  if (target$only_first && process.types[[target.name]] == "recurrent") {
+    if (!target.name %in% names(tmp.long)) {
+      stop(
+        "only_first needs the number of events of ",
+        target.name,
+        " in the state space; use it as a covariate in a hazard model.",
+        call. = FALSE
+      )
+    }
     process.types[[target.name]] <- "one_jump"
     tmp.long <- tmp.long[tmp.long[[target.name]] <= 1]
   }
@@ -246,13 +228,24 @@ tmle_alpha <- function(
     states[, at.risk := at.risks[[target.name]](depend.matrix)]
   }
 
-  if (only_first && is.finite(z.process.id)) {
-    tmp.long[, at.risk := at.risk * (tmp.long[[z.name]] <= 1)]
-    states[, at.risk := at.risk & (states[[z.name]] <= 1)]
+  if (intervention_only_first) {
+    if (!"at.risk" %in% names(states)) {
+      states[, at.risk := TRUE]
+    }
+    for (name.kk in names(alpha)) {
+      tmp.long[, at.risk := at.risk * (tmp.long[[name.kk]] <= 1)]
+      states[, at.risk := at.risk & (states[[name.kk]] <= 1)]
+    }
   }
 
-  if (!is.null(target_only_in_state)) {
-    states[, target.only.in.state := target_only_in_state(states)]
+  if (!is.null(target$when)) {
+    when <- .state_function(
+      target$when[[2]],
+      setdiff(names(states), "state"),
+      environment(target$when),
+      "`when`"
+    )
+    states[, target.only.in.state := when(states)]
   }
 
   for (process.name in process.names[!(process.names %in% names(at.risks))]) {
@@ -261,16 +254,26 @@ tmle_alpha <- function(
 
   P.prefix <- if (length(a) > 0) paste0("P.a", a, ".") else "P."
 
-  if (length(alpha_list) > 0) {
-    for (alpha.kk in seq_along(alpha_list)) {
-      tmp.long[,
-        paste0("alpha.", names(alpha_list)[alpha.kk]) := do.call(
-          alpha_list[[alpha.kk]],
-          .SD
-        ),
-        .SDcols = names(formals(alpha_list[[alpha.kk]]))
-      ]
+  for (name.kk in names(alpha)) {
+    if (
+      !name.kk %in% names(tmp.long) &&
+        process.types[[name.kk]] != "terminal"
+    ) {
+      stop(
+        "To intervene on ",
+        name.kk,
+        ", its number of events must be in the state space; use it as a ",
+        "covariate in a hazard model.",
+        call. = FALSE
+      )
     }
+    tmp.long[,
+      (paste0("alpha.", name.kk)) := .alpha_values(
+        alpha[[name.kk]],
+        tmp.long,
+        name.kk
+      )
+    ]
   }
 
   #--------------------------------
@@ -280,11 +283,7 @@ tmle_alpha <- function(
   # truncated at truncate_weights. Returns the number of individuals whose
   # weight was truncated.
   update_weights <- function() {
-    if (length(alpha_list) > 0) {
-      .update_alpha_list_weights(tmp.long, alpha_list)
-    } else {
-      .update_alpha_weights(tmp.long, alpha, z.name)
-    }
+    .update_alpha_weights(tmp.long, names(alpha))
     if (is.infinite(truncate_weights)) {
       return(0)
     }
@@ -336,19 +335,14 @@ tmle_alpha <- function(
   #--------------------------------
   #-- counterfactual hazards of the intervened processes:
 
-  intervened <- if (length(alpha_list) > 0) names(alpha_list) else z.name
-  for (name.kk in intervened) {
+  for (name.kk in names(alpha)) {
     for (varname in grep(
       paste0(P.prefix, name.kk),
       names(tmp.long),
       value = TRUE
     )) {
       if (varname != paste0(P.prefix, name.kk)) {
-        if (length(alpha_list) > 0) {
-          tmp.long[, (varname) := get(paste0("alpha.", name.kk)) * get(varname)]
-        } else {
-          tmp.long[, (varname) := alpha * get(varname)]
-        }
+        tmp.long[, (varname) := get(paste0("alpha.", name.kk)) * get(varname)]
       }
     }
   }
@@ -357,24 +351,21 @@ tmle_alpha <- function(
   #-- tmle iterations:
 
   converged <- FALSE
-  years_lost <- estimand == "years_lost"
+  years_lost <- target$estimand == "years_lost"
   clever.Q.label <- if (years_lost) {
     "clever.Q.years.lost."
   } else {
     "clever.Q."
   }
 
-  # The intervention's factor on the score of process number jj: alpha for
-  # z itself, the alpha_list function for the processes it covers, else 1.
+  # The intervention's factor on the score of process number jj: its alpha
+  # for the intervened processes, else 1.
   alpha.factor <- function(jj) {
     name.jj <- process.names[jj]
-    if (length(alpha_list) > 0) {
-      if (name.jj %in% names(alpha_list)) {
-        return(tmp.long[[paste0("alpha.", name.jj)]])
-      }
-      return(1)
+    if (name.jj %in% names(alpha)) {
+      return(tmp.long[[paste0("alpha.", name.jj)]])
     }
-    alpha^(jj == z.process.id)
+    1
   }
 
   # Per-individual score of process jj, with the hazards perturbed by eps
@@ -544,35 +535,28 @@ tmle_alpha <- function(
     )
   }
 
-  structure(
-    list(
-      estimate = .wald_table(
-        target.name,
-        if (one_step) one.step.est else target.est,
-        target.se
-      ),
-      initial_estimate = stats::setNames(g.est, target.name),
-      method = if (one_step) "one_step" else "tmle",
-      estimand = estimand,
-      alpha = if (length(alpha_list) > 0) NULL else alpha,
-      z_name = if (is.finite(z.process.id)) z.name else NULL,
-      a = a,
-      eic = stats::setNames(list(eic), target.name),
-      checks = list(
-        iter = stats::setNames(iter, target.name),
-        eic_solved_at = stats::setNames(abs(mean(eic)), target.name),
-        converged = stats::setNames(converged, target.name),
-        weights = weights,
-        n_truncated = n.truncated
-      )
+  list(
+    estimate = .wald_table(
+      target.name,
+      if (one_step) one.step.est else target.est,
+      target.se
     ),
-    class = "tmle_alpha"
+    initial_estimate = stats::setNames(g.est, target.name),
+    method = if (one_step) "one_step" else "tmle",
+    eic = stats::setNames(list(eic), target.name),
+    checks = list(
+      iter = stats::setNames(iter, target.name),
+      eic_solved_at = stats::setNames(abs(mean(eic)), target.name),
+      converged = stats::setNames(converged, target.name),
+      weights = weights,
+      n_truncated = n.truncated
+    )
   )
 }
 
-# Combine single-target tmle_alpha() fits under the same intervention into
-# one. The weight diagnostics are those of the first target; they only
-# differ between targets with only_first, which drops rows by target.
+# Combine single-process .tmle_fixed() fits under the same intervention into
+# one. The weight diagnostics are those of the first process; they only
+# differ between processes with only_first, which drops rows by process.
 .combine_targets <- function(fits) {
   out <- fits[[1]]
   out$estimate <- rbindlist(lapply(fits, function(fit) fit$estimate))
@@ -588,28 +572,53 @@ tmle_alpha <- function(
   out
 }
 
-# Clever weight of the intervention alpha on process z.name:
-# alpha^N_z(t-) * exp(-(alpha - 1) * Lambda_z(t-)).
-.update_alpha_weights <- function(tmp.long, alpha, z.name) {
-  tmp.long[,
-    cum.hazard.z := cumsum(
-      get(paste0("at.risk.", z.name)) * get(paste0("P.", z.name))
-    ),
-    by = "id"
-  ]
-  tmp.long[, cum.hazard.z.1 := c(0, cum.hazard.z[-.N]), by = "id"]
-  tmp.long[,
-    clever.weight.alpha := alpha^get(z.name) *
-      exp(-(alpha - 1) * cum.hazard.z.1)
-  ]
-  invisible(tmp.long)
+# The factor `alpha` of scale_intensity() on process `name`, one value per
+# row of `tmp.long`: a number, or a one-sided formula evaluated in the
+# columns of `tmp.long`.
+.alpha_values <- function(alpha, tmp.long, name) {
+  if (!inherits(alpha, "formula")) {
+    return(rep(alpha, nrow(tmp.long)))
+  }
+  values <- tryCatch(
+    eval(alpha[[2]], tmp.long, environment(alpha)),
+    error = function(e) {
+      stop(
+        "Could not evaluate the factor of ",
+        name,
+        " in scale_intensity(), ",
+        .deparse_one_line(alpha),
+        ": ",
+        conditionMessage(e),
+        call. = FALSE
+      )
+    }
+  )
+  if (length(values) == 1) {
+    values <- rep(values, nrow(tmp.long))
+  }
+  if (
+    !is.numeric(values) ||
+      length(values) != nrow(tmp.long) ||
+      anyNA(values) ||
+      any(values < 0)
+  ) {
+    stop(
+      "The factor of ",
+      name,
+      " in scale_intensity() must give one non-negative number per row.",
+      call. = FALSE
+    )
+  }
+  values
 }
 
-# As .update_alpha_weights(), with one time-varying alpha column per process
-# in alpha_list.
-.update_alpha_list_weights <- function(tmp.long, alpha_list) {
+# Clever weight of the intervention on the processes `names`, each with its
+# factor in the column alpha.<name>: the product over them of
+# alpha^N(t-) * exp(-(alpha - 1) * Lambda(t-)). A terminal process without
+# a count column has N(t-) = 0 while follow-up continues.
+.update_alpha_weights <- function(tmp.long, names) {
   tmp.long[, clever.weight.alpha := 1]
-  for (name.kk in names(alpha_list)) {
+  for (name.kk in names) {
     cum.col <- paste0("cum.hazard.", name.kk)
     tmp.long[,
       (cum.col) := cumsum(
@@ -620,11 +629,20 @@ tmle_alpha <- function(
     tmp.long[, (paste0(cum.col, ".1")) := c(0, get(cum.col)[-.N]), by = "id"]
     tmp.long[,
       clever.weight.alpha := clever.weight.alpha *
-        get(paste0("alpha.", name.kk))^get(name.kk) *
+        get(paste0("alpha.", name.kk))^(if (name.kk %in% names(tmp.long)) {
+          get(name.kk)
+        } else {
+          0
+        }) *
         exp(-(get(paste0("alpha.", name.kk)) - 1) * get(paste0(cum.col, ".1")))
     ]
   }
   invisible(tmp.long)
+}
+
+# A scale_intensity() of process `name` by the number `alpha`.
+.scale_one <- function(name, alpha) {
+  do.call(scale_intensity, stats::setNames(list(alpha), name))
 }
 
 .assert_initial_fit <- function(initial_fit) {
