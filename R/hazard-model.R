@@ -8,16 +8,17 @@
 #'
 #' @param formula A two-sided formula. The left-hand side names the process,
 #'   matching its name in the `event` column of the data, and the right-hand
-#'   side gives the covariates of its hazard. Other processes can be used as
-#'   covariates by name, giving their number of events so far.
+#'   side gives the covariates of its hazard, as in a [survival::coxph()]
+#'   formula. Other processes can be used as covariates by name, giving their
+#'   number of events so far.
 #' @param limit Optional positive integer. Maximum number of events of the
 #'   process per individual: individuals are only at risk while they have
 #'   had fewer than `limit` events. `limit = 1` is an event that can happen
 #'   at most once, as `sim_process(limit = 1)` in simevent.
 #' @param at_risk Optional one-sided formula, such as `~ z == 0`, of a
-#'   condition on the processes (their number of events so far) and the
-#'   `derived_vars` of [fit_initial()]. Individuals are only at risk of the
-#'   process while it holds. Combined with `limit` if both are given.
+#'   condition on the processes (their number of events so far).
+#'   Individuals are only at risk of the process while it holds. Combined
+#'   with `limit` if both are given.
 #' @param fit How the hazard is fitted: `"cox"` (default), a Cox model, or
 #'   `"hal"`, the highly adaptive lasso (experimental, see [fit_initial()]).
 #'
@@ -34,6 +35,10 @@
 #' # A relapse that can happen at most twice, and only before death of
 #' # another cause, w:
 #' hazard_model(relapse ~ L0, limit = 2, at_risk = ~ w == 0)
+#'
+#' # Death depending on having had two or more relapses. As in any R model
+#' # formula, wrap arithmetic and comparisons in I():
+#' hazard_model(death ~ L0 + I(relapse >= 2))
 #'
 #' # Use them in fit_initial(), mixed with plain formulas:
 #' fit <- fit_initial(
@@ -137,7 +142,7 @@ print.hazard_model <- function(x, ...) {
 # A hazard_model as an entry of the internal `fit_types`,
 # list(delta, model, fit, at_risk), where `at_risk` is a function of the
 # data as .fit_initial_impl() expects. `state_vars` are the processes and
-# derived variables that `at_risk` may use.
+# that `at_risk` may use.
 .hazard_model_to_fit_type <- function(model, delta, state_vars) {
   env <- environment(model$formula)
   out <- list(
@@ -183,8 +188,7 @@ print.hazard_model <- function(x, ...) {
       what,
       " uses ",
       paste(unknown, collapse = ", "),
-      ", but it may only use the processes and derived_vars that hazards ",
-      "depend on.",
+      ", but it may only use the processes that hazards depend on.",
       call. = FALSE
     )
   }

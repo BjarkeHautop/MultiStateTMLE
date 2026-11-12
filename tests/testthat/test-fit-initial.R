@@ -65,20 +65,7 @@ test_that("fit_initial() accepts plain formulas, named lists and any order", {
   )
 })
 
-test_that("fit_initial() takes derived_vars and depend_time as formulas", {
-  # A derived variable becomes the function of the data that
-  # .fit_initial_impl() expects, reading state variables from it.
-  ill <- .state_function(
-    quote(1 * (z > threshold)),
-    c("z", "death"),
-    list2env(list(threshold = 0)),
-    "ill"
-  )
-  expect_equal(
-    ill(data.table::data.table(z = c(0, 1, 2))),
-    c(0, 1, 1)
-  )
-
+test_that("fit_initial() takes depend_time as formulas", {
   timed <- fit_initial(
     fixture.data(40),
     models = list(
@@ -90,25 +77,6 @@ test_that("fit_initial() takes derived_vars and depend_time as formulas", {
     depend_time = list(z = ~ 1 * (time > 0.5))
   )
   expect_true(all(timed$tmp_long$T.z %in% c(0, 1)))
-
-  expect_error(
-    fit_initial(
-      fixture.data(40),
-      models = illness.death.models,
-      tau = 1,
-      derived_vars = list(ill = ill ~ z > 0)
-    ),
-    "derived_vars\\$ill must be a one-sided formula"
-  )
-  expect_error(
-    fit_initial(
-      fixture.data(40),
-      models = illness.death.models,
-      tau = 1,
-      derived_vars = list(ill = ~ L0 > 0)
-    ),
-    "The derived variable ill uses L0"
-  )
 })
 
 test_that("fit_initial() accepts transformed covariates in models", {
@@ -118,6 +86,23 @@ test_that("fit_initial() accepts transformed covariates in models", {
   expect_equal(
     fit_initial(fixture.data(40), models = transformed, tau = 1)$tmp_long,
     fixture.fit(40)$tmp_long
+  )
+})
+
+test_that("fit_initial() derives covariates from processes with I()", {
+  # With z happening at most once, I(z > 0) equals z.
+  derived <- illness.death.models
+  derived[[2]] <- death ~ L0 + I(z > 0)
+  fit <- fit_initial(fixture.data(40), models = derived, tau = 1)
+
+  expect_equal(fit$depend_matrix$z, c(0, 1))
+  expect_equal(
+    tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))$estimate,
+    tmle_estimate(
+      fixture.fit(40),
+      risk(death),
+      scale_intensity(z = 0.5)
+    )$estimate
   )
 })
 
@@ -226,15 +211,6 @@ test_that("fit_initial() validates its arguments", {
   expect_error(
     fit_initial(illness_death, models = m, tau = 1, arms = 1),
     "treatment_model"
-  )
-  expect_error(
-    fit_initial(
-      illness_death,
-      models = m,
-      tau = 1,
-      derived_vars = list(~z)
-    ),
-    "derived_vars"
   )
   expect_error(
     fit_initial(

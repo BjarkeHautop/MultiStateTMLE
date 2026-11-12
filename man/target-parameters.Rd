@@ -18,8 +18,7 @@ To give the names in a character vector \code{x}, use
 
 \item{when}{Optional one-sided formula of a condition on the state, such
 as \code{~ z == 0}: only events while it holds count. It may use the
-processes that hazards depend on (their number of events so far) and
-the \code{derived_vars} of \code{\link[=fit_initial]{fit_initial()}}.}
+processes that hazards depend on (their number of events so far).}
 
 \item{only_first}{Logical. If \code{TRUE}, only the first event of each
 process counts.}

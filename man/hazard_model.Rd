@@ -9,8 +9,9 @@ hazard_model(formula, limit = NULL, at_risk = NULL, fit = c("cox", "hal"))
 \arguments{
 \item{formula}{A two-sided formula. The left-hand side names the process,
 matching its name in the \code{event} column of the data, and the right-hand
-side gives the covariates of its hazard. Other processes can be used as
-covariates by name, giving their number of events so far.}
+side gives the covariates of its hazard, as in a \code{\link[survival:coxph]{survival::coxph()}}
+formula. Other processes can be used as covariates by name, giving their
+number of events so far.}
 
 \item{limit}{Optional positive integer. Maximum number of events of the
 process per individual: individuals are only at risk while they have
@@ -18,9 +19,9 @@ had fewer than \code{limit} events. \code{limit = 1} is an event that can happen
 at most once, as \code{sim_process(limit = 1)} in simevent.}
 
 \item{at_risk}{Optional one-sided formula, such as \code{~ z == 0}, of a
-condition on the processes (their number of events so far) and the
-\code{derived_vars} of \code{\link[=fit_initial]{fit_initial()}}. Individuals are only at risk of the
-process while it holds. Combined with \code{limit} if both are given.}
+condition on the processes (their number of events so far).
+Individuals are only at risk of the process while it holds. Combined
+with \code{limit} if both are given.}
 
 \item{fit}{How the hazard is fitted: \code{"cox"} (default), a Cox model, or
 \code{"hal"}, the highly adaptive lasso (experimental, see \code{\link[=fit_initial]{fit_initial()}}).}
@@ -46,6 +47,10 @@ hazard_model(z ~ L0, limit = 1)
 # A relapse that can happen at most twice, and only before death of
 # another cause, w:
 hazard_model(relapse ~ L0, limit = 2, at_risk = ~ w == 0)
+
+# Death depending on having had two or more relapses. As in any R model
+# formula, wrap arithmetic and comparisons in I():
+hazard_model(death ~ L0 + I(relapse >= 2))
 
 # Use them in fit_initial(), mixed with plain formulas:
 fit <- fit_initial(

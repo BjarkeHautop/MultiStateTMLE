@@ -30,11 +30,6 @@
 #'   `treatment_model` is given.
 #' @param max_count Positive integer. Maximum number of jumps tracked per
 #'   recurrent process in the state space.
-#' @param derived_vars Experimental, and may change. Named list of
-#'   one-sided formulas, each deriving an additional state variable, named by the list, that can be used in
-#'   `models`, such as `list(ill = ~ z > 0)`. They may use the processes
-#'   that hazards depend on (their number of events so far) and earlier
-#'   derived variables.
 #' @param depend_time Experimental, and may change. Named list of one-sided
 #'   formulas in `time`, making hazards depend on the time of a jump. Each is
 #'   named by a state variable: a process `z` that jumps once, or `z.k` for
@@ -159,7 +154,6 @@ fit_initial <- function(
   treatment_model = NULL,
   arms = NULL,
   max_count = 1,
-  derived_vars = list(),
   depend_time = list(),
   control = list(),
   hal_control = list(),
@@ -180,7 +174,6 @@ fit_initial <- function(
       "\"; give it one, or name the censoring process in `censoring`."
     )
   }
-  checkmate::assert_list(derived_vars, types = "formula", names = "unique")
   checkmate::assert_list(depend_time, types = "formula", names = "unique")
 
   events <- as.character(data[["event"]])
@@ -209,20 +202,6 @@ fit_initial <- function(
   data[["delta"]] <- unname(codes[events])
   data[["event"]] <- NULL
 
-  state_vars <- c(names(models), names(derived_vars))
-  derived_vars <- Map(
-    function(formula, name) {
-      .assert_one_sided(formula, paste0("derived_vars$", name))
-      .state_function(
-        formula[[2]],
-        state_vars,
-        environment(formula),
-        paste("The derived variable", name)
-      )
-    },
-    derived_vars,
-    names(derived_vars)
-  )
   depend_time <- Map(
     function(formula, name) {
       .assert_one_sided(formula, paste0("depend_time$", name))
@@ -235,7 +214,7 @@ fit_initial <- function(
     .hazard_model_to_fit_type,
     models,
     codes,
-    MoreArgs = list(state_vars = state_vars)
+    MoreArgs = list(state_vars = names(models))
   )
 
   fit <- .fit_initial_impl(
@@ -245,7 +224,6 @@ fit_initial <- function(
     treatment_model = treatment_model,
     arms = arms,
     max_count = max_count,
-    derived_vars = derived_vars,
     depend_time = depend_time,
     control = control,
     hal_control = hal_control,
@@ -276,7 +254,6 @@ fit_initial <- function(
   treatment_model = NULL,
   arms = NULL,
   max_count = 1,
-  derived_vars = list(),
   depend_time = list(),
   control = list(),
   hal_control = list(),
@@ -300,7 +277,6 @@ fit_initial <- function(
     null.ok = TRUE
   )
   checkmate::assert_count(max_count, positive = TRUE)
-  checkmate::assert_list(derived_vars, types = "function", names = "unique")
   checkmate::assert_list(depend_time, types = "function", names = "unique")
   checkmate::assert_list(control, names = "unique")
   checkmate::assert_subset(names(control), names(.fit_control_defaults))
@@ -529,15 +505,6 @@ fit_initial <- function(
     }
   }
 
-  if (length(derived_vars) > 0) {
-    for (derived.jj in seq_along(derived_vars)) {
-      derived.var <- names(derived_vars)[derived.jj]
-      derived.fun <- derived_vars[[derived.jj]]
-      dt[, (derived.var) := derived.fun(dt)]
-      state.names <- unique(c(state.names, derived.var))
-    }
-  }
-
   if (length(depend_time) > 0) {
     for (time.jj in seq_along(depend_time)) {
       time.var <- names(depend_time)[time.jj]
@@ -740,14 +707,6 @@ fit_initial <- function(
             count.jj)
         ]
       }
-    }
-  }
-
-  if (length(derived_vars) > 0) {
-    for (derived.jj in seq_along(derived_vars)) {
-      derived.var <- names(derived_vars)[derived.jj]
-      derived.fun <- derived_vars[[derived.jj]]
-      tmp.long[, (derived.var) := derived.fun(tmp.long)]
     }
   }
 
@@ -1889,10 +1848,6 @@ fit_initial <- function(
       return(out.beta)
     })
 
-    if (length(derived_vars) > 0) {
-      message("FIX: still need to check that HAL handles derived.var correctly")
-    }
-
     hal.vars <- unique(c(unlist(hal.vars.list)))
 
     if (length(A0.name) > 0 && any(grepl(":", hal.vars))) {
@@ -2145,9 +2100,7 @@ fit_initial <- function(
           seq_along(non.zero.state.vars),
           function(non.zero.jj) {
             non.zero.var <- names(non.zero.state.vars)[non.zero.jj]
-            if (non.zero.var %in% names(derived_vars)) {
-              return(0) #(unique(tmp.long[[non.zero.var]]))
-            } else if (non.zero.var %in% setdiff(N.vars, T.vars)) {
+            if (non.zero.var %in% setdiff(N.vars, T.vars)) {
               return(
                 0:max(as.numeric(gsub(
                   paste0(non.zero.var, ">="),
@@ -2248,69 +2201,6 @@ fit_initial <- function(
               get(paste0("T.", time.var)) >= 1)
           ]
         ## check -> tmp.long[tstart >= get(paste0("T.", time.var)), (paste0("T.", time.var)) := time.fun(get(paste0("T.", time.var)))]
-      }
-    }
-    if (length(derived_vars) > 0) {
-      for (derived.jj in seq_along(derived_vars)) {
-        derived.var <- names(derived_vars)[derived.jj]
-        derived.fun <- derived_vars[[derived.jj]]
-        if (derived.var %in% names(depend.matrix)) {
-          depend.matrix <- depend.matrix[,
-            names(depend.matrix) != derived.var,
-            with = FALSE
-          ]
-        }
-        depend.matrix[, derived.var := derived.fun(depend.matrix)]
-        derived.cols <- extract_dt_cols(derived.fun)
-        if (
-          any(sapply(
-            derived.cols,
-            function(varname) max_count < max(unique(tmp.long[[varname]]))
-          ))
-        ) {
-          depend.matrix.max <- depend.matrix[
-            apply(
-              sapply(derived.cols, function(derived.col) {
-                depend.matrix[[derived.col]] ==
-                  max(depend.matrix[[derived.col]])
-              }),
-              1,
-              all
-            )
-          ]
-          unique.vals.max <- unique(tmp.long[apply(
-            sapply(derived.cols, function(derived.col) {
-              tmp.long[[derived.col]] >= max(depend.matrix[[derived.col]])
-            }),
-            1,
-            all
-          )][[derived.var]])
-          for (vals.max in setdiff(
-            unique.vals.max,
-            depend.matrix.max[["derived.var"]]
-          )) {
-            depend.matrix <-
-              rbind(
-                depend.matrix,
-                depend.matrix[
-                  apply(
-                    sapply(derived.cols, function(derived.col) {
-                      depend.matrix[[derived.col]] ==
-                        max(depend.matrix[[derived.col]])
-                    }),
-                    1,
-                    all
-                  )
-                ][, derived.var := vals.max]
-              ) # <- (this may need be fixed for more general derived_vars)
-          }
-          ## setnames(depend.matrix, "derived.var", paste0(derived.var, " = ", paste0(derived.cols, collapse = ",")))
-          ## tmp.long[, At := At(tmp.long)]
-          ## setnames(tmp.long, derived.var, paste0("At = ", paste0(At.cols, collapse = ",")))
-        }
-        vals <- unique(tmp.long[[derived.var]])
-        depend.matrix <- depend.matrix[derived.var %in% vals]
-        setnames(depend.matrix, "derived.var", derived.var)
       }
     }
     depend.matrix[, state := 1:.N]
@@ -2748,22 +2638,6 @@ fit_initial <- function(
     }
   }
 
-  if (length(derived_vars) > 0) {
-    for (derived.jj in seq_along(derived_vars)) {
-      derived.var <- names(derived_vars)[derived.jj]
-      derived.fun <- derived_vars[[derived.jj]]
-      derived.cols <- extract_dt_cols(derived.fun)
-      if (derived.var %in% names(depend.matrix)) {
-        setnames(
-          depend.matrix,
-          derived.var,
-          paste0(derived.var, " = ", paste0(derived.cols, collapse = ","))
-        )
-      }
-      ## setnames(tmp.long, derived.var, paste0("At = ", paste0(At.cols, collapse = ",")))
-    }
-  }
-
   var.depend <- setdiff(names(depend.matrix), "state")
   process.depend <- var.depend[var.depend %in% process.names]
 
@@ -2893,25 +2767,6 @@ fit_initial <- function(
                 time.var
               )]]
             }
-          }
-        }
-      }
-
-      if (length(derived_vars) > 0) {
-        # <- this still needs checking
-        if (
-          length(grep(
-            varname,
-            grep(names(derived_vars), names(depend.matrix), value = TRUE)
-          )) >
-            0
-        ) {
-          for (derived.var in grep(
-            varname,
-            grep(names(derived_vars), names(depend.matrix), value = TRUE),
-            value = TRUE
-          )) {
-            depend.state.jj[[derived.var]] <- 1 - depend.state.jj[[derived.var]]
           }
         }
       }

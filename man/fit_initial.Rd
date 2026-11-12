@@ -12,7 +12,6 @@ fit_initial(
   treatment_model = NULL,
   arms = NULL,
   max_count = 1,
-  derived_vars = list(),
   depend_time = list(),
   control = list(),
   hal_control = list(),
@@ -50,12 +49,6 @@ then be passed as \code{a} to \code{\link[=tmle_estimate]{tmle_estimate()}} and
 
 \item{max_count}{Positive integer. Maximum number of jumps tracked per
 recurrent process in the state space.}
-
-\item{derived_vars}{Experimental, and may change. Named list of
-one-sided formulas, each deriving an additional state variable, named by the list, that can be used in
-\code{models}, such as \code{list(ill = ~ z > 0)}. They may use the processes
-that hazards depend on (their number of events so far) and earlier
-derived variables.}
 
 \item{depend_time}{Experimental, and may change. Named list of one-sided
 formulas in \code{time}, making hazards depend on the time of a jump. Each is

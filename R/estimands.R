@@ -13,8 +13,7 @@
 #'   `do.call(risk, as.list(x))`.
 #' @param when Optional one-sided formula of a condition on the state, such
 #'   as `~ z == 0`: only events while it holds count. It may use the
-#'   processes that hazards depend on (their number of events so far) and
-#'   the `derived_vars` of [fit_initial()].
+#'   processes that hazards depend on (their number of events so far).
 #' @param only_first Logical. If `TRUE`, only the first event of each
 #'   process counts.
 #'
