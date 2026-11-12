@@ -180,8 +180,14 @@ plot(
   xlab = "Risk of illness by time 1",
   ylab = "Risk of death by time 1"
 )
-arrows(ce$exposure_estimate, ce$lower, ce$exposure_estimate, ce$upper,
-  angle = 90, code = 3, length = 0.04
+arrows(
+  ce$exposure_estimate,
+  ce$lower,
+  ce$exposure_estimate,
+  ce$upper,
+  angle = 90,
+  code = 3,
+  length = 0.04
 )
 ```
 
