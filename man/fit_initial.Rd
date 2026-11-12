@@ -17,8 +17,7 @@ fit_initial(
   control = list(),
   hal_control = list(),
   cores = 1,
-  verbose = FALSE,
-  fit_types = lifecycle::deprecated()
+  verbose = FALSE
 )
 }
 \arguments{
@@ -79,11 +78,6 @@ only done if some increments exceed 1.
 \code{\link[parallel:mclapply]{parallel::mclapply()}} when predicting hazards across states.}
 
 \item{verbose}{Logical. If \code{TRUE}, print model fits and progress.}
-
-\item{fit_types}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Use \code{models}, with an
-\code{event} column in \code{data}, instead. A named list with one entry per
-process, \code{list(delta, model, fit, at_risk)}, for \code{data} with an integer
-\code{delta} column (\code{0} for censoring) instead of \code{event}.}
 }
 \value{
 An object of class \code{initial_fit}, a list with elements:

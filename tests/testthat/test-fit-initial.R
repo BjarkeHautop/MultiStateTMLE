@@ -36,34 +36,6 @@ test_that("fit_initial() fits the illness-death example", {
   ))
 })
 
-test_that("fit_initial() matches the deprecated fit_types interface", {
-  withr::local_options(lifecycle_verbosity = "warning")
-  new_fit <- fixture.fit(40)
-
-  expect_warning(
-    old_fit <- fit_initial(
-      with.delta(fixture.data(40)),
-      fit_types = illness.death.fit.types,
-      tau = 1
-    ),
-    class = "lifecycle_warning_deprecated"
-  )
-  # A fit_types list in place of models is also recognised.
-  expect_warning(
-    fit_initial(
-      with.delta(fixture.data(40)),
-      illness.death.fit.types,
-      tau = 1
-    ),
-    class = "lifecycle_warning_deprecated"
-  )
-
-  expect_equal(
-    tmle_alpha(new_fit, target = "death", alpha = 0.5, z_name = "z")$estimate,
-    tmle_alpha(old_fit, target = "death", alpha = 0.5, z_name = "z")$estimate
-  )
-})
-
 test_that("fit_initial() takes simevent output as is", {
   skip_if_not_installed("simevent")
   sim <- simulate.illness.death(60, seed = 1)

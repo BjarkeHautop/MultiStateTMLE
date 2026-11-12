@@ -50,10 +50,6 @@
 #' @param cores Positive integer. Number of cores used by
 #'   [parallel::mclapply()] when predicting hazards across states.
 #' @param verbose Logical. If `TRUE`, print model fits and progress.
-#' @param fit_types `r lifecycle::badge("deprecated")` Use `models`, with an
-#'   `event` column in `data`, instead. A named list with one entry per
-#'   process, `list(delta, model, fit, at_risk)`, for `data` with an integer
-#'   `delta` column (`0` for censoring) instead of `event`.
 #'
 #' @details
 #' HAL fits are experimental and require a `fit.hal()` function to be
@@ -135,44 +131,8 @@ fit_initial <- function(
   control = list(),
   hal_control = list(),
   cores = 1,
-  verbose = FALSE,
-  fit_types = lifecycle::deprecated()
+  verbose = FALSE
 ) {
-  settings <- list(
-    tau = tau,
-    treatment_model = treatment_model,
-    arms = arms,
-    max_count = max_count,
-    derived_vars = derived_vars,
-    depend_time = depend_time,
-    control = control,
-    hal_control = hal_control,
-    cores = cores,
-    verbose = verbose
-  )
-
-  if (
-    lifecycle::is_present(fit_types) ||
-      (!missing(models) && .is_legacy_fit_types(models))
-  ) {
-    lifecycle::deprecate_warn(
-      "0.1.0",
-      "fit_initial(fit_types)",
-      "fit_initial(models)",
-      details = paste(
-        "Give a list of formulas such as `death ~ L0 + z`, or of",
-        "hazard_model()s, with an `event` column of process names in `data`."
-      )
-    )
-    if (!lifecycle::is_present(fit_types)) {
-      fit_types <- models
-    }
-    return(do.call(
-      .fit_initial_impl,
-      c(list(data = data, fit_types = fit_types), settings)
-    ))
-  }
-
   checkmate::assert_data_frame(data, min.rows = 1)
   checkmate::assert_names(
     names(data),
@@ -223,9 +183,19 @@ fit_initial <- function(
     MoreArgs = list(state_vars = state_vars)
   )
 
-  fit <- do.call(
-    .fit_initial_impl,
-    c(list(data = data, fit_types = fit_types), settings)
+  fit <- .fit_initial_impl(
+    data = data,
+    fit_types = fit_types,
+    tau = tau,
+    treatment_model = treatment_model,
+    arms = arms,
+    max_count = max_count,
+    derived_vars = derived_vars,
+    depend_time = depend_time,
+    control = control,
+    hal_control = hal_control,
+    cores = cores,
+    verbose = verbose
   )
   fit$models <- models
   fit$processes <- data.table(

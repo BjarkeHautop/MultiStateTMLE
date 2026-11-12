@@ -117,19 +117,6 @@ print.hazard_model <- function(x, ...) {
   models
 }
 
-# Whether fit_initial()'s `models` is a list in the old `fit_types` format,
-# list(name = list(delta, model, ...)).
-.is_legacy_fit_types <- function(models) {
-  is.list(models) &&
-    !inherits(models, "hazard_model") &&
-    length(models) > 0 &&
-    all(vapply(
-      models,
-      function(model) is.list(model) && !inherits(model, "hazard_model"),
-      logical(1)
-    ))
-}
-
 # A hazard_model as an entry of the internal `fit_types`,
 # list(delta, model, fit, at_risk), where `at_risk` is a function of the
 # data as .fit_initial_impl() expects. `state_vars` are the processes and

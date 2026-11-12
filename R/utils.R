@@ -74,7 +74,7 @@
   verbose = FALSE
 )
 
-# Bring one entry of fit_initial()'s `fit_types`,
+# Bring one entry of .fit_initial_impl()'s `fit_types`,
 # list(delta, model, fit, at_risk), to the internal form
 # list(delta, model, fit, at.risk), where `model` is the string
 # "Surv(tstart,tstop,delta==<delta>)~<covariates>" without whitespace, as

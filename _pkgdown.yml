@@ -45,17 +45,3 @@ reference:
     Example data.
   contents:
   - illness_death
-
-- title: Deprecated
-  desc: >
-    Functions superseded by the snake_case functions above. Will be removed in
-    the future.
-  contents:
-  - prepare.initial
-  - tmle.alpha.fun
-  - calibration.fun
-  - calibration.curve.fun
-  - estimate.alpha.fun
-  - estimate.derivative
-  - make.calibrated.contrasts
-  - compute.Q.clever.per.id

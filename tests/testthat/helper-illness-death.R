@@ -50,26 +50,6 @@ illness.death.models <- list(
   censoring ~ L0
 )
 
-# The deprecated fit_types format, for data with an integer delta column.
-illness.death.fit.types <- list(
-  z = list(
-    delta = 2,
-    model = ~L0,
-    at_risk = function(dt) dt[["z"]] == 0
-  ),
-  death = list(delta = 1, model = ~ L0 + z),
-  censoring = list(delta = 0, model = ~L0)
-)
-
-# `data` with the event names replaced by the integer delta codes of
-# illness.death.fit.types.
-with.delta <- function(data) {
-  codes <- c(censoring = 0L, death = 1L, z = 2L)
-  data$delta <- unname(codes[as.character(data$event)])
-  data$event <- NULL
-  data
-}
-
 simulate.recovery.fit <- function(alpha, n, seed) {
   initial_fit <- fit_initial(
     simulate.illness.death(n, seed),

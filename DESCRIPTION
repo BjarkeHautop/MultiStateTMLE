@@ -21,7 +21,6 @@ Imports:
     checkmate,
     data.table,
     digest,
-    lifecycle,
     Matrix,
     nleqslv,
     parallel,

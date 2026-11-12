@@ -8,4 +8,10 @@ inst/doc
 docs
 *.pdf
 **/.quarto/
-.outputscratch/
+
+.output/
+scratch/
+usage/
+test/
+simulations/
+extra/
