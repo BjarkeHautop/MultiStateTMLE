@@ -168,7 +168,7 @@ prepare.initial <- function(
       )
     )
   }
-  fit_initial(
+  .fit_initial_impl(
     data = dt,
     fit_types = .legacy_fit_types(fit.types),
     tau = tau,

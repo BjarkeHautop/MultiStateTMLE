@@ -15,7 +15,7 @@ test_that("deprecated estimation functions warn and match their replacements", {
   )
   expect_warning(
     old_fit <- prepare.initial(
-      illness_death,
+      with.delta(illness_death),
       tau = 1,
       fit.types = old_fit_types,
       use.cores = 1
@@ -23,8 +23,8 @@ test_that("deprecated estimation functions warn and match their replacements", {
     "fit_initial",
     class = "lifecycle_warning_deprecated"
   )
-  new_fit <- fit_initial(
-    illness_death,
+  new_fit <- .fit_initial_impl(
+    with.delta(illness_death),
     fit_types = illness.death.fit.types,
     tau = 1
   )
@@ -62,7 +62,7 @@ test_that("deprecated estimation functions warn and match their replacements", {
 
   expect_error(
     .prepare_initial(
-      illness_death,
+      with.delta(illness_death),
       tau = 1,
       fit.types = old_fit_types,
       return.parameters.for.simulation = TRUE
@@ -144,7 +144,7 @@ test_that("deprecated tmle.alpha.fun() builds the initial fit from dt", {
   withr::local_options(lifecycle_verbosity = "quiet")
 
   est <- tmle.alpha.fun(
-    dt = fixture.data(30),
+    dt = with.delta(fixture.data(30)),
     fit.types = list(
       z = list(
         model = "Surv(tstart, tstop, delta == 2)~L0",

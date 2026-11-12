@@ -11,8 +11,8 @@
 #' \describe{
 #'   \item{id}{Individual identifier.}
 #'   \item{time}{Event time.}
-#'   \item{delta}{Event type: `0` censoring, `1` death, `2`
-#'     illness (`z`).}
+#'   \item{event}{The event: `"z"` (illness), `"death"` or
+#'     `"censoring"`.}
 #'   \item{L0}{Baseline covariate.}
 #' }
 "illness_death"

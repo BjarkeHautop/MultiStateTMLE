@@ -74,14 +74,10 @@ calibrating to the estimated exposure risk rather than to \code{alpha}.
 \examples{
 fit <- fit_initial(
   illness_death,
-  fit_types = list(
-    z = list(
-      delta = 2,
-      model = ~ L0,
-      at_risk = function(dt) dt[["z"]] == 0
-    ),
-    death = list(delta = 1, model = ~ L0 + z),
-    censoring = list(delta = 0, model = ~ L0)
+  models = list(
+    hazard_model(z ~ L0, limit = 1),
+    death ~ L0 + z,
+    censoring ~ L0
   ),
   tau = 1
 )

@@ -1,7 +1,7 @@
 test_that("calibration_curve() returns one row per alpha", {
   fit <- fit_initial(
     illness_death,
-    fit_types = illness.death.fit.types,
+    models = illness.death.models,
     tau = 1
   )
 

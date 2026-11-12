@@ -1,7 +1,7 @@
 test_that("tmle_alpha() returns the estimate and diagnostics", {
   fit <- fit_initial(
     illness_death,
-    fit_types = illness.death.fit.types,
+    models = illness.death.models,
     tau = 1
   )
 
@@ -68,7 +68,7 @@ test_that("tmle_alpha() matches process names exactly", {
 test_that("tmle_alpha() validates its arguments", {
   fit <- fit_initial(
     illness_death,
-    fit_types = illness.death.fit.types,
+    models = illness.death.models,
     tau = 1
   )
 
@@ -163,7 +163,7 @@ test_that("tmle_alpha() truncates clever weights", {
 test_that("tmle_alpha() estimates under a baseline intervention 'a'", {
   fit <- fit_initial(
     fixture.data.treated(),
-    fit_types = illness.death.fit.types,
+    models = illness.death.models,
     tau = 1,
     treatment_model = A0 ~ L0,
     arms = 0:1
@@ -228,7 +228,7 @@ test_that("tmle_alpha() estimates the expected years lost", {
 test_that("tmle_alpha() only accepts a values prepared by fit_initial()", {
   fit <- fit_initial(
     fixture.data.treated(),
-    fit_types = illness.death.fit.types,
+    models = illness.death.models,
     tau = 1,
     treatment_model = A0 ~ L0,
     arms = 1

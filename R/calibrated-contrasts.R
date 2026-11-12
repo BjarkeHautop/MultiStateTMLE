@@ -32,14 +32,10 @@
 #'
 #' fit <- fit_initial(
 #'   treated,
-#'   fit_types = list(
-#'     z = list(
-#'       delta = 2,
-#'       model = ~ L0 + A0,
-#'       at_risk = function(dt) dt[["z"]] == 0
-#'     ),
-#'     death = list(delta = 1, model = ~ L0 + A0 + z),
-#'     censoring = list(delta = 0, model = ~L0)
+#'   models = list(
+#'     hazard_model(z ~ L0 + A0, limit = 1),
+#'     death ~ L0 + A0 + z,
+#'     censoring ~ L0
 #'   ),
 #'   tau = 1,
 #'   treatment_model = A0 ~ L0

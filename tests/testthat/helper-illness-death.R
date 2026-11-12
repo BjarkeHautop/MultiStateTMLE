@@ -27,8 +27,8 @@ analytic.truth <- function(
   integrate(integrand, -Inf, Inf)$value
 }
 
-# Simulate n individuals from the DGP above with simevent, in the
-# id/time/delta format of fit_initial().
+# Simulate n individuals from the DGP above with simevent, whose output
+# fit_initial() takes as is.
 simulate.illness.death <- function(n, seed) {
   withr::local_seed(seed)
   model <- simevent::sim_model(
@@ -41,16 +41,16 @@ simulate.illness.death <- function(n, seed) {
       simevent::sim_effect(death ~ z, coef = 0.7)
     )
   )
-  sim <- simevent::simulate_events(model, n = n)
-  codes <- c(censoring = 0L, death = 1L, z = 2L)
-  data.frame(
-    id = sim$id,
-    time = sim$time,
-    delta = unname(codes[as.character(sim$event)]),
-    L0 = sim$L0
-  )
+  simevent::simulate_events(model, n = n)
 }
 
+illness.death.models <- list(
+  hazard_model(z ~ L0, limit = 1),
+  death ~ L0 + z,
+  censoring ~ L0
+)
+
+# The deprecated fit_types format, for data with an integer delta column.
 illness.death.fit.types <- list(
   z = list(
     delta = 2,
@@ -61,10 +61,19 @@ illness.death.fit.types <- list(
   censoring = list(delta = 0, model = ~L0)
 )
 
+# `data` with the event names replaced by the integer delta codes of
+# illness.death.fit.types.
+with.delta <- function(data) {
+  codes <- c(censoring = 0L, death = 1L, z = 2L)
+  data$delta <- unname(codes[as.character(data$event)])
+  data$event <- NULL
+  data
+}
+
 simulate.recovery.fit <- function(alpha, n, seed) {
   initial_fit <- fit_initial(
     simulate.illness.death(n, seed),
-    fit_types = illness.death.fit.types,
+    models = illness.death.models,
     tau = 1
   )
   tmle_alpha(initial_fit, target = "death", alpha = alpha, z_name = "z")
@@ -78,7 +87,7 @@ fixture.data <- function(n = 40) {
 fixture.fit <- function(n = 40, ...) {
   fit_initial(
     fixture.data(n),
-    fit_types = illness.death.fit.types,
+    models = illness.death.models,
     tau = 1,
     ...
   )

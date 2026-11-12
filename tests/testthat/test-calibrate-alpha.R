@@ -1,7 +1,7 @@
 test_that("calibrate_alpha() hits the calibration target", {
   fit <- fit_initial(
     illness_death,
-    fit_types = illness.death.fit.types,
+    models = illness.death.models,
     tau = 1
   )
   n <- length(unique(illness_death$id))
@@ -36,7 +36,7 @@ test_that("calibrate_alpha() hits the calibration target", {
 test_that("calibrate_alpha() validates its arguments", {
   fit <- fit_initial(
     illness_death,
-    fit_types = illness.death.fit.types,
+    models = illness.death.models,
     tau = 1
   )
 
@@ -183,7 +183,7 @@ test_that("calibrate_alpha() calibrates relative to a reference", {
 test_that("calibrate_alpha() calibrates to the risk under another arm", {
   fit <- fit_initial(
     fixture.data.treated(100),
-    fit_types = illness.death.fit.types,
+    models = illness.death.models,
     tau = 1,
     treatment_model = A0 ~ L0,
     arms = 0:1

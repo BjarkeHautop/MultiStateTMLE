@@ -18,11 +18,10 @@ model <- sim_model(
 )
 sim <- simulate_events(model, n = 150)
 
-codes <- c(censoring = 0L, death = 1L, z = 2L)
 illness_death <- data.frame(
   id = sim$id,
   time = sim$time,
-  delta = unname(codes[as.character(sim$event)]),
+  event = factor(sim$event, levels = c("z", "death", "censoring")),
   L0 = sim$L0
 )
 

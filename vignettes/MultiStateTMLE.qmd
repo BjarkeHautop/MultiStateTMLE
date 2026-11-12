@@ -51,9 +51,12 @@ The data are in long format with one row per event and the columns:
 
 - `id`: individual identifier.
 - `time`: event time.
-- `delta`: the integer code of the process that jumped, with `0` reserved for
-  censoring. Here `1` is death and `2` is illness.
+- `event`: the name of the process that jumped, here `"z"`, `"death"` or
+  `"censoring"`.
 - Baseline covariates, here `L0`.
+
+This is the format that `simevent::simulate_events()` returns, so simulated data
+can be passed straight to `fit_initial()`.
 
 An individual who dies without falling ill has a single row, while one who falls
 ill and later dies has two rows. For example, individual 3 dies, while
@@ -71,35 +74,35 @@ illness_death[illness_death$id %in% c(3, 4), ]
 grid of observed event times up to the horizon `tau`, and builds the discrete
 state space that the targeting step works on.
 
-Each process is specified in `fit_types` by its code in the `delta` column and a
-one-sided formula of the covariates of its hazard. Other processes can be used
-as covariates by name, here the death hazard depends on whether the individual
-has fallen ill (`z`). Because the illness can occur at most once, we say that
-individuals are only at risk of `z` while `z == 0`. Exactly one process must be
-the censoring process (`delta = 0`).
+Each process gets a formula in `models`, with the process name on the left and
+the covariates of its hazard on the right. Other processes can be used as
+covariates by name, giving their number of events so far: here the death hazard
+depends on whether the individual has fallen ill (`z`). The illness can occur at
+most once, which `hazard_model()` expresses with `limit = 1`. Every event in the
+data needs a model, including censoring.
 
 ```{r}
 #| label: fit-initial
 
-fit_types <- list(
-  z = list(
-    delta = 2,
-    model = ~L0,
-    at_risk = function(dt) dt[["z"]] == 0
+fit <- fit_initial(
+  illness_death,
+  models = list(
+    hazard_model(z ~ L0, limit = 1),
+    death ~ L0 + z,
+    censoring ~ L0
   ),
-  death = list(delta = 1, model = ~ L0 + z),
-  censoring = list(delta = 0, model = ~L0)
+  tau = 1
 )
-
-fit <- fit_initial(illness_death, fit_types = fit_types, tau = 1)
 fit
 ```
 
 The `type` of each process is inferred from the data: death and censoring end
 follow-up, and the illness occurs at most once.
 
-By default the hazards are fitted with Cox models. Setting `fit = "hal"` in a
-process's entry uses the highly adaptive lasso instead (experimental).
+By default the hazards are fitted with Cox models. `hazard_model()` can also
+restrict when individuals are at risk with a condition on the processes, such as
+`at_risk = ~ z == 0`, and `fit = "hal"` uses the highly adaptive lasso instead
+(experimental).
 
 ## Step 2: Target a single intervention
 
@@ -265,14 +268,10 @@ treated$A0 <- a0[treated$id]
 
 fit_treated <- fit_initial(
   treated,
-  fit_types = list(
-    z = list(
-      delta = 2,
-      model = ~ L0 + A0,
-      at_risk = function(dt) dt[["z"]] == 0
-    ),
-    death = list(delta = 1, model = ~ L0 + A0 + z),
-    censoring = list(delta = 0, model = ~L0)
+  models = list(
+    hazard_model(z ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + z,
+    censoring ~ L0
   ),
   tau = 1,
   treatment_model = A0 ~ L0

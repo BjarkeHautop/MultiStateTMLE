@@ -6,8 +6,9 @@
 \usage{
 fit_initial(
   data,
-  fit_types,
+  models,
   tau,
+  censoring = "censoring",
   treatment_model = NULL,
   arms = NULL,
   max_count = 1,
@@ -16,33 +17,27 @@ fit_initial(
   control = list(),
   hal_control = list(),
   cores = 1,
-  verbose = FALSE
+  verbose = FALSE,
+  fit_types = lifecycle::deprecated()
 )
 }
 \arguments{
 \item{data}{A \code{data.frame} of observed event history data in long format,
-with one row per event and columns \code{id}, \code{time} and \code{delta} (the
-integer code of the process that jumped, with \code{0} reserved for
-censoring), plus any baseline covariates used in \code{fit_types}.}
+with one row per event and columns \code{id}, \code{time} and \code{event} (the name of
+the process that jumped), plus any baseline covariates used in
+\code{models}. This is the format of \code{\link[simevent:simulate_events]{simevent::simulate_events()}}.}
 
-\item{fit_types}{A named list with one entry per event process, named by
-the process. Each entry is a list with elements:
-\itemize{
-\item \code{delta}: the process's integer code in the \code{delta} column of \code{data}.
-Exactly one process must have code \code{0} (censoring).
-\item \code{model}: a one-sided formula of the covariates of its hazard model,
-such as \code{~ L0 + z}. Other processes can be used as covariates by
-name, in which case their counting process (lagged by one event) is
-used.
-\item \code{fit}: \code{"cox"} (default) or \code{"hal"}.
-\item \code{at_risk}: an optional function of the data returning a logical
-vector, marking the rows at risk of the process (e.g.
-\code{function(dt) dt[["z"]] == 0} for a process that can jump at most
-once).
-}}
+\item{models}{A list with the hazard model of each event process: a
+formula such as \code{death ~ L0 + z}, naming the process on the left and
+its covariates on the right, or a \code{\link[=hazard_model]{hazard_model()}} to also restrict
+when individuals are at risk of it. Other processes can be used as
+covariates by name, giving their number of events so far. Every event
+in \code{data} needs a model, including the censoring process.}
 
 \item{tau}{Positive number. Follow-up horizon; the target parameters are
 evaluated at \code{tau}.}
+
+\item{censoring}{String. Name of the censoring process in \code{models}.}
 
 \item{treatment_model}{Optional logistic regression model for the
 baseline treatment, a two-sided formula such as \code{A0 ~ L0}. Required when
@@ -58,20 +53,20 @@ then be passed as \code{a} to \code{\link[=tmle_alpha]{tmle_alpha()}}, \code{\li
 recurrent process in the state space.}
 
 \item{derived_vars}{Named list of functions of the data, each deriving an
-additional state variable, named by the list, that can be used in the
-\code{model}s of \code{fit_types}.}
+additional state variable, named by the list, that can be used in
+\code{models}.}
 
 \item{depend_time}{Experimental, and may change. Named list of functions
 making hazards depend on the time of a jump. Each is named by a state
 variable: a process \code{z} that jumps once, or \code{z.k} for the \code{k}th jump of
 a recurrent process \code{z}. It adds the covariate \verb{T.<name>}, \code{0} before
 that jump and the function applied to the time of the jump after it,
-which can be used (as a factor) in the \code{model}s of \code{fit_types}.}
+which can be used (as a factor) in \code{models}.}
 
 \item{control}{A named list of tuning settings:
 \itemize{
 \item \code{prune_states} (\code{FALSE}): if \code{TRUE}, prune states not admissible
-under the \code{at_risk} functions of \code{fit_types}.
+under the at-risk conditions of \code{models}.
 \item \code{use_exponential} (\code{FALSE}): if \code{TRUE}, always transform the hazard
 increments \code{dH} to probabilities \code{1 - exp(-dH)}. Otherwise this is
 only done if some increments exceed 1.
@@ -84,6 +79,11 @@ only done if some increments exceed 1.
 \code{\link[parallel:mclapply]{parallel::mclapply()}} when predicting hazards across states.}
 
 \item{verbose}{Logical. If \code{TRUE}, print model fits and progress.}
+
+\item{fit_types}{\ifelse{html}{\href{https://lifecycle.r-lib.org/articles/stages.html#deprecated}{\figure{lifecycle-deprecated.svg}{options: alt='[Deprecated]'}}}{\strong{[Deprecated]}} Use \code{models}, with an
+\code{event} column in \code{data}, instead. A named list with one entry per
+process, \code{list(delta, model, fit, at_risk)}, for \code{data} with an integer
+\code{delta} column (\code{0} for censoring) instead of \code{event}.}
 }
 \value{
 An object of class \code{initial_fit}, a list with elements:
@@ -91,10 +91,12 @@ An object of class \code{initial_fit}, a list with elements:
 \item \code{n}: the number of individuals.
 \item \code{tau}, \code{treatment_model} and \code{arms}: as given (\code{arms} with its
 default filled in).
+\item \code{models}: the hazard models, as a list of \code{\link[=hazard_model]{hazard_model()}}s named by
+process.
 \item \code{processes}: a \code{data.table} with one row per process and columns
-\code{name}, \code{delta}, \code{type} (\code{"terminal"}, \code{"recurrent"} or
-\code{"one_jump"}, inferred from the data), \code{model} and \code{at_risk}
-(whether an \code{at_risk} function was given).
+\code{name}, \code{type} (\code{"terminal"}, \code{"recurrent"} or \code{"one_jump"}, inferred
+from the data), \code{model} and \code{at_risk} (whether the process has a
+\code{limit} or \code{at_risk} condition).
 }
 
 It also contains the internal elements used by \code{\link[=tmle_alpha]{tmle_alpha()}}, among
@@ -120,18 +122,23 @@ specifications, built from \code{cut_one_way}, \code{cut_tk}, \code{cut_tk_value
 (10), \code{seed} (\code{NULL}), \code{reduce_seed_dependence} (\code{FALSE}),
 \code{penalize_time} (\code{FALSE}) and \code{verbose} (\code{FALSE}), with defaults in
 parentheses.
+
+Columns of \code{data} named after a process, such as the event counts that
+\code{\link[simevent:simulate_events]{simevent::simulate_events()}} adds, are ignored: the counts are
+recomputed from \code{event}.
 }
 \section{Functions in the arguments}{
 
 The functions given to \code{fit_initial()} and \code{\link[=tmle_alpha]{tmle_alpha()}} are called in
 different ways:
 \itemize{
-\item \code{at_risk} in \code{fit_types}, and the functions in \code{derived_vars}, are
-called with a \code{data.table} and must return one value per row. They are
-called both with the data, with a row per individual and time, and with
-the state space, with a row per state and a column per process that
-other processes depend on. So they may only use those process columns,
-such as \code{dt[["z"]]}, the number of jumps of \code{z} so far.
+\item The functions in \code{derived_vars} are called with a \code{data.table} and
+must return one value per row. They are called both with the data, with
+a row per individual and time, and with the state space, with a row per
+state and a column per process that other processes depend on. So they
+may only use those process columns, such as \code{dt[["z"]]}, the number of
+jumps of \code{z} so far. The same holds for the \code{at_risk} conditions of
+\code{\link[=hazard_model]{hazard_model()}}.
 \item The functions in \code{depend_time} are called with a numeric vector of
 times and must return one value per time.
 \item \code{target_only_in_state} in \code{\link[=tmle_alpha]{tmle_alpha()}} is called with the state
@@ -145,20 +152,16 @@ return one value per row.
 }
 
 \examples{
-# Illness-death data: z is an illness that can occur once, death is
-# terminal, and delta = 0 is censoring.
+# Illness-death data: z is an illness that can occur once, death ends
+# follow-up, and so does censoring.
 head(illness_death)
 
 fit <- fit_initial(
   illness_death,
-  fit_types = list(
-    z = list(
-      delta = 2,
-      model = ~ L0,
-      at_risk = function(dt) dt[["z"]] == 0
-    ),
-    death = list(delta = 1, model = ~ L0 + z),
-    censoring = list(delta = 0, model = ~ L0)
+  models = list(
+    hazard_model(z ~ L0, limit = 1),
+    death ~ L0 + z,
+    censoring ~ L0
   ),
   tau = 1
 )

@@ -16,6 +16,7 @@ reference:
     product state space used internally.
   contents:
   - fit_initial
+  - hazard_model
 
 - title: Targeted estimation
   desc: >

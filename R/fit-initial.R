@@ -8,24 +8,18 @@
 #' [calibrate_alpha()] and [calibration_curve()].
 #'
 #' @param data A `data.frame` of observed event history data in long format,
-#'   with one row per event and columns `id`, `time` and `delta` (the
-#'   integer code of the process that jumped, with `0` reserved for
-#'   censoring), plus any baseline covariates used in `fit_types`.
-#' @param fit_types A named list with one entry per event process, named by
-#'   the process. Each entry is a list with elements:
-#'   * `delta`: the process's integer code in the `delta` column of `data`.
-#'     Exactly one process must have code `0` (censoring).
-#'   * `model`: a one-sided formula of the covariates of its hazard model,
-#'     such as `~ L0 + z`. Other processes can be used as covariates by
-#'     name, in which case their counting process (lagged by one event) is
-#'     used.
-#'   * `fit`: `"cox"` (default) or `"hal"`.
-#'   * `at_risk`: an optional function of the data returning a logical
-#'     vector, marking the rows at risk of the process (e.g.
-#'     `function(dt) dt[["z"]] == 0` for a process that can jump at most
-#'     once).
+#'   with one row per event and columns `id`, `time` and `event` (the name of
+#'   the process that jumped), plus any baseline covariates used in
+#'   `models`. This is the format of [simevent::simulate_events()].
+#' @param models A list with the hazard model of each event process: a
+#'   formula such as `death ~ L0 + z`, naming the process on the left and
+#'   its covariates on the right, or a [hazard_model()] to also restrict
+#'   when individuals are at risk of it. Other processes can be used as
+#'   covariates by name, giving their number of events so far. Every event
+#'   in `data` needs a model, including the censoring process.
 #' @param tau Positive number. Follow-up horizon; the target parameters are
 #'   evaluated at `tau`.
+#' @param censoring String. Name of the censoring process in `models`.
 #' @param treatment_model Optional logistic regression model for the
 #'   baseline treatment, a two-sided formula such as `A0 ~ L0`. Required when
 #'   `arms` is given.
@@ -37,17 +31,17 @@
 #' @param max_count Positive integer. Maximum number of jumps tracked per
 #'   recurrent process in the state space.
 #' @param derived_vars Named list of functions of the data, each deriving an
-#'   additional state variable, named by the list, that can be used in the
-#'   `model`s of `fit_types`.
+#'   additional state variable, named by the list, that can be used in
+#'   `models`.
 #' @param depend_time Experimental, and may change. Named list of functions
 #'   making hazards depend on the time of a jump. Each is named by a state
 #'   variable: a process `z` that jumps once, or `z.k` for the `k`th jump of
 #'   a recurrent process `z`. It adds the covariate `T.<name>`, `0` before
 #'   that jump and the function applied to the time of the jump after it,
-#'   which can be used (as a factor) in the `model`s of `fit_types`.
+#'   which can be used (as a factor) in `models`.
 #' @param control A named list of tuning settings:
 #'   * `prune_states` (`FALSE`): if `TRUE`, prune states not admissible
-#'     under the `at_risk` functions of `fit_types`.
+#'     under the at-risk conditions of `models`.
 #'   * `use_exponential` (`FALSE`): if `TRUE`, always transform the hazard
 #'     increments `dH` to probabilities `1 - exp(-dH)`. Otherwise this is
 #'     only done if some increments exceed 1.
@@ -56,6 +50,10 @@
 #' @param cores Positive integer. Number of cores used by
 #'   [parallel::mclapply()] when predicting hazards across states.
 #' @param verbose Logical. If `TRUE`, print model fits and progress.
+#' @param fit_types `r lifecycle::badge("deprecated")` Use `models`, with an
+#'   `event` column in `data`, instead. A named list with one entry per
+#'   process, `list(delta, model, fit, at_risk)`, for `data` with an integer
+#'   `delta` column (`0` for censoring) instead of `event`.
 #'
 #' @details
 #' HAL fits are experimental and require a `fit.hal()` function to be
@@ -69,15 +67,20 @@
 #' `penalize_time` (`FALSE`) and `verbose` (`FALSE`), with defaults in
 #' parentheses.
 #'
+#' Columns of `data` named after a process, such as the event counts that
+#' [simevent::simulate_events()] adds, are ignored: the counts are
+#' recomputed from `event`.
+#'
 #' @section Functions in the arguments:
 #' The functions given to `fit_initial()` and [tmle_alpha()] are called in
 #' different ways:
-#' * `at_risk` in `fit_types`, and the functions in `derived_vars`, are
-#'   called with a `data.table` and must return one value per row. They are
-#'   called both with the data, with a row per individual and time, and with
-#'   the state space, with a row per state and a column per process that
-#'   other processes depend on. So they may only use those process columns,
-#'   such as `dt[["z"]]`, the number of jumps of `z` so far.
+#' * The functions in `derived_vars` are called with a `data.table` and
+#'   must return one value per row. They are called both with the data, with
+#'   a row per individual and time, and with the state space, with a row per
+#'   state and a column per process that other processes depend on. So they
+#'   may only use those process columns, such as `dt[["z"]]`, the number of
+#'   jumps of `z` so far. The same holds for the `at_risk` conditions of
+#'   [hazard_model()].
 #' * The functions in `depend_time` are called with a numeric vector of
 #'   times and must return one value per time.
 #' * `target_only_in_state` in [tmle_alpha()] is called with the state
@@ -92,36 +95,156 @@
 #'   * `n`: the number of individuals.
 #'   * `tau`, `treatment_model` and `arms`: as given (`arms` with its
 #'     default filled in).
+#'   * `models`: the hazard models, as a list of [hazard_model()]s named by
+#'     process.
 #'   * `processes`: a `data.table` with one row per process and columns
-#'     `name`, `delta`, `type` (`"terminal"`, `"recurrent"` or
-#'     `"one_jump"`, inferred from the data), `model` and `at_risk`
-#'     (whether an `at_risk` function was given).
+#'     `name`, `type` (`"terminal"`, `"recurrent"` or `"one_jump"`, inferred
+#'     from the data), `model` and `at_risk` (whether the process has a
+#'     `limit` or `at_risk` condition).
 #'
 #'   It also contains the internal elements used by [tmle_alpha()], among
 #'   them `tmp_long` (the expanded data with fitted hazards and clever
 #'   weights) and `depend_matrix` (the product state space).
 #'
 #' @examples
-#' # Illness-death data: z is an illness that can occur once, death is
-#' # terminal, and delta = 0 is censoring.
+#' # Illness-death data: z is an illness that can occur once, death ends
+#' # follow-up, and so does censoring.
 #' head(illness_death)
 #'
 #' fit <- fit_initial(
 #'   illness_death,
-#'   fit_types = list(
-#'     z = list(
-#'       delta = 2,
-#'       model = ~ L0,
-#'       at_risk = function(dt) dt[["z"]] == 0
-#'     ),
-#'     death = list(delta = 1, model = ~ L0 + z),
-#'     censoring = list(delta = 0, model = ~ L0)
+#'   models = list(
+#'     hazard_model(z ~ L0, limit = 1),
+#'     death ~ L0 + z,
+#'     censoring ~ L0
 #'   ),
 #'   tau = 1
 #' )
 #' fit
 #' @export
 fit_initial <- function(
+  data,
+  models,
+  tau,
+  censoring = "censoring",
+  treatment_model = NULL,
+  arms = NULL,
+  max_count = 1,
+  derived_vars = list(),
+  depend_time = list(),
+  control = list(),
+  hal_control = list(),
+  cores = 1,
+  verbose = FALSE,
+  fit_types = lifecycle::deprecated()
+) {
+  settings <- list(
+    tau = tau,
+    treatment_model = treatment_model,
+    arms = arms,
+    max_count = max_count,
+    derived_vars = derived_vars,
+    depend_time = depend_time,
+    control = control,
+    hal_control = hal_control,
+    cores = cores,
+    verbose = verbose
+  )
+
+  if (
+    lifecycle::is_present(fit_types) ||
+      (!missing(models) && .is_legacy_fit_types(models))
+  ) {
+    lifecycle::deprecate_warn(
+      "0.1.0",
+      "fit_initial(fit_types)",
+      "fit_initial(models)",
+      details = paste(
+        "Give a list of formulas such as `death ~ L0 + z`, or of",
+        "hazard_model()s, with an `event` column of process names in `data`."
+      )
+    )
+    if (!lifecycle::is_present(fit_types)) {
+      fit_types <- models
+    }
+    return(do.call(
+      .fit_initial_impl,
+      c(list(data = data, fit_types = fit_types), settings)
+    ))
+  }
+
+  checkmate::assert_data_frame(data, min.rows = 1)
+  checkmate::assert_names(
+    names(data),
+    must.include = c("id", "time", "event")
+  )
+  models <- .as_hazard_models(models)
+  checkmate::assert_string(censoring)
+  if (!censoring %in% names(models)) {
+    stop(
+      "models has no model for the censoring process \"",
+      censoring,
+      "\"; give it one, or name the censoring process in `censoring`."
+    )
+  }
+  checkmate::assert_list(derived_vars, types = "function", names = "unique")
+
+  events <- as.character(data[["event"]])
+  if (anyNA(events)) {
+    stop("The event column of data has missing values.")
+  }
+  unmodelled <- setdiff(unique(events), names(models))
+  if (length(unmodelled) > 0) {
+    stop(
+      "data has events without a model in `models`: ",
+      paste(unmodelled, collapse = ", "),
+      "."
+    )
+  }
+
+  # Integer codes for the internal `delta` column: 0 for censoring and
+  # 1, 2, ... for the other processes, in the order of `models`.
+  codes <- stats::setNames(integer(length(models)), names(models))
+  others <- names(models) != censoring
+  codes[others] <- seq_len(sum(others))
+
+  # Process count columns, as added by simevent, are recomputed from the
+  # events.
+  data <- as.data.frame(data)
+  data <- data[, setdiff(names(data), c(names(models), "delta")), drop = FALSE]
+  data[["delta"]] <- unname(codes[events])
+  data[["event"]] <- NULL
+
+  state_vars <- c(names(models), names(derived_vars))
+  fit_types <- Map(
+    .hazard_model_to_fit_type,
+    models,
+    codes,
+    MoreArgs = list(state_vars = state_vars)
+  )
+
+  fit <- do.call(
+    .fit_initial_impl,
+    c(list(data = data, fit_types = fit_types), settings)
+  )
+  fit$models <- models
+  fit$processes <- data.table(
+    name = fit$processes$name,
+    type = fit$processes$type,
+    model = vapply(
+      models,
+      function(model) .deparse_one_line(model$formula),
+      character(1),
+      USE.NAMES = FALSE
+    ),
+    at_risk = fit$processes$at_risk
+  )
+  fit
+}
+
+# fit_initial() with the processes given as `fit_types`, a named list of
+# list(delta, model, fit, at_risk) for data with an integer `delta` column.
+.fit_initial_impl <- function(
   data,
   fit_types,
   tau,

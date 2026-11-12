@@ -9,8 +9,8 @@ A data frame with one row per event and columns:
 \describe{
 \item{id}{Individual identifier.}
 \item{time}{Event time.}
-\item{delta}{Event type: \code{0} censoring, \code{1} death, \code{2}
-illness (\code{z}).}
+\item{event}{The event: \code{"z"} (illness), \code{"death"} or
+\code{"censoring"}.}
 \item{L0}{Baseline covariate.}
 }
 }
