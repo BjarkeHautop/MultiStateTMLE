@@ -12,11 +12,11 @@ model <- sim_model(
   death = sim_process("terminal", eta = 0.3, nu = 1),
   censoring = sim_process("censoring", eta = 0.1, nu = 1),
   effects = list(
-    sim_effect("L0", "z", 0.5),
-    sim_effect("z", "death", 0.7)
+    sim_effect(z ~ L0, coef = 0.5),
+    sim_effect(death ~ z, coef = 0.7)
   )
 )
-sim <- sim_events(model, n = 150)
+sim <- simulate_events(model, n = 150)
 
 codes <- c(censoring = 0L, death = 1L, z = 2L)
 illness_death <- data.frame(

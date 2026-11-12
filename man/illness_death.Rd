@@ -22,7 +22,7 @@ Simulated event history data for 150 individuals at risk of an illness
 \code{z}, which can occur at most once, and \code{death}. Both have
 exponential hazards that depend on a standard normal baseline covariate
 \code{L0}, the illness raises the hazard of death, and follow-up is subject to
-independent censoring. Simulated with \code{\link[simevent:sim_events]{simevent::sim_events()}}, see
+independent censoring. Simulated with \code{\link[simevent:simulate_events]{simevent::simulate_events()}}, see
 \code{data-raw/illness_death.R} in the package source.
 }
 \keyword{datasets}

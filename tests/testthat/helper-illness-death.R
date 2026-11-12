@@ -37,11 +37,11 @@ simulate.illness.death <- function(n, seed) {
     death = simevent::sim_process("terminal", eta = 0.3, nu = 1),
     censoring = simevent::sim_process("censoring", eta = 0.1, nu = 1),
     effects = list(
-      simevent::sim_effect("L0", "z", 0.5),
-      simevent::sim_effect("z", "death", 0.7)
+      simevent::sim_effect(z ~ L0, coef = 0.5),
+      simevent::sim_effect(death ~ z, coef = 0.7)
     )
   )
-  sim <- simevent::sim_events(model, n = n)
+  sim <- simevent::simulate_events(model, n = n)
   codes <- c(censoring = 0L, death = 1L, z = 2L)
   data.frame(
     id = sim$id,
