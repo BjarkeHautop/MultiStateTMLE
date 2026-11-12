@@ -5,7 +5,7 @@ Simulated event history data for 150 individuals at risk of an illness
 hazards that depend on a standard normal baseline covariate `L0`, the
 illness raises the hazard of death, and follow-up is subject to
 independent censoring. Simulated with
-[`simevent::sim_events()`](https://rdrr.io/pkg/simevent/man/sim_events.html),
+[`simevent::simulate_events()`](https://rdrr.io/pkg/simevent/man/simulate_events.html),
 see `data-raw/illness_death.R` in the package source.
 
 ## Usage
@@ -26,9 +26,9 @@ A data frame with one row per event and columns:
 
   Event time.
 
-- delta:
+- event:
 
-  Event type: `0` censoring, `1` death, `2` illness (`z`).
+  The event: `"z"` (illness), `"death"` or `"censoring"`.
 
 - L0:
 

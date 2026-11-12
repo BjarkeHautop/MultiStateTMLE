@@ -29,16 +29,17 @@ The pipeline has three main steps:
 - [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
   fits the initial (nuisance) hazard models for each event process in
   the data, and builds the discrete product state space used internally.
-- [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
-  targets the initial fit under a stochastic intensity intervention,
-  which scales the intensity of a process by `alpha` (optionally
-  combined with an intervention on baseline treatment). It returns a
-  TMLE estimate, its standard error, and optionally the efficient
-  influence curve.
-- [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md)
-  and
-  [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md)
-  calibrate the intervention to a target effect size, and
+- [`tmle_estimate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_estimate.md)
+  targets the initial fit to estimate a target, such as `risk(death)`,
+  under a stochastic intensity intervention: a fixed scaling of the
+  intensity of a process, `scale_intensity(z = 0.5)`, or one calibrated
+  to bring an exposure to a given value,
+  `calibrate(risk(z), relative_change(0.8))` (optionally combined with
+  an intervention on baseline treatment). It returns a TMLE estimate
+  with its standard error and efficient influence curve.
+- [`intervention_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/intervention_curve.md)
+  traces how the target responds to the exposure over a grid of
+  scalings, and
   [`calibrated_contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.md)
   decomposes a total treatment effect into mediated and calibrated
   contrasts.
@@ -51,21 +52,17 @@ time 1 if the intensity of the illness were halved is estimated by:
 
 fit <- fit_initial(
   illness_death,
-  fit_types = list(
-    z = list(
-      delta = 2,
-      model = ~L0,
-      at_risk = function(dt) dt[["z"]] == 0
-    ),
-    death = list(delta = 1, model = ~ L0 + z),
-    censoring = list(delta = 0, model = ~L0)
+  models = list(
+    hazard_model(z ~ L0, limit = 1),
+    death ~ L0 + z,
+    censoring ~ L0
   ),
   tau = 1
 )
 
-est <- tmle_alpha(fit, target = "death", alpha = 0.5, z_name = "z")
-est
-#> TMLE estimate under alpha = 0.5 on z
+tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+#> TMLE estimate of risk(death)
+#> under scale_intensity(z = 0.5)
 #>
 #>    target  estimate         se     lower     upper
 #>    <char>     <num>      <num>     <num>     <num>
@@ -75,7 +72,10 @@ est
 ```
 
 To simulate multistate event history data, see the
-[simevent](https://github.com/BjarkeHautop/simevent) package.
+[simevent](https://github.com/BjarkeHautop/simevent) package, whose
+output
+[`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
+takes as is.
 
 ## Contributing
 

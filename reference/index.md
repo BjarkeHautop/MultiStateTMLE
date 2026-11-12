@@ -16,23 +16,33 @@ product state space used internally.
 
 - [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
   : Fit the initial hazard models
+- [`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md)
+  : Specify the hazard model of an event process
 
 ## Targeted estimation
 
-Targeting the initial fit under a stochastic intensity intervention.
+Estimating a target parameter under a stochastic intensity intervention,
+fixed or calibrated.
 
-- [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
+- [`tmle_estimate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_estimate.md)
   : Targeted estimation under a stochastic intensity intervention
+- [`risk()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/target-parameters.md)
+  [`years_lost()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/target-parameters.md)
+  : Target parameters
+- [`scale_intensity()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/interventions.md)
+  [`calibrate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/interventions.md)
+  [`level()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/interventions.md)
+  [`absolute_change()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/interventions.md)
+  [`relative_change()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/interventions.md)
+  : Stochastic intensity interventions
 
 ## Calibration
 
-Calibrating an intensity intervention to a target effect size, and
-decomposing treatment effects into calibrated contrasts.
+Tracing the intervention curve, and decomposing treatment effects into
+calibrated contrasts.
 
-- [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md)
-  : Calibrate an intensity intervention to a target value
-- [`calibration_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration_curve.md)
-  : Trace the calibration curve over a grid of interventions
+- [`intervention_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/intervention_curve.md)
+  : Trace the intervention curve over a grid of intensity scalings
 - [`calibrated_contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.md)
   : Decompose a treatment effect into mediated and calibrated contrasts
 
@@ -42,14 +52,11 @@ Printing, extracting estimates from, and computing confidence intervals
 for the result objects.
 
 - [`print(`*`<initial_fit>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
-  [`print(`*`<tmle_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
-  [`print(`*`<calibrate_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
-  [`print(`*`<calibration_curve>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`print(`*`<tmle_estimate>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`print(`*`<intervention_curve>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
   [`print(`*`<calibrated_contrasts>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
-  [`coef(`*`<tmle_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
-  [`coef(`*`<calibrate_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
-  [`confint(`*`<tmle_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
-  [`confint(`*`<calibrate_alpha>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`coef(`*`<tmle_estimate>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
+  [`confint(`*`<tmle_estimate>`*`)`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/result-methods.md)
   : Methods for the result objects
 
 ## Data
@@ -58,25 +65,3 @@ Example data.
 
 - [`illness_death`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/illness_death.md)
   : Simulated illness-death data
-
-## Deprecated
-
-Functions superseded by the snake_case functions above. Will be removed
-in the future.
-
-- [`prepare.initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/prepare.initial.md)
-  : Prepare the initial fit (deprecated)
-- [`tmle.alpha.fun()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle.alpha.fun.md)
-  : TMLE under a shape-parameter intervention (deprecated)
-- [`calibration.fun()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration.fun.md)
-  : Calibrate a shape-parameter intervention (deprecated)
-- [`calibration.curve.fun()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibration.curve.fun.md)
-  : Calibration curve over a grid of interventions (deprecated)
-- [`estimate.alpha.fun()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate.alpha.fun.md)
-  : Search for the alpha achieving a target value (defunct)
-- [`estimate.derivative()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/estimate.derivative.md)
-  : Estimate the derivative with respect to alpha (defunct)
-- [`make.calibrated.contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/make.calibrated.contrasts.md)
-  : Total, mediated and calibrated contrasts (deprecated)
-- [`compute.Q.clever.per.id()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/compute.Q.clever.per.id.md)
-  : Compute Q and clever covariates per id (deprecated)

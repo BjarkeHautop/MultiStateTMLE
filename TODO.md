@@ -9,7 +9,7 @@
 - [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
   parses process `delta` codes and covariates out of model strings;
   consider specifying processes by name, matching simevent’s
-  `sim_events()` output (`event` column).
+  `simulate_events()` output (`event` column).
 
 # Performance:
 

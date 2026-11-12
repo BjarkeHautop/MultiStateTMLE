@@ -2,9 +2,7 @@
 
 Given estimates of the risk of an outcome under treatment, under
 placebo, and under a calibrated intervention (as returned by
-[`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
-and
-[`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md)),
+[`tmle_estimate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_estimate.md)),
 computes the total treatment effect and its decomposition into a
 mediated contrast (treatment versus calibrated) and a calibrated
 contrast (calibrated versus placebo), with Wald confidence intervals
@@ -21,15 +19,17 @@ calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit, level = 0.95)
 - treatment_fit, placebo_fit:
 
   Fits for the treatment and placebo arms, as returned by
-  [`tmle_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_alpha.md)
-  with different baseline treatments `a`.
+  [`tmle_estimate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_estimate.md)
+  with different baseline treatments `a` and no calibrated intervention.
 
 - calibrated_fit:
 
-  Fit for the calibrated intervention, as returned by
-  [`calibrate_alpha()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrate_alpha.md)
+  Fit under a
+  [`calibrate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/interventions.md)
+  intervention, as returned by
+  [`tmle_estimate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_estimate.md)
   with the `a` of `treatment_fit`. It may contain estimates for several
-  targets; the one of `treatment_fit` is used.
+  target processes; the one of `treatment_fit` is used.
 
 - level:
 
@@ -60,34 +60,30 @@ treated$A0 <- rbinom(max(treated$id), 1, 0.5)[treated$id]
 
 fit <- fit_initial(
   treated,
-  fit_types = list(
-    z = list(
-      delta = 2,
-      model = ~ L0 + A0,
-      at_risk = function(dt) dt[["z"]] == 0
-    ),
-    death = list(delta = 1, model = ~ L0 + A0 + z),
-    censoring = list(delta = 0, model = ~L0)
+  models = list(
+    hazard_model(z ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + z,
+    censoring ~ L0
   ),
   tau = 1,
   treatment_model = A0 ~ L0
 )
 
-# How much of the effect of treatment on death is mediated by its effect
-# on the risk of z?
-calibrated_contrasts(
-  treatment_fit = tmle_alpha(fit, target = "death", a = 1),
-  placebo_fit = tmle_alpha(fit, target = "death", a = 0),
-  calibrated_fit = calibrate_alpha(
+# \donttest{
+# How much of the effect of treatment on death goes through its effect on
+# the risk of z? The calibrated intervention gives the treated the risk of z
+# they would have had under placebo (reference_a = 0):
+contrasts <- calibrated_contrasts(
+  treatment_fit = tmle_estimate(fit, risk(death), a = 1),
+  placebo_fit = tmle_estimate(fit, risk(death), a = 0),
+  calibrated_fit = tmle_estimate(
     fit,
-    target = "death",
-    z_name = "z",
-    value = 1,
-    scale = "ratio",
-    a = 1,
-    reference_a = 0
+    risk(death),
+    calibrate(risk(z), relative_change(1), reference_a = 0),
+    a = 1
   )
 )
+contrasts
 #> Decomposition of the effect of a on death into mediated and calibrated contrasts
 #> 
 #>    target   contrast   estimate         se       lower      upper
@@ -95,4 +91,9 @@ calibrated_contrasts(
 #> 1:  death      total -0.1405813 0.07724416 -0.29197704 0.01081449
 #> 2:  death   mediated -0.0234265 0.01632300 -0.05541899 0.00856599
 #> 3:  death calibrated -0.1171548 0.08141345 -0.27672220 0.04241266
+
+# The total effect is the sum of the mediated and calibrated contrasts:
+sum(contrasts$estimate$estimate[2:3]) - contrasts$estimate$estimate[1]
+#> [1] 0
+# }
 ```
