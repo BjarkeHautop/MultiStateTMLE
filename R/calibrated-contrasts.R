@@ -43,11 +43,11 @@
 #'   treatment_model = A0 ~ L0
 #' )
 #'
-#' # How much of the effect of treatment on death is mediated by its effect
-#' # on the risk of z?
-#' # The calibrated intervention brings the risk of z under treatment to its
-#' # risk under placebo.
-#' calibrated_contrasts(
+#' \donttest{
+#' # How much of the effect of treatment on death goes through its effect on
+#' # the risk of z? The calibrated intervention gives the treated the risk of z
+#' # they would have had under placebo (reference_a = 0):
+#' contrasts <- calibrated_contrasts(
 #'   treatment_fit = tmle_estimate(fit, risk(death), a = 1),
 #'   placebo_fit = tmle_estimate(fit, risk(death), a = 0),
 #'   calibrated_fit = tmle_estimate(
@@ -57,6 +57,11 @@
 #'     a = 1
 #'   )
 #' )
+#' contrasts
+#'
+#' # The total effect is the sum of the mediated and calibrated contrasts:
+#' sum(contrasts$estimate$estimate[2:3]) - contrasts$estimate$estimate[1]
+#' }
 #' @export
 calibrated_contrasts <- function(
   treatment_fit,

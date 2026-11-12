@@ -93,11 +93,38 @@
 #'   tau = 1
 #' )
 #'
-#' # Risk of death by tau = 1 if the intensity of z were halved.
-#' tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+#' # The risk of death by tau = 1 without intervention, and if the intensity
+#' # of the illness z were halved:
+#' observed <- tmle_estimate(fit, risk(death))
+#' halved <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+#' observed
+#' halved
 #'
-#' # Risk of death if the risk of z fell to 80% of its observed value.
-#' tmle_estimate(fit, risk(death), calibrate(risk(z), relative_change(0.8)))
+#' # Several targets at once, here the risks of death and of z themselves:
+#' tmle_estimate(fit, risk(death, z), scale_intensity(z = 0.5))$estimate
+#'
+#' # The expected years lost before tau rather than the risk:
+#' tmle_estimate(fit, years_lost(death), scale_intensity(z = 0.5))$estimate
+#'
+#' # Diagnostics: the quantiles over individuals of the largest weights, as a
+#' # check of positivity.
+#' halved$checks$weights
+#'
+#' \donttest{
+#' # A calibrated intervention: the risk of death if the risk of z fell to 80%
+#' # of its observed value. The first table gives the scaling alpha that
+#' # achieves it and the risk of z, theta, it attains:
+#' cal <- tmle_estimate(
+#'   fit,
+#'   risk(death),
+#'   calibrate(risk(z), relative_change(0.8))
+#' )
+#' cal
+#'
+#' # Its standard error accounts for alpha being estimated; se_crude treats
+#' # alpha as known:
+#' cal$estimate[, c("target", "estimate", "se", "se_crude")]
+#' }
 #' @export
 tmle_estimate <- function(
   initial_fit,

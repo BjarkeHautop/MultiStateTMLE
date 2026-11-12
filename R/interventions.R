@@ -45,14 +45,43 @@
 #'   `relative_change()` one of class `calibration_rule`.
 #'
 #' @examples
-#' # Halve the intensity of z.
+#' # Fixed intensity scalings. Halve the intensity of z, remove z altogether,
+#' # or double it:
 #' scale_intensity(z = 0.5)
+#' scale_intensity(z = 0)
+#' scale_intensity(z = 2)
 #'
-#' # Halve it before time 0.5 only.
+#' # A time-varying scaling: halve the intensity of z before time 0.5 only.
 #' scale_intensity(z = ~ ifelse(time < 0.5, 0.5, 1))
 #'
-#' # Scale it so that the risk of z falls to 80% of its observed value.
+#' # A scaling that depends on a baseline covariate: halve it only for
+#' # individuals with L0 > 0.
+#' scale_intensity(z = ~ ifelse(L0 > 0, 0.5, 1))
+#'
+#' # Several processes at once:
+#' scale_intensity(z = 0.5, death = 0.8)
+#'
+#' # Calibrated interventions, scaling the intensity of z so that its risk
+#' # equals 0.1, falls by 0.05, or falls to 80% of its value without
+#' # intervention:
+#' calibrate(risk(z), level(0.1))
+#' calibrate(risk(z), absolute_change(-0.05))
 #' calibrate(risk(z), relative_change(0.8))
+#'
+#' # Use them in tmle_estimate():
+#' fit <- fit_initial(
+#'   illness_death,
+#'   models = list(
+#'     hazard_model(z ~ L0, limit = 1),
+#'     death ~ L0 + z,
+#'     censoring ~ L0
+#'   ),
+#'   tau = 1
+#' )
+#' tmle_estimate(fit, risk(death), scale_intensity(z = ~ ifelse(L0 > 0, 0.5, 1)))
+#' \donttest{
+#' tmle_estimate(fit, risk(death), calibrate(risk(z), level(0.1)))
+#' }
 #' @name interventions
 NULL
 

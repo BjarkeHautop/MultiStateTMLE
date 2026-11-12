@@ -54,8 +54,13 @@ fit <- fit_initial(
 )
 fit
 
-est <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+est <- tmle_estimate(fit, risk(death, z), scale_intensity(z = 0.5))
 est
+
+# The estimates, named by target process:
 coef(est)
+
+# Confidence intervals at another level, for all or some targets:
 confint(est, level = 0.9)
+confint(est, "death")
 }

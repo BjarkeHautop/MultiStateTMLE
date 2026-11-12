@@ -42,13 +42,38 @@
 #'   tau = 1
 #' )
 #'
+#' \donttest{
+#' # How the risk of death responds to the risk of z, as the intensity of z
+#' # is scaled from 0 (no illness) to 2 (twice the observed intensity):
 #' curve <- intervention_curve(
 #'   fit,
 #'   risk(death),
 #'   exposure = risk(z),
-#'   alpha = c(0, 0.5, 1)
+#'   alpha = c(0, 0.5, 1, 2)
 #' )
 #' curve
+#'
+#' # Plot the risk of death against the risk of z, with 95% confidence
+#' # intervals:
+#' est <- curve$estimate
+#' plot(
+#'   est$exposure_estimate,
+#'   est$estimate,
+#'   type = "b",
+#'   ylim = range(est$lower, est$upper),
+#'   xlab = "Risk of z by time 1",
+#'   ylab = "Risk of death by time 1"
+#' )
+#' arrows(
+#'   est$exposure_estimate,
+#'   est$lower,
+#'   est$exposure_estimate,
+#'   est$upper,
+#'   angle = 90,
+#'   code = 3,
+#'   length = 0.03
+#' )
+#' }
 #' @export
 intervention_curve <- function(
   initial_fit,

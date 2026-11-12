@@ -127,9 +127,11 @@ recomputed from \code{event}.
 }
 \examples{
 # Illness-death data: z is an illness that can occur once, death ends
-# follow-up, and so does censoring.
+# follow-up, and so does censoring. One row per event:
 head(illness_death)
 
+# One hazard model per process. The death hazard depends on whether the
+# individual has fallen ill, and the illness can occur at most once:
 fit <- fit_initial(
   illness_death,
   models = list(
@@ -140,4 +142,51 @@ fit <- fit_initial(
   tau = 1
 )
 fit
+
+# The process types are inferred from the data, and the hazard models are
+# kept for reference:
+fit$processes
+fit$models$death
+
+# With a baseline treatment A0, a treatment model prepares estimates under
+# both arms, for `a` in tmle_estimate():
+treated <- illness_death
+treated$A0 <- rbinom(max(treated$id), 1, 0.5)[treated$id]
+fit_treated <- fit_initial(
+  treated,
+  models = list(
+    hazard_model(z ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + z,
+    censoring ~ L0
+  ),
+  tau = 1,
+  treatment_model = A0 ~ L0
+)
+fit_treated
+
+\donttest{
+# Data simulated with simevent can be passed as is. Here relapse is
+# recurrent, and the death hazard grows with the number of relapses so far,
+# tracked up to max_count:
+if (requireNamespace("simevent", quietly = TRUE)) {
+  model <- simevent::sim_model(
+    L0 = simevent::sim_covariate(function(N) rnorm(N)),
+    relapse = simevent::sim_process("transient", eta = 0.6, nu = 1),
+    death = simevent::sim_process("terminal", eta = 0.2, nu = 1),
+    censoring = simevent::sim_process("censoring", eta = 0.2, nu = 1),
+    effects = list(
+      simevent::sim_effect(relapse ~ L0, coef = 0.5),
+      simevent::sim_effect(death ~ relapse, coef = 0.4)
+    )
+  )
+  relapses <- simevent::simulate_events(model, n = 200, seed = 1)
+
+  fit_initial(
+    relapses,
+    models = list(relapse ~ L0, death ~ L0 + relapse, censoring ~ L0),
+    tau = 2,
+    max_count = 3
+  )
+}
+}
 }

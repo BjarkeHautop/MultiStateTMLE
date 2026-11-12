@@ -38,9 +38,34 @@ the risk up to \code{tau}.
 }
 }
 \examples{
+# The risk of death by tau, and the expected years lost before it:
 risk(death)
-risk(death, relapse)
+years_lost(death)
 
-# Deaths before illness only.
-years_lost(death, when = ~ z == 0)
+# Several processes, each estimated separately under the same intervention:
+risk(death, z)
+
+# Only deaths before illness count:
+risk(death, when = ~ z == 0)
+
+# For a recurrent process, the risk of a first event rather than the
+# expected number of events:
+risk(relapse, only_first = TRUE)
+
+# Processes held in a character vector:
+targets <- c("death", "z")
+do.call(risk, as.list(targets))
+
+# Use them in tmle_estimate():
+fit <- fit_initial(
+  illness_death,
+  models = list(
+    hazard_model(z ~ L0, limit = 1),
+    death ~ L0 + z,
+    censoring ~ L0
+  ),
+  tau = 1
+)
+tmle_estimate(fit, risk(death, z))
+tmle_estimate(fit, risk(death, when = ~ z == 0))$estimate
 }

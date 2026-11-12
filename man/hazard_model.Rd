@@ -36,9 +36,26 @@ when an individual is at risk of the process, or to change how it is
 fitted.
 }
 \examples{
-# An illness that can happen at most once.
+# A plain formula in fit_initial()'s `models` is short for
+# hazard_model(formula):
+hazard_model(death ~ L0 + z)
+
+# An illness that can happen at most once:
 hazard_model(z ~ L0, limit = 1)
 
-# Death, only counted before illness.
-hazard_model(death ~ L0, at_risk = ~ z == 0)
+# A relapse that can happen at most twice, and only before death of
+# another cause, w:
+hazard_model(relapse ~ L0, limit = 2, at_risk = ~ w == 0)
+
+# Use them in fit_initial(), mixed with plain formulas:
+fit <- fit_initial(
+  illness_death,
+  models = list(
+    hazard_model(z ~ L0, limit = 1),
+    death ~ L0 + z,
+    censoring ~ L0
+  ),
+  tau = 1
+)
+fit$processes
 }
