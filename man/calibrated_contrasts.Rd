@@ -40,16 +40,13 @@ a calibrated contrast (calibrated versus placebo), with Wald confidence
 intervals based on the influence curves.
 }
 \examples{
-# illness_death with a randomised treatment A0 added, for illustration.
-set.seed(1)
-treated <- illness_death
-treated$A0 <- rbinom(max(treated$id), 1, 0.5)[treated$id]
-
+# A trial where treatment A0 lowers the risk of illness, which raises
+# the risk of death:
 fit <- fit_initial(
-  treated,
+  illness_death,
   models = list(
-    hazard_model(z ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + z,
+    hazard_model(illness ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + illness,
     censoring ~ L0
   ),
   tau = 1,
@@ -58,15 +55,15 @@ fit <- fit_initial(
 
 \donttest{
 # How much of the effect of treatment on death goes through its effect on
-# the risk of z? The calibrated intervention gives the treated the risk of z
-# they would have had under placebo (reference_a = 0):
+# the risk of illness? The calibrated intervention gives the treated the
+# risk of illness they would have had under placebo (reference_a = 0):
 contrasts <- calibrated_contrasts(
   treatment_fit = tmle_estimate(fit, risk(death), a = 1),
   placebo_fit = tmle_estimate(fit, risk(death), a = 0),
   calibrated_fit = tmle_estimate(
     fit,
     risk(death),
-    calibrate(risk(z), relative_change(1), reference_a = 0),
+    calibrate(risk(illness), relative_change(1), reference_a = 0),
     a = 1
   )
 )

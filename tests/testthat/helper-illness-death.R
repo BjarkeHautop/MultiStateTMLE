@@ -1,11 +1,11 @@
 # Shared helpers for simulation-based recovery tests: simulate from a
-# known illness-death DGP (L0 -> z -> death, z one-jump, death
+# known illness-death DGP (L0 -> illness -> death, illness one-jump, death
 # terminal, both Weibull(nu=1) i.e. exponential hazards) and compute
 # the true P(death by tau) in closed form.
 #
 # Truth is:
-# P(death by tau) = P(direct, from z=0) + P(via a
-# jump to z=1 at some u<=tau, then death by tau), integrated over
+# P(death by tau) = P(direct, from illness=0) + P(via a
+# jump to illness=1 at some u<=tau, then death by tau), integrated over
 # L0 ~ N(0,1) numerically.
 analytic.truth <- function(
   alpha,
@@ -33,20 +33,20 @@ simulate.illness.death <- function(n, seed) {
   withr::local_seed(seed)
   model <- simevent::sim_model(
     L0 = simevent::sim_covariate(function(N) rnorm(N)),
-    z = simevent::sim_process("transient", limit = 1, eta = 0.2, nu = 1),
+    illness = simevent::sim_process("transient", limit = 1, eta = 0.2, nu = 1),
     death = simevent::sim_process("terminal", eta = 0.3, nu = 1),
     censoring = simevent::sim_process("censoring", eta = 0.1, nu = 1),
     effects = list(
-      simevent::sim_effect(z ~ L0, coef = 0.5),
-      simevent::sim_effect(death ~ z, coef = 0.7)
+      simevent::sim_effect(illness ~ L0, coef = 0.5),
+      simevent::sim_effect(death ~ illness, coef = 0.7)
     )
   )
   simevent::simulate_events(model, n = n)
 }
 
 illness.death.models <- list(
-  hazard_model(z ~ L0, limit = 1),
-  death ~ L0 + z,
+  hazard_model(illness ~ L0, limit = 1),
+  death ~ L0 + illness,
   censoring ~ L0
 )
 
@@ -56,10 +56,11 @@ simulate.recovery.fit <- function(alpha, n, seed) {
     models = illness.death.models,
     tau = 1
   )
-  tmle_estimate(initial_fit, risk(death), scale_intensity(z = alpha))
+  tmle_estimate(initial_fit, risk(death), scale_intensity(illness = alpha))
 }
 
-# The first n individuals of illness_death, for fast unit tests.
+# The first n individuals of illness_death, for fast unit tests. Includes
+# the randomised baseline treatment A0.
 fixture.data <- function(n = 40) {
   illness_death[illness_death$id <= n, ]
 }
@@ -71,14 +72,6 @@ fixture.fit <- function(n = 40, ...) {
     tau = 1,
     ...
   )
-}
-
-# fixture.data() with a binary baseline treatment A0.
-fixture.data.treated <- function(n = 40) {
-  data <- fixture.data(n)
-  a0 <- withr::with_seed(1, rbinom(n, 1, 0.5))
-  data$A0 <- a0[data$id]
-  data
 }
 
 # Minimal tmle_estimate() results with the given estimates and influence
@@ -116,7 +109,7 @@ fake.calibrated.fit <- function(
     list(
       estimate = data.table::data.table(target = target, estimate = estimate),
       target = do.call(estimand, as.list(target)),
-      intervention = calibrate(risk(z), relative_change(1)),
+      intervention = calibrate(risk(illness), relative_change(1)),
       a = a,
       eic = stats::setNames(eic, target)
     ),

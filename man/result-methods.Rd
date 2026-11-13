@@ -46,15 +46,15 @@ objects returned by \code{\link[=fit_initial]{fit_initial()}}, \code{\link[=tmle
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
+    hazard_model(illness ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + illness,
     censoring ~ L0
   ),
   tau = 1
 )
 fit
 
-est <- tmle_estimate(fit, risk(death, z), scale_intensity(z = 0.5))
+est <- tmle_estimate(fit, risk(death, illness), scale_intensity(illness = 0.5))
 est
 
 # The estimates, named by target process:

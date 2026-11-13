@@ -18,15 +18,15 @@
 #' fit <- fit_initial(
 #'   illness_death,
 #'   models = list(
-#'     hazard_model(z ~ L0, limit = 1),
-#'     death ~ L0 + z,
+#'     hazard_model(illness ~ L0 + A0, limit = 1),
+#'     death ~ L0 + A0 + illness,
 #'     censoring ~ L0
 #'   ),
 #'   tau = 1
 #' )
 #' fit
 #'
-#' est <- tmle_estimate(fit, risk(death, z), scale_intensity(z = 0.5))
+#' est <- tmle_estimate(fit, risk(death, illness), scale_intensity(illness = 0.5))
 #' est
 #'
 #' # The estimates, named by target process:
@@ -182,7 +182,7 @@ confint.tmle_estimate <- function(object, parm, level = 0.95, ...) {
   out
 }
 
-# "under scale_intensity(z = 0.5), with a = 1", or "without intervention".
+# "under scale_intensity(illness = 0.5), with a = 1", or "without intervention".
 .describe_intervention <- function(x) {
   parts <- character()
   if (!is.null(x$intervention)) {

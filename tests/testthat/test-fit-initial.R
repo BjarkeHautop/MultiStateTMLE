@@ -11,27 +11,27 @@ test_that("fit_initial() fits the illness-death example", {
   expect_equal(
     fit$processes,
     data.table::data.table(
-      name = c("z", "death", "censoring"),
+      name = c("illness", "death", "censoring"),
       type = c("one_jump", "terminal", "terminal"),
-      model = c("z ~ L0", "death ~ L0 + z", "censoring ~ L0"),
+      model = c("illness ~ L0", "death ~ L0 + illness", "censoring ~ L0"),
       at_risk = c(TRUE, FALSE, FALSE)
     )
   )
-  expect_named(fit$models, c("z", "death", "censoring"))
+  expect_named(fit$models, c("illness", "death", "censoring"))
   expect_s3_class(fit$models$death, "hazard_model")
 
-  expect_equal(fit$process_names, c("z", "death", "censoring"))
+  expect_equal(fit$process_names, c("illness", "death", "censoring"))
   expect_equal(
     fit$process_types,
-    list(z = "one_jump", death = "terminal", censoring = "terminal")
+    list(illness = "one_jump", death = "terminal", censoring = "terminal")
   )
   expect_equal(fit$cens_process_id, 3)
-  expect_named(fit$at_risks, "z")
-  # z is a state variable, with states z = 0 and z = 1.
-  expect_equal(fit$depend_matrix$z, c(0, 1))
+  expect_named(fit$at_risks, "illness")
+  # illness is a state variable, with states illness = 0 and illness = 1.
+  expect_equal(fit$depend_matrix$illness, c(0, 1))
   expect_true(all(fit$tmp_long$time <= 1))
   expect_true(all(
-    c("P.z.1", "P.z.2", "P.death.1", "P.death.2") %in%
+    c("P.illness.1", "P.illness.2", "P.death.1", "P.death.2") %in%
       names(fit$tmp_long)
   ))
 })
@@ -40,11 +40,11 @@ test_that("fit_initial() takes simevent output as is", {
   skip_if_not_installed("simevent")
   sim <- simulate.illness.death(60, seed = 1)
 
-  # simevent's z column, the count after each event, is recomputed.
-  expect_true("z" %in% names(sim))
+  # simevent's illness column, the count after each event, is recomputed.
+  expect_true("illness" %in% names(sim))
   fit <- fit_initial(sim, models = illness.death.models, tau = 1)
   expect_equal(fit$n, 60)
-  expect_equal(fit$depend_matrix$z, c(0, 1))
+  expect_equal(fit$depend_matrix$illness, c(0, 1))
 })
 
 test_that("fit_initial() accepts plain formulas, named lists and any order", {
@@ -54,14 +54,18 @@ test_that("fit_initial() accepts plain formulas, named lists and any order", {
     fixture.data(40),
     models = list(
       censoring = censoring ~ L0,
-      death = death ~ L0 + z,
-      z = hazard_model(z ~ L0, at_risk = ~ z == 0)
+      death = death ~ L0 + illness,
+      illness = hazard_model(illness ~ L0, at_risk = ~ illness == 0)
     ),
     tau = 1
   )
   expect_equal(
-    tmle_estimate(reordered, risk(death), scale_intensity(z = 0.5))$estimate,
-    tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))$estimate
+    tmle_estimate(
+      reordered,
+      risk(death),
+      scale_intensity(illness = 0.5)
+    )$estimate,
+    tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))$estimate
   )
 })
 
@@ -69,19 +73,19 @@ test_that("fit_initial() takes depend_time as formulas", {
   timed <- fit_initial(
     fixture.data(40),
     models = list(
-      hazard_model(z ~ L0, limit = 1),
-      death ~ L0 + z + T.z,
+      hazard_model(illness ~ L0, limit = 1),
+      death ~ L0 + illness + T.illness,
       censoring ~ L0
     ),
     tau = 1,
-    depend_time = list(z = ~ 1 * (time > 0.5))
+    depend_time = list(illness = ~ 1 * (time > 0.5))
   )
-  expect_true(all(timed$tmp_long$T.z %in% c(0, 1)))
+  expect_true(all(timed$tmp_long$T.illness %in% c(0, 1)))
 })
 
 test_that("fit_initial() accepts transformed covariates in models", {
   transformed <- illness.death.models
-  transformed[[2]] <- death ~ log(exp(L0)) + z
+  transformed[[2]] <- death ~ log(exp(L0)) + illness
 
   expect_equal(
     fit_initial(fixture.data(40), models = transformed, tau = 1)$tmp_long,
@@ -90,18 +94,18 @@ test_that("fit_initial() accepts transformed covariates in models", {
 })
 
 test_that("fit_initial() derives covariates from processes with I()", {
-  # With z happening at most once, I(z > 0) equals z.
+  # With illness happening at most once, I(illness > 0) equals illness.
   derived <- illness.death.models
-  derived[[2]] <- death ~ L0 + I(z > 0)
+  derived[[2]] <- death ~ L0 + I(illness > 0)
   fit <- fit_initial(fixture.data(40), models = derived, tau = 1)
 
-  expect_equal(fit$depend_matrix$z, c(0, 1))
+  expect_equal(fit$depend_matrix$illness, c(0, 1))
   expect_equal(
-    tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))$estimate,
+    tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))$estimate,
     tmle_estimate(
       fixture.fit(40),
       risk(death),
-      scale_intensity(z = 0.5)
+      scale_intensity(illness = 0.5)
     )$estimate
   )
 })
@@ -113,7 +117,10 @@ test_that("fit_initial() uses a censoring process of another name", {
   expect_error(
     fit_initial(
       data,
-      models = list(hazard_model(z ~ L0, limit = 1), death ~ L0 + z),
+      models = list(
+        hazard_model(illness ~ L0, limit = 1),
+        death ~ L0 + illness
+      ),
       tau = 1
     ),
     "censoring"
@@ -121,8 +128,8 @@ test_that("fit_initial() uses a censoring process of another name", {
   fit <- fit_initial(
     data,
     models = list(
-      hazard_model(z ~ L0, limit = 1),
-      death ~ L0 + z,
+      hazard_model(illness ~ L0, limit = 1),
+      death ~ L0 + illness,
       dropout ~ L0
     ),
     tau = 1,
@@ -133,12 +140,15 @@ test_that("fit_initial() uses a censoring process of another name", {
 
 test_that("hazard_model() validates its arguments", {
   expect_error(hazard_model(~L0), "two-sided")
-  expect_error(hazard_model(log(z) ~ L0), "two-sided")
-  expect_error(hazard_model(z ~ L0, limit = 0), "limit")
-  expect_error(hazard_model(z ~ L0, at_risk = z ~ z == 0), "one-sided")
-  expect_error(hazard_model(z ~ L0, fit = "glm"), "cox")
+  expect_error(hazard_model(log(illness) ~ L0), "two-sided")
+  expect_error(hazard_model(illness ~ L0, limit = 0), "limit")
+  expect_error(
+    hazard_model(illness ~ L0, at_risk = illness ~ illness == 0),
+    "one-sided"
+  )
+  expect_error(hazard_model(illness ~ L0, fit = "glm"), "cox")
   expect_output(
-    print(hazard_model(z ~ L0, limit = 1, at_risk = ~ death == 0)),
+    print(hazard_model(illness ~ L0, limit = 1, at_risk = ~ death == 0)),
     "limit: 1"
   )
 })
@@ -146,9 +156,9 @@ test_that("hazard_model() validates its arguments", {
 test_that("hazard_model() conditions become at-risk functions", {
   k <- 5
   at_risk <- .hazard_model_to_fit_type(
-    hazard_model(z ~ L0, limit = 1, at_risk = ~ death == 0 & z < k),
+    hazard_model(illness ~ L0, limit = 1, at_risk = ~ death == 0 & illness < k),
     delta = 1,
-    state_vars = c("z", "death")
+    state_vars = c("illness", "death")
   )$at_risk
 
   # State variables are read from dt, other variables from the formula's
@@ -157,10 +167,10 @@ test_that("hazard_model() conditions become at-risk functions", {
     all.names(body(at_risk)),
     c("&", "<", "[[", "dt", "&", "==", "[[", "dt", "<", "[[", "dt", "k")
   )
-  dt <- data.table::data.table(z = c(0, 1, 0), death = c(0, 0, 1))
+  dt <- data.table::data.table(illness = c(0, 1, 0), death = c(0, 0, 1))
   expect_equal(at_risk(dt), c(TRUE, FALSE, FALSE))
   expect_null(
-    .hazard_model_to_fit_type(hazard_model(z ~ L0), 1, "z")$at_risk
+    .hazard_model_to_fit_type(hazard_model(illness ~ L0), 1, "illness")$at_risk
   )
 })
 
@@ -197,8 +207,8 @@ test_that("fit_initial() validates its arguments", {
     fit_initial(
       illness_death,
       models = list(
-        hazard_model(z ~ L0, at_risk = ~ L0 > 0),
-        death ~ L0 + z,
+        hazard_model(illness ~ L0, at_risk = ~ L0 > 0),
+        death ~ L0 + illness,
         censoring ~ L0
       ),
       tau = 1
@@ -237,7 +247,7 @@ test_that("fit_initial() rejects invalid inputs", {
   )
   expect_error(
     fit_initial(
-      fixture.data.treated(),
+      fixture.data(),
       models = m,
       tau = 1,
       treatment_model = list(model = A0 ~ L0, fit = "glm")
@@ -246,7 +256,7 @@ test_that("fit_initial() rejects invalid inputs", {
   )
   expect_error(
     fit_initial(
-      fixture.data.treated(),
+      fixture.data(),
       models = m,
       tau = 1,
       treatment_model = ~L0,
@@ -269,7 +279,7 @@ test_that("fit_initial() converts a non-numeric time column with a warning", {
 
 test_that("fit_initial() fits a treatment model and propensities under 'a'", {
   fit <- fit_initial(
-    fixture.data.treated(),
+    fixture.data(),
     models = illness.death.models,
     tau = 1,
     treatment_model = A0 ~ L0
@@ -296,7 +306,7 @@ test_that("fit_initial()'s HAL setup identifies the process for its own delta", 
   # process name instead of just the HAL one and error before reaching the
   # HAL fit itself.
   m <- illness.death.models
-  m[[1]] <- hazard_model(z ~ L0, limit = 1, fit = "hal")
+  m[[1]] <- hazard_model(illness ~ L0, limit = 1, fit = "hal")
   assign("fit.hal", function(...) stop("reached fit.hal"), envir = globalenv())
   withr::defer(rm("fit.hal", envir = globalenv()))
 
@@ -308,7 +318,7 @@ test_that("fit_initial()'s HAL setup identifies the process for its own delta", 
 
 test_that("fit_initial() errors early when HAL is not available", {
   m <- illness.death.models
-  m[[1]] <- hazard_model(z ~ L0, limit = 1, fit = "hal")
+  m[[1]] <- hazard_model(illness ~ L0, limit = 1, fit = "hal")
 
   expect_error(
     fit_initial(fixture.data(30), models = m, tau = 1),

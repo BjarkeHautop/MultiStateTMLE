@@ -118,38 +118,38 @@ accounts for the scaling being estimated.
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
+    hazard_model(illness ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + illness,
     censoring ~ L0
   ),
   tau = 1
 )
 
 # The risk of death by tau = 1 without intervention, and if the intensity
-# of the illness z were halved:
+# of illness were halved:
 observed <- tmle_estimate(fit, risk(death))
-halved <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+halved <- tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))
 observed
 halved
 
-# Several targets at once, here the risks of death and of z themselves:
-tmle_estimate(fit, risk(death, z), scale_intensity(z = 0.5))$estimate
+# Several targets at once, here the risks of death and of illness themselves:
+tmle_estimate(fit, risk(death, illness), scale_intensity(illness = 0.5))$estimate
 
 # The expected years lost before tau rather than the risk:
-tmle_estimate(fit, years_lost(death), scale_intensity(z = 0.5))$estimate
+tmle_estimate(fit, years_lost(death), scale_intensity(illness = 0.5))$estimate
 
 # Diagnostics: the quantiles over individuals of the largest weights, as a
 # check of positivity.
 halved$checks$weights
 
 \donttest{
-# A calibrated intervention: the risk of death if the risk of z fell to 80\%
+# A calibrated intervention: the risk of death if the risk of illness fell to 80\%
 # of its observed value. The first table gives the scaling alpha that
-# achieves it and the risk of z, theta, it attains:
+# achieves it and the risk of illness, theta, it attains:
 cal <- tmle_estimate(
   fit,
   risk(death),
-  calibrate(risk(z), relative_change(0.8))
+  calibrate(risk(illness), relative_change(0.8))
 )
 cal
 

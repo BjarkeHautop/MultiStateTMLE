@@ -26,7 +26,7 @@ the process that jumped), plus any baseline covariates used in
 \code{models}. This is the format of \code{\link[simevent:simulate_events]{simevent::simulate_events()}}.}
 
 \item{models}{A list with the hazard model of each event process: a
-formula such as \code{death ~ L0 + z}, naming the process on the left and
+formula such as \code{death ~ L0 + illness}, naming the process on the left and
 its covariates on the right, or a \code{\link[=hazard_model]{hazard_model()}} to also restrict
 when individuals are at risk of it. Other processes can be used as
 covariates by name, giving their number of events so far. Every event
@@ -52,11 +52,12 @@ recurrent process in the state space.}
 
 \item{depend_time}{Experimental, and may change. Named list of one-sided
 formulas in \code{time}, making hazards depend on the time of a jump. Each is
-named by a state variable: a process \code{z} that jumps once, or \code{z.k} for
-the \code{k}th jump of a recurrent process \code{z}. It adds the covariate
-\verb{T.<name>}, \code{0} before that jump and the formula evaluated at the time
-of the jump after it, which can be used (as a factor) in \code{models}. For
-example, \code{list(z = ~ time > 0.5)} distinguishes early from late
+named by a state variable: a process \code{illness} that jumps once, or
+\code{illness.k} for the \code{k}th jump of a recurrent process \code{illness}. It adds
+the covariate \verb{T.<name>}, \code{0} before that jump and the formula evaluated
+at the time of the jump after it, which can be used (as a factor) in
+\code{models}. For
+example, \code{list(illness = ~ time > 0.5)} distinguishes early from late
 jumps.}
 
 \item{control}{A named list of tuning settings:
@@ -119,7 +120,7 @@ Columns of \code{data} named after a process, such as the event counts that
 recomputed from \code{event}.
 }
 \examples{
-# Illness-death data: z is an illness that can occur once, death ends
+# Illness-death data: illness is an illness that can occur once, death ends
 # follow-up, and so does censoring. One row per event:
 head(illness_death)
 
@@ -128,8 +129,8 @@ head(illness_death)
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
+    hazard_model(illness ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + illness,
     censoring ~ L0
   ),
   tau = 1
@@ -143,13 +144,11 @@ fit$models$death
 
 # With a baseline treatment A0, a treatment model prepares estimates under
 # both arms, for `a` in tmle_estimate():
-treated <- illness_death
-treated$A0 <- rbinom(max(treated$id), 1, 0.5)[treated$id]
 fit_treated <- fit_initial(
-  treated,
+  illness_death,
   models = list(
-    hazard_model(z ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + z,
+    hazard_model(illness ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + illness,
     censoring ~ L0
   ),
   tau = 1,

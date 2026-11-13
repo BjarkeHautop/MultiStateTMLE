@@ -18,7 +18,7 @@ process per individual: individuals are only at risk while they have
 had fewer than \code{limit} events. \code{limit = 1} is an event that can happen
 at most once, as \code{sim_process(limit = 1)} in simevent.}
 
-\item{at_risk}{Optional one-sided formula, such as \code{~ z == 0}, of a
+\item{at_risk}{Optional one-sided formula, such as \code{~ illness == 0}, of a
 condition on the processes (their number of events so far).
 Individuals are only at risk of the process while it holds. Combined
 with \code{limit} if both are given.}
@@ -31,18 +31,18 @@ An object of class \code{hazard_model}.
 }
 \description{
 Describes how \code{\link[=fit_initial]{fit_initial()}} models the hazard of one event process. A
-plain formula such as \code{death ~ L0 + z} in \code{models} is short for
-\code{hazard_model(death ~ L0 + z)}; use \code{hazard_model()} to also restrict
+plain formula such as \code{death ~ L0 + illness} in \code{models} is short for
+\code{hazard_model(death ~ L0 + illness)}; use \code{hazard_model()} to also restrict
 when an individual is at risk of the process, or to change how it is
 fitted.
 }
 \examples{
 # A plain formula in fit_initial()'s `models` is short for
 # hazard_model(formula):
-hazard_model(death ~ L0 + z)
+hazard_model(death ~ L0 + illness)
 
 # An illness that can happen at most once:
-hazard_model(z ~ L0, limit = 1)
+hazard_model(illness ~ L0, limit = 1)
 
 # A relapse that can happen at most twice, and only before death of
 # another cause, w:
@@ -56,8 +56,8 @@ hazard_model(death ~ L0 + I(relapse >= 2))
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
+    hazard_model(illness ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + illness,
     censoring ~ L0
   ),
   tau = 1

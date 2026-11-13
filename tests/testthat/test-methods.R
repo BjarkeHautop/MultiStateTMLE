@@ -3,9 +3,13 @@ test_that("print methods summarise the result objects", {
   expect_output(print(fit), "Initial fit of 30 individuals up to tau = 1")
   expect_output(print(fit), "one_jump")
 
-  est <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+  est <- tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))
   expect_output(print(est), "TMLE estimate of risk(death)", fixed = TRUE)
-  expect_output(print(est), "under scale_intensity(z = 0.5)", fixed = TRUE)
+  expect_output(
+    print(est),
+    "under scale_intensity(illness = 0.5)",
+    fixed = TRUE
+  )
   expect_output(print(est), "converged after")
   expect_output(
     print(
@@ -15,10 +19,10 @@ test_that("print methods summarise the result objects", {
     fixed = TRUE
   )
 
-  curve <- intervention_curve(fit, risk(death), risk(z), alpha = 1)
+  curve <- intervention_curve(fit, risk(death), risk(illness), alpha = 1)
   expect_output(
     print(curve),
-    "over 1 scalings of the intensity of z"
+    "over 1 scalings of the intensity of illness"
   )
 })
 
@@ -51,10 +55,14 @@ test_that("coef() and confint() extract the estimates by target", {
     c("5 %", "95 %")
   )
 
-  cal <- fake.calibrated.fit(c(0.2, 0.4), list(0, 0), target = c("z", "death"))
+  cal <- fake.calibrated.fit(
+    c(0.2, 0.4),
+    list(0, 0),
+    target = c("illness", "death")
+  )
   cal$estimate$se <- c(0.1, 0.2)
 
-  expect_equal(coef(cal), c(z = 0.2, death = 0.4))
+  expect_equal(coef(cal), c(illness = 0.2, death = 0.4))
   expect_equal(rownames(confint(cal, "death")), "death")
   expect_equal(
     confint(cal, "death")[1, ],

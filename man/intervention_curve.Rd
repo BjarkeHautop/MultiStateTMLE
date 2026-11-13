@@ -88,25 +88,25 @@ to \code{alpha}, as in \code{\link[=calibrate]{calibrate()}}.
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
+    hazard_model(illness ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + illness,
     censoring ~ L0
   ),
   tau = 1
 )
 
 \donttest{
-# How the risk of death responds to the risk of z, as the intensity of z
+# How the risk of death responds to the risk of illness, as the intensity of illness
 # is scaled from 0 (no illness) to 2 (twice the observed intensity):
 curve <- intervention_curve(
   fit,
   risk(death),
-  exposure = risk(z),
+  exposure = risk(illness),
   alpha = c(0, 0.5, 1, 2)
 )
 curve
 
-# Plot the risk of death against the risk of z, with 95\% confidence
+# Plot the risk of death against the risk of illness, with 95\% confidence
 # intervals:
 est <- curve$estimate
 plot(
@@ -114,7 +114,7 @@ plot(
   est$estimate,
   type = "b",
   ylim = range(est$lower, est$upper),
-  xlab = "Risk of z by time 1",
+  xlab = "Risk of illness by time 1",
   ylab = "Risk of death by time 1"
 )
 arrows(

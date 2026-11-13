@@ -12,7 +12,7 @@
 #'   the process that jumped), plus any baseline covariates used in
 #'   `models`. This is the format of [simevent::simulate_events()].
 #' @param models A list with the hazard model of each event process: a
-#'   formula such as `death ~ L0 + z`, naming the process on the left and
+#'   formula such as `death ~ L0 + illness`, naming the process on the left and
 #'   its covariates on the right, or a [hazard_model()] to also restrict
 #'   when individuals are at risk of it. Other processes can be used as
 #'   covariates by name, giving their number of events so far. Every event
@@ -32,11 +32,12 @@
 #'   recurrent process in the state space.
 #' @param depend_time Experimental, and may change. Named list of one-sided
 #'   formulas in `time`, making hazards depend on the time of a jump. Each is
-#'   named by a state variable: a process `z` that jumps once, or `z.k` for
-#'   the `k`th jump of a recurrent process `z`. It adds the covariate
-#'   `T.<name>`, `0` before that jump and the formula evaluated at the time
-#'   of the jump after it, which can be used (as a factor) in `models`. For
-#'   example, `list(z = ~ time > 0.5)` distinguishes early from late
+#'   named by a state variable: a process `illness` that jumps once, or
+#'   `illness.k` for the `k`th jump of a recurrent process `illness`. It adds
+#'   the covariate `T.<name>`, `0` before that jump and the formula evaluated
+#'   at the time of the jump after it, which can be used (as a factor) in
+#'   `models`. For
+#'   example, `list(illness = ~ time > 0.5)` distinguishes early from late
 #'   jumps.
 #' @param control A named list of tuning settings:
 #'   * `prune_states` (`FALSE`): if `TRUE`, prune states not admissible
@@ -82,7 +83,7 @@
 #'   weights) and `depend_matrix` (the product state space).
 #'
 #' @examples
-#' # Illness-death data: z is an illness that can occur once, death ends
+#' # Illness-death data: illness is an illness that can occur once, death ends
 #' # follow-up, and so does censoring. One row per event:
 #' head(illness_death)
 #'
@@ -91,8 +92,8 @@
 #' fit <- fit_initial(
 #'   illness_death,
 #'   models = list(
-#'     hazard_model(z ~ L0, limit = 1),
-#'     death ~ L0 + z,
+#'     hazard_model(illness ~ L0 + A0, limit = 1),
+#'     death ~ L0 + A0 + illness,
 #'     censoring ~ L0
 #'   ),
 #'   tau = 1
@@ -106,13 +107,11 @@
 #'
 #' # With a baseline treatment A0, a treatment model prepares estimates under
 #' # both arms, for `a` in tmle_estimate():
-#' treated <- illness_death
-#' treated$A0 <- rbinom(max(treated$id), 1, 0.5)[treated$id]
 #' fit_treated <- fit_initial(
-#'   treated,
+#'   illness_death,
 #'   models = list(
-#'     hazard_model(z ~ L0 + A0, limit = 1),
-#'     death ~ L0 + A0 + z,
+#'     hazard_model(illness ~ L0 + A0, limit = 1),
+#'     death ~ L0 + A0 + illness,
 #'     censoring ~ L0
 #'   ),
 #'   tau = 1,

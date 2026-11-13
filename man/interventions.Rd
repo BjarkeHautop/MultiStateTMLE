@@ -21,8 +21,8 @@ relative_change(rho)
 }
 \arguments{
 \item{...}{Named factors, one per process to intervene on, such as
-\code{z = 0.5}. Each is a non-negative number, or a one-sided formula giving
-a time-varying factor, such as \code{z = ~ ifelse(time < 0.5, 0.5, 1)}, that
+\code{illness = 0.5}. Each is a non-negative number, or a one-sided formula giving
+a time-varying factor, such as \code{illness = ~ ifelse(time < 0.5, 0.5, 1)}, that
 may use \code{time}, baseline covariates and the processes (their number of
 events so far).}
 
@@ -77,41 +77,41 @@ intervention.
 }
 }
 \examples{
-# Fixed intensity scalings. Halve the intensity of z, remove z altogether,
+# Fixed intensity scalings. Halve the intensity of illness, remove illness altogether,
 # or double it:
-scale_intensity(z = 0.5)
-scale_intensity(z = 0)
-scale_intensity(z = 2)
+scale_intensity(illness = 0.5)
+scale_intensity(illness = 0)
+scale_intensity(illness = 2)
 
-# A time-varying scaling: halve the intensity of z before time 0.5 only.
-scale_intensity(z = ~ ifelse(time < 0.5, 0.5, 1))
+# A time-varying scaling: halve the intensity of illness before time 0.5 only.
+scale_intensity(illness = ~ ifelse(time < 0.5, 0.5, 1))
 
 # A scaling that depends on a baseline covariate: halve it only for
 # individuals with L0 > 0.
-scale_intensity(z = ~ ifelse(L0 > 0, 0.5, 1))
+scale_intensity(illness = ~ ifelse(L0 > 0, 0.5, 1))
 
 # Several processes at once:
-scale_intensity(z = 0.5, death = 0.8)
+scale_intensity(illness = 0.5, death = 0.8)
 
-# Calibrated interventions, scaling the intensity of z so that its risk
+# Calibrated interventions, scaling the intensity of illness so that its risk
 # equals 0.1, falls by 0.05, or falls to 80\% of its value without
 # intervention:
-calibrate(risk(z), level(0.1))
-calibrate(risk(z), absolute_change(-0.05))
-calibrate(risk(z), relative_change(0.8))
+calibrate(risk(illness), level(0.1))
+calibrate(risk(illness), absolute_change(-0.05))
+calibrate(risk(illness), relative_change(0.8))
 
 # Use them in tmle_estimate():
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
+    hazard_model(illness ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + illness,
     censoring ~ L0
   ),
   tau = 1
 )
-tmle_estimate(fit, risk(death), scale_intensity(z = ~ ifelse(L0 > 0, 0.5, 1)))
+tmle_estimate(fit, risk(death), scale_intensity(illness = ~ ifelse(L0 > 0, 0.5, 1)))
 \donttest{
-tmle_estimate(fit, risk(death), calibrate(risk(z), level(0.1)))
+tmle_estimate(fit, risk(death), calibrate(risk(illness), level(0.1)))
 }
 }

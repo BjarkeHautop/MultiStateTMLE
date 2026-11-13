@@ -145,7 +145,7 @@ test_that("calibrated_contrasts() checks that the fits belong together", {
   expect_error(
     calibrated_contrasts(
       treatment.fit,
-      fake.tmle.fit(0.3, eic, target = "z", a = 0),
+      fake.tmle.fit(0.3, eic, target = "illness", a = 0),
       calibrated.fit
     ),
     "same target"
@@ -189,7 +189,7 @@ test_that("calibrated_contrasts() defaults to the treatment fit's target", {
   calibrated.fit <- fake.calibrated.fit(
     c(0.5, 0.9),
     list(eic, eic),
-    target = c("z", "death")
+    target = c("illness", "death")
   )
 
   out <- calibrated_contrasts(

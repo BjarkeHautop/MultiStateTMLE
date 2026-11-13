@@ -39,39 +39,40 @@ The pipeline has three main steps:
   used internally.
 - `tmle_estimate()` targets the initial fit to estimate a target, such
   as `risk(death)`, under a stochastic intensity intervention: a fixed
-  scaling of the intensity of a process, `scale_intensity(z = 0.5)`, or
-  one calibrated to bring an exposure to a given value,
-  `calibrate(risk(z), relative_change(0.8))` (optionally combined with
-  an intervention on baseline treatment). It returns a TMLE estimate
-  with its standard error and efficient influence curve.
+  scaling of the intensity of a process,
+  `scale_intensity(illness = 0.5)`, or one calibrated to bring an
+  exposure to a given value,
+  `calibrate(risk(illness), relative_change(0.8))` (optionally combined
+  with an intervention on baseline treatment). It returns a TMLE
+  estimate with its standard error and efficient influence curve.
 - `intervention_curve()` traces how the target responds to the exposure
   over a grid of scalings, and `calibrated_contrasts()` decomposes a
   total treatment effect into mediated and calibrated contrasts.
 
 For example, with the simulated illness-death data `illness_death`,
-where an illness `z` raises the risk of `death`, the risk of death by
-time 1 if the intensity of the illness were halved is estimated by:
+where `illness` raises the risk of `death`, the risk of death by time 1
+if the intensity of the illness were halved is estimated by:
 
 ``` r
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
+    hazard_model(illness ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + illness,
     censoring ~ L0
   ),
   tau = 1
 )
 
-tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))
 #> TMLE estimate of risk(death)
-#> under scale_intensity(z = 0.5)
+#> under scale_intensity(illness = 0.5)
 #>
 #>    target  estimate         se     lower     upper
 #>    <char>     <num>      <num>     <num>     <num>
-#> 1:  death 0.3040549 0.03853505 0.2285276 0.3795823
+#> 1:  death 0.2906665 0.03341164 0.2251809 0.3561521
 #>
-#> Initial estimate: 0.3124; converged after 2 iterations
+#> Initial estimate: 0.2907; converged after 1 iterations
 ```
 
 To simulate multistate event history data, see the

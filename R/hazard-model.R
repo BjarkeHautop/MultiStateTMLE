@@ -1,8 +1,8 @@
 #' Specify the hazard model of an event process
 #'
 #' Describes how [fit_initial()] models the hazard of one event process. A
-#' plain formula such as `death ~ L0 + z` in `models` is short for
-#' `hazard_model(death ~ L0 + z)`; use `hazard_model()` to also restrict
+#' plain formula such as `death ~ L0 + illness` in `models` is short for
+#' `hazard_model(death ~ L0 + illness)`; use `hazard_model()` to also restrict
 #' when an individual is at risk of the process, or to change how it is
 #' fitted.
 #'
@@ -15,7 +15,7 @@
 #'   process per individual: individuals are only at risk while they have
 #'   had fewer than `limit` events. `limit = 1` is an event that can happen
 #'   at most once, as `sim_process(limit = 1)` in simevent.
-#' @param at_risk Optional one-sided formula, such as `~ z == 0`, of a
+#' @param at_risk Optional one-sided formula, such as `~ illness == 0`, of a
 #'   condition on the processes (their number of events so far).
 #'   Individuals are only at risk of the process while it holds. Combined
 #'   with `limit` if both are given.
@@ -27,10 +27,10 @@
 #' @examples
 #' # A plain formula in fit_initial()'s `models` is short for
 #' # hazard_model(formula):
-#' hazard_model(death ~ L0 + z)
+#' hazard_model(death ~ L0 + illness)
 #'
 #' # An illness that can happen at most once:
-#' hazard_model(z ~ L0, limit = 1)
+#' hazard_model(illness ~ L0, limit = 1)
 #'
 #' # A relapse that can happen at most twice, and only before death of
 #' # another cause, w:
@@ -44,8 +44,8 @@
 #' fit <- fit_initial(
 #'   illness_death,
 #'   models = list(
-#'     hazard_model(z ~ L0, limit = 1),
-#'     death ~ L0 + z,
+#'     hazard_model(illness ~ L0 + A0, limit = 1),
+#'     death ~ L0 + A0 + illness,
 #'     censoring ~ L0
 #'   ),
 #'   tau = 1
@@ -62,13 +62,13 @@ hazard_model <- function(
   if (length(formula) != 3 || !is.name(formula[[2]])) {
     stop(
       "`formula` must be two-sided with the process name on the left, ",
-      "e.g. death ~ L0 + z."
+      "e.g. death ~ L0 + illness."
     )
   }
   checkmate::assert_count(limit, positive = TRUE, null.ok = TRUE)
   checkmate::assert_formula(at_risk, null.ok = TRUE)
   if (!is.null(at_risk) && length(at_risk) != 2) {
-    stop("`at_risk` must be a one-sided formula, e.g. ~ z == 0.")
+    stop("`at_risk` must be a one-sided formula, e.g. ~ illness == 0.")
   }
   fit <- match.arg(fit)
   structure(

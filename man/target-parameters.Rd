@@ -17,7 +17,7 @@ To give the names in a character vector \code{x}, use
 \code{do.call(risk, as.list(x))}.}
 
 \item{when}{Optional one-sided formula of a condition on the state, such
-as \code{~ z == 0}: only events while it holds count. It may use the
+as \code{~ illness == 0}: only events while it holds count. It may use the
 processes that hazards depend on (their number of events so far).}
 
 \item{only_first}{Logical. If \code{TRUE}, only the first event of each
@@ -42,29 +42,29 @@ risk(death)
 years_lost(death)
 
 # Several processes, each estimated separately under the same intervention:
-risk(death, z)
+risk(death, illness)
 
 # Only deaths before illness count:
-risk(death, when = ~ z == 0)
+risk(death, when = ~ illness == 0)
 
 # For a recurrent process, the risk of a first event rather than the
 # expected number of events:
 risk(relapse, only_first = TRUE)
 
 # Processes held in a character vector:
-targets <- c("death", "z")
+targets <- c("death", "illness")
 do.call(risk, as.list(targets))
 
 # Use them in tmle_estimate():
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
+    hazard_model(illness ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + illness,
     censoring ~ L0
   ),
   tau = 1
 )
-tmle_estimate(fit, risk(death, z))
-tmle_estimate(fit, risk(death, when = ~ z == 0))$estimate
+tmle_estimate(fit, risk(death, illness))
+tmle_estimate(fit, risk(death, when = ~ illness == 0))$estimate
 }

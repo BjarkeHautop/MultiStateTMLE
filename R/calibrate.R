@@ -23,7 +23,7 @@
   a_fixed <- a
 
   # The fit of `parameter` (a tmle_target, the exposure by default, as
-  # solve_alpha() needs) for its first process, under scaling alpha of z.
+  # solve_alpha() needs) for its first process, under scaling alpha of illness.
   fit_at <- function(alpha, parameter = exposure, a = a_fixed) {
     .tmle_fixed(
       initial_fit,

@@ -5,7 +5,7 @@ test_that("tmle_estimate() returns the estimate and diagnostics", {
     tau = 1
   )
 
-  est <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+  est <- tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))
 
   expect_s3_class(est, "tmle_estimate")
   expect_named(est$estimate, c("target", "estimate", "se", "lower", "upper"))
@@ -17,7 +17,7 @@ test_that("tmle_estimate() returns the estimate and diagnostics", {
   )
   expect_equal(est$method, "tmle")
   expect_equal(est$target, risk(death))
-  expect_equal(est$intervention, scale_intensity(z = 0.5))
+  expect_equal(est$intervention, scale_intensity(illness = 0.5))
   expect_named(est$eic, "death")
   expect_length(est$eic$death, length(unique(illness_death$id)))
   expect_named(
@@ -46,7 +46,7 @@ test_that("tmle_estimate() returns the estimate and diagnostics", {
   one_step <- tmle_estimate(
     fit,
     risk(death),
-    scale_intensity(z = 0.5),
+    scale_intensity(illness = 0.5),
     control = list(one_step = TRUE)
   )
   expect_equal(one_step$method, "one_step")
@@ -62,7 +62,7 @@ test_that("tmle_estimate() validates its arguments", {
   expect_error(tmle_estimate(fit, risk(stroke)), "stroke.*not in initial_fit")
   expect_error(tmle_estimate(fit, risk(DEATH)), "DEATH")
   expect_error(
-    tmle_estimate(fit, risk(death), list(z = 0.5)),
+    tmle_estimate(fit, risk(death), list(illness = 0.5)),
     "scale_intensity\\(\\) or calibrate"
   )
   expect_error(
@@ -87,26 +87,26 @@ test_that("tmle_estimate() validates its arguments", {
     "control\\$truncate_weights"
   )
   expect_error(
-    tmle_estimate(fit, risk(death), scale_intensity(z = ~ -1)),
+    tmle_estimate(fit, risk(death), scale_intensity(illness = ~ -1)),
     "non-negative"
   )
   expect_error(
-    tmle_estimate(fit, risk(death), scale_intensity(z = ~undefined_var)),
-    "Could not evaluate the factor of z"
+    tmle_estimate(fit, risk(death), scale_intensity(illness = ~undefined_var)),
+    "Could not evaluate the factor of illness"
   )
 })
 
 test_that("tmle_estimate() supports when, only_first and target_by_state", {
   fit <- fixture.fit(30)
-  plain <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+  plain <- tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))
 
-  # Both halves of only_first are no-ops here: z happens at most once, and
+  # Both halves of only_first are no-ops here: illness happens at most once, and
   # death ends follow-up.
   expect_equal(
     tmle_estimate(
       fit,
       risk(death),
-      scale_intensity(z = 0.5, only_first = TRUE)
+      scale_intensity(illness = 0.5, only_first = TRUE)
     )$estimate,
     plain$estimate
   )
@@ -114,12 +114,12 @@ test_that("tmle_estimate() supports when, only_first and target_by_state", {
     tmle_estimate(
       fit,
       risk(death, only_first = TRUE),
-      scale_intensity(z = 0.5)
+      scale_intensity(illness = 0.5)
     )$estimate,
     plain$estimate
   )
 
-  before_z <- tmle_estimate(fit, risk(death, when = ~ z == 0))
+  before_z <- tmle_estimate(fit, risk(death, when = ~ illness == 0))
   expect_lt(
     before_z$estimate$estimate,
     tmle_estimate(fit, risk(death))$estimate$estimate
@@ -142,7 +142,7 @@ test_that("tmle_estimate() truncates clever weights", {
   est <- tmle_estimate(
     fixture.fit(30),
     risk(death),
-    scale_intensity(z = 3),
+    scale_intensity(illness = 3),
     control = list(truncate_weights = 1.5)
   )
 
@@ -152,7 +152,7 @@ test_that("tmle_estimate() truncates clever weights", {
 
 test_that("tmle_estimate() estimates under a baseline intervention 'a'", {
   fit <- fit_initial(
-    fixture.data.treated(),
+    fixture.data(),
     models = illness.death.models,
     tau = 1,
     treatment_model = A0 ~ L0,
@@ -175,44 +175,52 @@ test_that("tmle_estimate() estimates under a baseline intervention 'a'", {
 
 test_that("scale_intensity() takes time-varying factors", {
   fit <- fixture.fit(30)
-  constant <- tmle_estimate(fit, risk(death), scale_intensity(z = 2))
+  constant <- tmle_estimate(fit, risk(death), scale_intensity(illness = 2))
 
   expect_equal(
-    tmle_estimate(fit, risk(death), scale_intensity(z = ~2))$estimate,
+    tmle_estimate(fit, risk(death), scale_intensity(illness = ~2))$estimate,
     constant$estimate
   )
   factor <- 2
   expect_equal(
-    tmle_estimate(fit, risk(death), scale_intensity(z = ~factor))$estimate,
+    tmle_estimate(
+      fit,
+      risk(death),
+      scale_intensity(illness = ~factor)
+    )$estimate,
     constant$estimate
   )
   expect_equal(
     tmle_estimate(
       fit,
       risk(death),
-      scale_intensity(z = ~ rep(2, length(time))),
+      scale_intensity(illness = ~ rep(2, length(time))),
       control = list(target_by_state = TRUE)
     )$estimate$estimate,
     tmle_estimate(
       fit,
       risk(death),
-      scale_intensity(z = 2),
+      scale_intensity(illness = 2),
       control = list(target_by_state = TRUE)
     )$estimate$estimate
   )
   # Scaling by 1 after time 0.5 lies between scaling by 1 and by 2 always.
   early <- tmle_estimate(
     fit,
-    risk(z),
-    scale_intensity(z = ~ ifelse(time < 0.5, 2, 1))
+    risk(illness),
+    scale_intensity(illness = ~ ifelse(time < 0.5, 2, 1))
   )
   expect_gt(
     early$estimate$estimate,
-    tmle_estimate(fit, risk(z))$estimate$estimate
+    tmle_estimate(fit, risk(illness))$estimate$estimate
   )
   expect_lt(
     early$estimate$estimate,
-    tmle_estimate(fit, risk(z), scale_intensity(z = 2))$estimate$estimate
+    tmle_estimate(
+      fit,
+      risk(illness),
+      scale_intensity(illness = 2)
+    )$estimate$estimate
   )
 })
 
@@ -235,7 +243,7 @@ test_that("tmle_estimate() estimates the expected years lost", {
 
 test_that("tmle_estimate() only accepts a values prepared by fit_initial()", {
   fit <- fit_initial(
-    fixture.data.treated(),
+    fixture.data(),
     models = illness.death.models,
     tau = 1,
     treatment_model = A0 ~ L0,
@@ -252,7 +260,7 @@ test_that("tmle_estimate() only accepts a values prepared by fit_initial()", {
     tmle_estimate(
       fit,
       risk(death),
-      calibrate(risk(z), relative_change(1), reference_a = 0),
+      calibrate(risk(illness), relative_change(1), reference_a = 0),
       a = 1
     ),
     "reference_a must be one of"
@@ -261,26 +269,26 @@ test_that("tmle_estimate() only accepts a values prepared by fit_initial()", {
 
 test_that("tmle_estimate() estimates several targets separately", {
   fit <- fixture.fit(30)
-  scaled <- scale_intensity(z = 2)
+  scaled <- scale_intensity(illness = 2)
 
-  both <- tmle_estimate(fit, risk(death, z), scaled)
+  both <- tmle_estimate(fit, risk(death, illness), scaled)
   death <- tmle_estimate(fit, risk(death), scaled)
-  z <- tmle_estimate(fit, risk(z), scaled)
+  illness <- tmle_estimate(fit, risk(illness), scaled)
 
-  expect_equal(both$estimate, rbind(death$estimate, z$estimate))
+  expect_equal(both$estimate, rbind(death$estimate, illness$estimate))
   expect_equal(
     both$initial_estimate,
-    c(death$initial_estimate, z$initial_estimate)
+    c(death$initial_estimate, illness$initial_estimate)
   )
-  expect_equal(both$eic, c(death$eic, z$eic))
-  expect_named(both$checks$converged, c("death", "z"))
+  expect_equal(both$eic, c(death$eic, illness$eic))
+  expect_named(both$checks$converged, c("death", "illness"))
   expect_equal(both$checks$weights, death$checks$weights)
   expect_equal(
     coef(both),
-    c(death = coef(death), z = coef(z)),
+    c(death = coef(death), illness = coef(illness)),
     ignore_attr = TRUE
   )
-  expect_output(print(both), "z: Initial estimate")
+  expect_output(print(both), "illness: Initial estimate")
 })
 
 test_that("scale_intensity() intervenes on several processes at once", {
@@ -291,16 +299,20 @@ test_that("scale_intensity() intervenes on several processes at once", {
     tmle_estimate(
       fit,
       risk(death),
-      scale_intensity(z = 0.5, death = 1)
+      scale_intensity(illness = 0.5, death = 1)
     )$estimate,
-    tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))$estimate
+    tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))$estimate
   )
   expect_gt(
     tmle_estimate(
       fit,
       risk(death),
-      scale_intensity(z = 0.5, death = 2)
+      scale_intensity(illness = 0.5, death = 2)
     )$estimate$estimate,
-    tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))$estimate$estimate
+    tmle_estimate(
+      fit,
+      risk(death),
+      scale_intensity(illness = 0.5)
+    )$estimate$estimate
   )
 })

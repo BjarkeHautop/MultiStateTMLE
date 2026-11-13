@@ -1,32 +1,20 @@
 ---
-title: "Getting started with MultiStateTMLE"
+title: "Getting Started with MultiStateTMLE"
 vignette: >
-  %\VignetteIndexEntry{Getting started with MultiStateTMLE}
+  %\VignetteIndexEntry{Getting Started with MultiStateTMLE}
   %\VignetteEngine{quarto::html}
   %\VignetteEncoding{UTF-8}
-knitr:
-  opts_chunk:
-    collapse: true
-    comment: "#>"
 ---
 
-MultiStateTMLE estimates causal parameters of multistate event processes under
-*stochastic intensity interventions*: hypothetical interventions that scale the
-intensity of one event process (for example, an illness) by a factor `alpha`,
-and ask how the risk of another process (for example, death) would change.
-Estimation uses targeted maximum likelihood estimation (TMLE), which updates an
-initial fit of the hazards so that the resulting estimator is efficient and
-comes with influence curve based standard errors.
+```{r}
+#| label: knitr-opts
+#| include: false
 
-This vignette walks through the main workflow:
-
-1. Fit the initial hazard models with `fit_initial()`.
-2. Estimate a target, such as `risk(death)`, under a fixed intensity scaling,
-   `scale_intensity()`, with `tmle_estimate()`.
-3. Trace how the outcome risk depends on the exposure risk with
-   `intervention_curve()`.
-4. Calibrate the intervention to a target exposure risk with `calibrate()`.
-5. Decompose a treatment effect with `calibrated_contrasts()`.
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
 
 ```{r}
 #| label: setup
@@ -34,12 +22,16 @@ This vignette walks through the main workflow:
 library(MultiStateTMLE)
 ```
 
-## The data
+We will in this vignette use the following example: how many deaths would be
+prevented by a drug that makes the illness less likely?
 
-The package ships with `illness_death`, simulated event history data for 150
-individuals at risk of an illness `z`, which can occur at most once, and of
-`death`. The illness raises the hazard of death, and both hazards depend on a
-baseline covariate `L0`. Follow-up is subject to censoring.
+# The Data
+
+`illness_death` is a trial of 200 patients who may fall ill and may die, with
+follow-up subject to censoring. The `illness` can occur at most once and raises
+the hazard of death. Patients were randomised to a treatment, `A0 = 1`, or
+placebo, `A0 = 0`, and patients with a higher baseline covariate `L0` are more
+likely to fall ill.
 
 ```{r}
 #| label: data
@@ -47,68 +39,66 @@ baseline covariate `L0`. Follow-up is subject to censoring.
 head(illness_death)
 ```
 
-The data are in long format with one row per event and the columns:
-
-- `id`: individual identifier.
-- `time`: event time.
-- `event`: the name of the process that jumped, here `"z"`, `"death"` or
-  `"censoring"`.
-- Baseline covariates, here `L0`.
-
-This is the format that `simevent::simulate_events()` returns, so simulated data
-can be passed straight to `fit_initial()`.
-
-An individual who dies without falling ill has a single row, while one who falls
-ill and later dies has two rows. For example, individual 3 dies, while
-individual 4 falls ill and then dies:
+Each row is an event: the patient `id`, the `time` of the event, which `event`
+it was, and the baseline covariates. A patient who dies without falling ill has
+one row, like patient 3, while one who falls ill and then dies has two, like
+patient 2:
 
 ```{r}
 #| label: data-example
 
-illness_death[illness_death$id %in% c(3, 4), ]
+illness_death[illness_death$id %in% c(2, 3), ]
 ```
 
-## Step 1: Fit the initial hazard models
+::: {.callout-note title="Simulated data"}
+This is the format `simevent::simulate_events()` returns, so data simulated with
+[simevent](https://github.com/BjarkeHautop/simevent) can be used directly.
+`illness_death` itself was simulated with simevent, which lets us check the
+estimates against the truth below.
+:::
 
-`fit_initial()` fits one hazard model per event process, expands the data to the
-grid of observed event times up to the horizon `tau`, and builds the discrete
-state space that the targeting step works on.
+# Fitting the Hazards
 
-Each process gets a formula in `models`, with the process name on the left and
-the covariates of its hazard on the right. Other processes can be used as
-covariates by name, giving their number of events so far: here the death hazard
-depends on whether the individual has fallen ill (`z`). The illness can occur at
-most once, which `hazard_model()` expresses with `limit = 1`. Every event in the
-data needs a model, including censoring.
+The first step is to model the hazard of each event. `fit_initial()` takes one
+formula per event, with the event on the left and the covariates of its hazard
+on the right. Using another event's name as a covariate gives its number of
+events so far, so `death ~ L0 + A0 + illness` lets the illness change the death
+hazard:
 
 ```{r}
 #| label: fit-initial
 
-fit <- fit_initial(
-  illness_death,
-  models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
-    censoring ~ L0
-  ),
-  tau = 1
+models <- list(
+  hazard_model(illness ~ L0 + A0, limit = 1),
+  death ~ L0 + A0 + illness,
+  censoring ~ L0
 )
+fit <- fit_initial(illness_death, models = models, tau = 1)
 fit
 ```
 
-The `type` of each process is inferred from the data: death and censoring end
-follow-up, and the illness occurs at most once.
+By default each hazard is a Cox model, so the death hazard is
 
-By default the hazards are fitted with Cox models. `hazard_model()` can also
-restrict when individuals are at risk with a condition on the processes, such as
-`at_risk = ~ z == 0`, and `fit = "hal"` uses the highly adaptive lasso instead
-(experimental).
+$$
+  \lambda_{\text{death}}(t)
+  = \lambda_0(t) \exp\left( \beta_1 L_0 + \beta_2 A_0 + \beta_3 Z(t) \right),
+$$
 
-## Step 2: Estimate under a fixed intervention
+where $Z(t)$ is 1 once the patient has fallen ill. `tau = 1` is the time
+horizon: everything below concerns what happens by time 1.
 
-`tmle_estimate()` estimates a target parameter under an intervention. The target
-is given by `risk()`, here the risk of death by time `tau`. Without an
-intervention, this is the observed risk of death by time 1:
+::: {.callout-note title="Hazard models"}
+Every event in the data needs a model, censoring included. A plain formula is
+short for `hazard_model(formula)`, which also takes `limit`, the most events a
+patient can have (here one illness), and `at_risk`, a condition such as
+`~ illness == 0` for when patients are at risk. `fit = "hal"` uses the highly
+adaptive lasso instead of a Cox model (experimental).
+:::
+
+# Halving the Illness
+
+Without any intervention, `tmle_estimate()` estimates the risk of death by
+`tau`, given by `risk()`:
 
 ```{r}
 #| label: tmle-observed
@@ -117,19 +107,22 @@ observed <- tmle_estimate(fit, risk(death))
 observed
 ```
 
-The printed table gives the targeted estimate with its standard error and a 95%
-confidence interval, and it is stored as `observed$estimate`. The intervention
-`scale_intensity(z = 0.5)` halves the intensity of the illness:
+Now suppose the drug halves the hazard of the illness. `scale_intensity()`
+multiplies a hazard by a factor $\alpha$, and the estimate is the risk of death
+had the illness hazard been $\alpha \lambda_z(t)$:
 
 ```{r}
 #| label: tmle-halved
 
-halved <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+halved <- tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))
 halved
 ```
 
-`coef()` and `confint()` extract the estimate and confidence intervals at other
-levels:
+Halving the illness lowers the risk of death from `{r} round(coef(observed), 3)`
+to `{r} round(coef(halved), 3)`. The other hazards, death given illness
+included, are left as they are.
+
+`coef()` and `confint()` extract the estimate and its confidence interval:
 
 ```{r}
 #| label: tmle-ci
@@ -138,27 +131,44 @@ coef(halved)
 confint(halved, level = 0.9)
 ```
 
-A factor of `0` removes the illness altogether, while a factor above `1`
-increases its intensity. The factor can also vary over time, given as a formula
-in `time`, baseline covariates and the processes:
+::: {.callout-note title="Reading the output"}
+The standard error comes from the efficient influence curve, so no bootstrap is
+needed. The last line gives the estimate from the initial fit alone, which TMLE
+then *targets*: it updates the fitted hazards until the estimate solves the
+efficient influence curve equation. This removes the first-order bias of the
+initial fit, so the confidence interval is valid even with flexible hazard
+models.
+:::
+
+::: {.callout-note title="Other interventions"}
+A factor of `0` removes the illness, and one above `1` increases it. The factor
+can also be a formula in `time`, the baseline covariates and the events so far,
+for example a drug that only works early, or only for patients with `L0 > 0`:
 
 ```{r}
 #| label: tmle-time-varying
 
-tmle_estimate(
+coef(tmle_estimate(
   fit,
   risk(death),
-  scale_intensity(z = ~ ifelse(time < 0.5, 0.5, 1))
-)$estimate
+  scale_intensity(illness = ~ ifelse(time < 0.5, 0.5, 1))
+))
+coef(tmle_estimate(
+  fit,
+  risk(death),
+  scale_intensity(illness = ~ ifelse(L0 > 0, 0.5, 1))
+))
 ```
 
-## Step 3: Trace the intervention curve
+Several events can be scaled at once, as in
+`scale_intensity(illness = 0.5, death = 0.8)`.
+:::
 
-An intensity scaling is not always easy to interpret. It is often more natural
-to ask what happens to the outcome when the *risk* of the exposure is changed by
-a given amount. `intervention_curve()` evaluates a grid of scalings `alpha` of
-the exposure's intensity and, for each, estimates both the exposure, here the
-risk of the illness, and the target:
+# From Hazards to Risks
+
+"Halve the hazard" is hard to interpret: what does it mean for how many patients
+fall ill? `intervention_curve()` answers this for a grid of factors $\alpha$,
+estimating both the risk of the illness, the *exposure*, and the risk of death:
 
 ```{r}
 #| label: intervention-curve
@@ -166,20 +176,20 @@ risk of the illness, and the target:
 curve <- intervention_curve(
   fit,
   risk(death),
-  exposure = risk(z),
+  exposure = risk(illness),
   alpha = c(0, 0.25, 0.5, 1, 1.5, 2)
 )
-curve$estimate
+curve
 ```
 
-Plotting the target risk against the exposure risk shows how the risk of death
-responds to the risk of illness:
+Plotting one against the other shows how the risk of death responds to the risk
+of illness:
 
 ```{r}
 #| label: intervention-plot
 #| fig-alt: >
 #|   Estimated risk of death plotted against the estimated risk of illness
-#|   across interventions on the illness intensity, with 95% confidence bands.
+#|   across interventions on the illness hazard, with 95% confidence intervals.
 #|   The risk of death increases with the risk of illness.
 
 ce <- curve$estimate
@@ -189,6 +199,8 @@ plot(
   ce$estimate,
   type = "b",
   pch = 19,
+  las = 1,
+  bty = "l",
   ylim = range(ce$lower, ce$upper),
   xlab = "Risk of illness by time 1",
   ylab = "Risk of death by time 1"
@@ -204,108 +216,201 @@ arrows(
 )
 ```
 
-## Step 4: Calibrate the intervention
+Removing the illness altogether (the leftmost point) lowers the risk of death by
+about `{r} round(100 * (coef(observed) - ce$estimate[1]))` percentage points.
 
-`calibrate()` describes a calibrated intervention: the scaling of the exposure's
-intensity is chosen so that the exposure attains a given value, and the target
-is estimated under it. The value is given by a calibration rule:
+::: {.callout-tip collapse="true" title="Checking against the truth"}
+`illness_death` was simulated from the model below, so simevent can tell us the
+true risks under each intervention, by simulating many patients without
+censoring and with the illness hazard scaled by `intervene`:
 
-- `level(theta)`: the exposure equals `theta`.
-- `absolute_change(delta)`: the exposure is `delta` plus its observed value.
-- `relative_change(rho)`: the exposure is `rho` times its observed value.
+```{r}
+#| label: truth
+#| eval: !expr requireNamespace("simevent", quietly = TRUE)
 
-For example, the risk of death if the risk of illness were reduced to 80% of its
-observed value:
+library(simevent)
+
+true_model <- sim_model(
+  L0 = sim_covariate(function(N) rnorm(N)),
+  A0 = sim_covariate(function(N) rbinom(N, 1, 0.5)),
+  illness = sim_process("transient", limit = 1, eta = 0.7, nu = 1),
+  death = sim_process("terminal", eta = 0.3, nu = 1),
+  censoring = sim_process("censoring", eta = 0.1, nu = 1),
+  effects = list(
+    sim_effect(illness ~ L0 + A0, coef = c(0.5, -1)),
+    sim_effect(death ~ illness + A0, coef = c(1.2, -0.3))
+  )
+)
+
+true_risks <- function(intervene) {
+  sim <- simulate_events(
+    true_model,
+    n = 1e5,
+    cens = 0,
+    intervene = intervene,
+    seed = 1
+  )
+  risks <- event_risk(sim, true_model, c("illness", "death"), tau = 1)
+  setNames(risks$risk, risks$process)
+}
+
+check <- ce[, c("alpha", "estimate", "lower", "upper")]
+check$truth <- sapply(
+  check$alpha,
+  function(alpha) true_risks(list(illness = alpha))["death"]
+)
+check
+```
+
+Every interval covers the truth, and the estimates follow the true curve
+closely, removing the illness included.
+:::
+
+# Calibrating the Drug
+
+Often the question is about risks directly: what if the drug prevented 20% of
+illnesses? `calibrate()` finds the factor $\alpha$ for which the risk of illness
+reaches a given value, and estimates the risk of death under it:
 
 ```{r}
 #| label: calibrate
 
-cal <- tmle_estimate(fit, risk(death), calibrate(risk(z), relative_change(0.8)))
-cal
+calibrated <- tmle_estimate(
+  fit,
+  risk(death),
+  calibrate(risk(illness), relative_change(0.8))
+)
+calibrated
 ```
 
-The first table gives the calibrated scaling `alpha` and the exposure risk
-`theta` it attains, and the second the risk of death under it. Its standard
-error `se` accounts for `alpha` being estimated, whereas `se_crude` treats it as
-known.
+The first table gives the calibrated $\alpha$ and the risk of illness $\theta$
+it reaches, 80% of the observed
+`{r} round(ce$exposure_estimate[ce$alpha == 1], 3)`. The second gives the risk
+of death under it.
 
-The target can also be the expected years of life lost before `tau`, with
-`years_lost()`, while the exposure is still calibrated on its risk:
+::: {.callout-note title="Calibration rules"}
+The target risk of illness can be given in three ways:
+
+- `level(theta)`: the risk is `theta`.
+- `absolute_change(delta)`: the risk is `delta` plus its observed value.
+- `relative_change(rho)`: the risk is `rho` times its observed value.
+
+Because $\alpha$ is itself estimated, the standard error `se` accounts for its
+uncertainty. `se_crude` is the standard error if $\alpha$ were known.
+:::
+
+`years_lost()` gives the expected years of life lost before `tau` instead of the
+risk, and can be used wherever `risk()` can:
 
 ```{r}
 #| label: calibrate-years-lost
 
-tmle_estimate(
+coef(tmle_estimate(
   fit,
   years_lost(death),
-  calibrate(risk(z), relative_change(0.8))
-)$estimate
+  calibrate(risk(illness), relative_change(0.8))
+))
 ```
 
-## Step 5: Decompose a treatment effect
+# Explaining a Treatment Effect
 
-With a baseline treatment `A0`, the total effect of treatment on the outcome can
-be split into the part that goes through its effect on the exposure and the
-remainder. The calibrated intervention sets the treated individuals' exposure
-risk to what it would have been under placebo, and `calibrated_contrasts()` then
-decomposes the total effect into:
+So far `A0` has only been a covariate. Suppose instead we want the effect of the
+trial's treatment on death, and how much of it is because treated patients fall
+ill less often. The calibrated intervention above answers this: give patients
+the treatment, but calibrate their risk of illness to what it would have been on
+placebo. This splits the total effect into two contrasts:
 
-- a *mediated* contrast: treatment versus the calibrated intervention, and
-- a *calibrated* contrast: the calibrated intervention versus placebo.
+- *mediated*: treatment versus the calibrated intervention, the part that goes
+  through the illness, and
+- *calibrated*: the calibrated intervention versus placebo, the rest.
 
-`illness_death` has no treatment, so for illustration we add a randomised
-treatment that has no actual effect. The treatment model is given in
-`treatment_model`, and `fit_initial()` then prepares estimates under both
-treatment values, `a = 0` and `a = 1`.
+`treatment_model` tells `fit_initial()` how treatment was assigned, so that
+estimates can be made with everyone treated or everyone on placebo:
 
 ```{r}
-#| label: treatment-data
+#| label: trial-fit
 
-set.seed(1)
-treated <- illness_death
-a0 <- rbinom(max(treated$id), 1, 0.5)
-treated$A0 <- a0[treated$id]
-
-fit_treated <- fit_initial(
-  treated,
-  models = list(
-    hazard_model(z ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + z,
-    censoring ~ L0
-  ),
+trial_fit <- fit_initial(
+  illness_death,
+  models = models,
   tau = 1,
   treatment_model = A0 ~ L0
 )
 ```
 
-The contrasts are computed from the influence curves that each fit returns. In
-the calibrated arm we set `a = 1` and calibrate to a relative change of 1 from
-the risk of illness under placebo, `reference_a = 0`, so the risk of illness
-under treatment is calibrated to equal that under placebo:
+`a` sets everyone's treatment, and `reference_a = 0` calibrates the risk of
+illness to that under placebo:
 
 ```{r}
-#| label: contrasts
+#| label: trial-arms
 
-treatment_fit <- tmle_estimate(fit_treated, risk(death), a = 1)
-placebo_fit <- tmle_estimate(fit_treated, risk(death), a = 0)
-calibrated_fit <- tmle_estimate(
-  fit_treated,
+treatment <- tmle_estimate(trial_fit, risk(death), a = 1)
+placebo <- tmle_estimate(trial_fit, risk(death), a = 0)
+treatment_calibrated <- tmle_estimate(
+  trial_fit,
   risk(death),
-  calibrate(risk(z), relative_change(1), reference_a = 0),
+  calibrate(risk(illness), relative_change(1), reference_a = 0),
   a = 1
 )
-
-calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
+treatment_calibrated
 ```
 
-The treatment was randomised without any effect, so the confidence intervals of
-all three contrasts cover zero, as expected.
+To give treated patients the risk of illness they would have had on placebo,
+their illness hazard must be multiplied by about
+`{r} round(treatment_calibrated$calibration$estimate[1], 1)`.
+`calibrated_contrasts()` then combines the three fits:
 
-## Further reading
+```{r}
+#| label: trial-contrasts
 
-- The function reference documents further options, such as recurrent targets,
-  only counting events in some states (`risk(death, when = ~ z == 0)`), only
-  counting first events (`only_first`), and intervening on several processes at
-  once (`scale_intensity(z = 0.5, w = 2)`).
-- To simulate multistate event history data, see the
-  [simevent](https://github.com/BjarkeHautop/simevent) package.
+contrasts <- calibrated_contrasts(treatment, placebo, treatment_calibrated)
+contrasts
+```
+
+Treatment lowers the risk of death by
+`{r} round(-100 * contrasts$estimate$estimate[1])` percentage points, of which
+`{r} round(-100 * contrasts$estimate$estimate[2])` go through the illness.
+
+::: {.callout-tip collapse="true" title="Checking against the truth"}
+With `true_model` from before, simevent gives the true contrasts too: simulate
+each arm without censoring, and for the calibrated arm search for the factor on
+the illness hazard that matches the risk of illness on placebo:
+
+```{r}
+#| label: trial-truth
+#| eval: !expr requireNamespace("simevent", quietly = TRUE)
+
+placebo_risks <- true_risks(list(A0 = 0))
+treatment_risks <- true_risks(list(A0 = 1))
+true_alpha <- uniroot(
+  function(alpha) {
+    calibrated <- true_risks(list(A0 = 1, illness = alpha))
+    calibrated["illness"] - placebo_risks["illness"]
+  },
+  interval = c(1, 5),
+  tol = 0.01
+)$root
+calibrated_risks <- true_risks(list(A0 = 1, illness = true_alpha))
+
+check <- contrasts$estimate[, c("contrast", "estimate", "lower", "upper")]
+check$truth <- c(
+  treatment_risks["death"] - placebo_risks["death"],
+  treatment_risks["death"] - calibrated_risks["death"],
+  calibrated_risks["death"] - placebo_risks["death"]
+)
+check
+```
+
+Every interval covers the truth. With 200 patients the contrasts are estimated
+less precisely than the risks, since each compares two arms of about 100.
+:::
+
+# Where Next
+
+- `risk()` and `years_lost()` take several events at once, as in
+  `risk(death, illness)`, count only events in some states, as in
+  `risk(death, when = ~ illness == 0)`, and for recurrent events give the
+  expected number of events, or the risk of a first one with
+  `only_first = TRUE`. See `?"target-parameters"`.
+- To simulate event history data, and the truth under interventions, see
+  [simevent](https://github.com/BjarkeHautop/simevent).
