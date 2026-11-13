@@ -89,16 +89,17 @@ to \code{alpha}, as in \code{\link[=calibrate]{calibrate()}}.
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(illness ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + illness,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1
 )
 
 \donttest{
-# How the risk of death responds to the risk of illness, as the intensity of illness
-# is scaled from 0 (no illness) to 2 (twice the observed intensity):
+# How the risk of death responds to the risk of illness, as the intensity
+# of illness is scaled from 0 (no illness) to 2 (twice the observed
+# intensity):
 curve <- intervention_curve(
   fit,
   risk(death),

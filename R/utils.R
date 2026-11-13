@@ -97,8 +97,8 @@
   if (length(spec$model) != 2) {
     stop(
       var_name,
-      "$model must be a one-sided formula of the covariates, e.g. ~ L0; ",
-      "the response is built from `delta`."
+      "$model must be a one-sided formula of the covariates, ",
+      "e.g. ~ biomarker; the response is built from `delta`."
     )
   }
   covariates <- .deparse_one_line(spec$model[[2]])

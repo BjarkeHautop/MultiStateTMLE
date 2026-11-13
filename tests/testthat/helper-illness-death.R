@@ -1,12 +1,13 @@
 # Shared helpers for simulation-based recovery tests: simulate from a
-# known illness-death DGP (L0 -> illness -> death, illness one-jump, death
-# terminal, both Weibull(nu=1) i.e. exponential hazards) and compute
+# known illness-death DGP (biomarker -> illness -> death, illness
+# one-jump, death terminal, both Weibull(nu=1) i.e. exponential hazards)
+# and compute
 # the true P(death by tau) in closed form.
 #
 # Truth is:
 # P(death by tau) = P(direct, from illness=0) + P(via a
 # jump to illness=1 at some u<=tau, then death by tau), integrated over
-# L0 ~ N(0,1) numerically.
+# biomarker ~ N(0,1) numerically.
 analytic.truth <- function(
   alpha,
   h_z0 = 0.2,
@@ -14,8 +15,8 @@ analytic.truth <- function(
   h_out1 = 0.3 * exp(0.7),
   tau = 1
 ) {
-  Q <- function(L0) {
-    h_z <- alpha * h_z0 * exp(0.5 * L0)
+  Q <- function(biomarker) {
+    h_z <- alpha * h_z0 * exp(0.5 * biomarker)
     p_direct <- (h_out0 / (h_z + h_out0)) * (1 - exp(-(h_z + h_out0) * tau))
     f <- function(u) {
       h_z * exp(-(h_z + h_out0) * u) * (1 - exp(-h_out1 * (tau - u)))
@@ -23,7 +24,7 @@ analytic.truth <- function(
     p_via <- integrate(f, 0, tau)$value
     p_direct + p_via
   }
-  integrand <- function(L0) sapply(L0, Q) * dnorm(L0)
+  integrand <- function(biomarker) sapply(biomarker, Q) * dnorm(biomarker)
   integrate(integrand, -Inf, Inf)$value
 }
 
@@ -32,12 +33,12 @@ analytic.truth <- function(
 simulate.illness.death <- function(n, seed) {
   withr::local_seed(seed)
   model <- simevent::sim_model(
-    L0 = simevent::sim_covariate(function(N) rnorm(N)),
+    biomarker = simevent::sim_covariate(function(N) rnorm(N)),
     illness = simevent::sim_process("transient", limit = 1, eta = 0.2, nu = 1),
     death = simevent::sim_process("terminal", eta = 0.3, nu = 1),
     censoring = simevent::sim_process("censoring", eta = 0.1, nu = 1),
     effects = list(
-      simevent::sim_effect(illness ~ L0, coef = 0.5),
+      simevent::sim_effect(illness ~ biomarker, coef = 0.5),
       simevent::sim_effect(death ~ illness, coef = 0.7)
     )
   )
@@ -45,9 +46,9 @@ simulate.illness.death <- function(n, seed) {
 }
 
 illness.death.models <- list(
-  hazard_model(illness ~ L0, limit = 1),
-  death ~ L0 + illness,
-  censoring ~ L0
+  hazard_model(illness ~ biomarker, limit = 1),
+  death ~ biomarker + illness,
+  censoring ~ biomarker
 )
 
 simulate.recovery.fit <- function(alpha, n, seed) {

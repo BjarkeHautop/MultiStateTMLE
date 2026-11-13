@@ -42,9 +42,9 @@
 #' fit <- fit_initial(
 #'   illness_death,
 #'   models = list(
-#'     hazard_model(illness ~ L0 + A0, limit = 1),
-#'     death ~ L0 + A0 + illness,
-#'     censoring ~ L0
+#'     hazard_model(illness ~ biomarker + treatment, limit = 1),
+#'     death ~ biomarker + treatment + illness,
+#'     censoring ~ biomarker
 #'   ),
 #'   tau = 1
 #' )

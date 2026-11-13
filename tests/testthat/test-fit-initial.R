@@ -13,7 +13,11 @@ test_that("fit_initial() fits the illness-death example", {
     data.table::data.table(
       name = c("illness", "death", "censoring"),
       type = c("one_jump", "terminal", "terminal"),
-      model = c("illness ~ L0", "death ~ L0 + illness", "censoring ~ L0"),
+      model = c(
+        "illness ~ biomarker",
+        "death ~ biomarker + illness",
+        "censoring ~ biomarker"
+      ),
       at_risk = c(TRUE, FALSE, FALSE)
     )
   )
@@ -53,9 +57,9 @@ test_that("fit_initial() accepts plain formulas, named lists and any order", {
   reordered <- fit_initial(
     fixture.data(40),
     models = list(
-      censoring = censoring ~ L0,
-      death = death ~ L0 + illness,
-      illness = hazard_model(illness ~ L0, at_risk = ~ illness == 0)
+      censoring = censoring ~ biomarker,
+      death = death ~ biomarker + illness,
+      illness = hazard_model(illness ~ biomarker, at_risk = ~ illness == 0)
     ),
     tau = 1
   )
@@ -73,9 +77,9 @@ test_that("fit_initial() takes depend_time as formulas", {
   timed <- fit_initial(
     fixture.data(40),
     models = list(
-      hazard_model(illness ~ L0, limit = 1),
-      death ~ L0 + illness + T.illness,
-      censoring ~ L0
+      hazard_model(illness ~ biomarker, limit = 1),
+      death ~ biomarker + illness + T.illness,
+      censoring ~ biomarker
     ),
     tau = 1,
     depend_time = list(illness = ~ 1 * (time > 0.5))
@@ -85,7 +89,7 @@ test_that("fit_initial() takes depend_time as formulas", {
 
 test_that("fit_initial() accepts transformed covariates in models", {
   transformed <- illness.death.models
-  transformed[[2]] <- death ~ log(exp(L0)) + illness
+  transformed[[2]] <- death ~ log(exp(biomarker)) + illness
 
   expect_equal(
     fit_initial(fixture.data(40), models = transformed, tau = 1)$tmp_long,
@@ -96,7 +100,7 @@ test_that("fit_initial() accepts transformed covariates in models", {
 test_that("fit_initial() derives covariates from processes with I()", {
   # With illness happening at most once, I(illness > 0) equals illness.
   derived <- illness.death.models
-  derived[[2]] <- death ~ L0 + I(illness > 0)
+  derived[[2]] <- death ~ biomarker + I(illness > 0)
   fit <- fit_initial(fixture.data(40), models = derived, tau = 1)
 
   expect_equal(fit$depend_matrix$illness, c(0, 1))
@@ -118,8 +122,8 @@ test_that("fit_initial() uses a censoring process of another name", {
     fit_initial(
       data,
       models = list(
-        hazard_model(illness ~ L0, limit = 1),
-        death ~ L0 + illness
+        hazard_model(illness ~ biomarker, limit = 1),
+        death ~ biomarker + illness
       ),
       tau = 1
     ),
@@ -128,9 +132,9 @@ test_that("fit_initial() uses a censoring process of another name", {
   fit <- fit_initial(
     data,
     models = list(
-      hazard_model(illness ~ L0, limit = 1),
-      death ~ L0 + illness,
-      dropout ~ L0
+      hazard_model(illness ~ biomarker, limit = 1),
+      death ~ biomarker + illness,
+      dropout ~ biomarker
     ),
     tau = 1,
     censoring = "dropout"
@@ -139,16 +143,16 @@ test_that("fit_initial() uses a censoring process of another name", {
 })
 
 test_that("hazard_model() validates its arguments", {
-  expect_error(hazard_model(~L0), "two-sided")
-  expect_error(hazard_model(log(illness) ~ L0), "two-sided")
-  expect_error(hazard_model(illness ~ L0, limit = 0), "limit")
+  expect_error(hazard_model(~biomarker), "two-sided")
+  expect_error(hazard_model(log(illness) ~ biomarker), "two-sided")
+  expect_error(hazard_model(illness ~ biomarker, limit = 0), "limit")
   expect_error(
-    hazard_model(illness ~ L0, at_risk = illness ~ illness == 0),
+    hazard_model(illness ~ biomarker, at_risk = illness ~ illness == 0),
     "one-sided"
   )
-  expect_error(hazard_model(illness ~ L0, fit = "glm"), "cox")
+  expect_error(hazard_model(illness ~ biomarker, fit = "glm"), "cox")
   expect_output(
-    print(hazard_model(illness ~ L0, limit = 1, at_risk = ~ death == 0)),
+    print(hazard_model(illness ~ biomarker, limit = 1, at_risk = ~ death == 0)),
     "limit: 1"
   )
 })
@@ -156,7 +160,11 @@ test_that("hazard_model() validates its arguments", {
 test_that("hazard_model() conditions become at-risk functions", {
   k <- 5
   at_risk <- .hazard_model_to_fit_type(
-    hazard_model(illness ~ L0, limit = 1, at_risk = ~ death == 0 & illness < k),
+    hazard_model(
+      illness ~ biomarker,
+      limit = 1,
+      at_risk = ~ death == 0 & illness < k
+    ),
     delta = 1,
     state_vars = c("illness", "death")
   )$at_risk
@@ -170,7 +178,11 @@ test_that("hazard_model() conditions become at-risk functions", {
   dt <- data.table::data.table(illness = c(0, 1, 0), death = c(0, 0, 1))
   expect_equal(at_risk(dt), c(TRUE, FALSE, FALSE))
   expect_null(
-    .hazard_model_to_fit_type(hazard_model(illness ~ L0), 1, "illness")$at_risk
+    .hazard_model_to_fit_type(
+      hazard_model(illness ~ biomarker),
+      1,
+      "illness"
+    )$at_risk
   )
 })
 
@@ -192,7 +204,7 @@ test_that("fit_initial() validates its arguments", {
     "without a model.*death"
   )
   expect_error(
-    fit_initial(illness_death, models = c(m, list(death ~ L0)), tau = 1),
+    fit_initial(illness_death, models = c(m, list(death ~ biomarker)), tau = 1),
     "one model"
   )
   expect_error(
@@ -200,20 +212,24 @@ test_that("fit_initial() validates its arguments", {
     "formula or a hazard_model"
   )
   expect_error(
-    fit_initial(illness_death, models = list(other = death ~ L0), tau = 1),
+    fit_initial(
+      illness_death,
+      models = list(other = death ~ biomarker),
+      tau = 1
+    ),
     "named \"other\""
   )
   expect_error(
     fit_initial(
       illness_death,
       models = list(
-        hazard_model(illness ~ L0, at_risk = ~ L0 > 0),
-        death ~ L0 + illness,
-        censoring ~ L0
+        hazard_model(illness ~ biomarker, at_risk = ~ biomarker > 0),
+        death ~ biomarker + illness,
+        censoring ~ biomarker
       ),
       tau = 1
     ),
-    "L0"
+    "biomarker"
   )
   data <- illness_death
   data$event[1] <- NA
@@ -250,7 +266,7 @@ test_that("fit_initial() rejects invalid inputs", {
       fixture.data(),
       models = m,
       tau = 1,
-      treatment_model = list(model = A0 ~ L0, fit = "glm")
+      treatment_model = list(model = treatment ~ biomarker, fit = "glm")
     ),
     "treatment_model"
   )
@@ -259,7 +275,7 @@ test_that("fit_initial() rejects invalid inputs", {
       fixture.data(),
       models = m,
       tau = 1,
-      treatment_model = ~L0,
+      treatment_model = ~biomarker,
       arms = 1
     ),
     "two-sided"
@@ -282,7 +298,7 @@ test_that("fit_initial() fits a treatment model and propensities under 'a'", {
     fixture.data(),
     models = illness.death.models,
     tau = 1,
-    treatment_model = A0 ~ L0
+    treatment_model = treatment ~ biomarker
   )
 
   # arms defaults to both arms when a treatment model is given.
@@ -306,7 +322,7 @@ test_that("fit_initial()'s HAL setup identifies the process for its own delta", 
   # process name instead of just the HAL one and error before reaching the
   # HAL fit itself.
   m <- illness.death.models
-  m[[1]] <- hazard_model(illness ~ L0, limit = 1, fit = "hal")
+  m[[1]] <- hazard_model(illness ~ biomarker, limit = 1, fit = "hal")
   assign("fit.hal", function(...) stop("reached fit.hal"), envir = globalenv())
   withr::defer(rm("fit.hal", envir = globalenv()))
 
@@ -318,7 +334,7 @@ test_that("fit_initial()'s HAL setup identifies the process for its own delta", 
 
 test_that("fit_initial() errors early when HAL is not available", {
   m <- illness.death.models
-  m[[1]] <- hazard_model(illness ~ L0, limit = 1, fit = "hal")
+  m[[1]] <- hazard_model(illness ~ biomarker, limit = 1, fit = "hal")
 
   expect_error(
     fit_initial(fixture.data(30), models = m, tau = 1),

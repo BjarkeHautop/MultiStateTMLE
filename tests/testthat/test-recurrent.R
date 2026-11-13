@@ -136,7 +136,11 @@ test_that("only_first and interventions need a recurrent process in the state sp
   # No hazard depends on relapse, so its count is not tracked.
   fit <- fit_initial(
     simulate.recurrent(80, seed = 1),
-    models = list(relapse ~ L0, death ~ L0, censoring ~ L0),
+    models = list(
+      relapse ~ biomarker,
+      death ~ biomarker,
+      censoring ~ biomarker
+    ),
     tau = 1
   )
   expect_equal(fit$processes$type[1], "recurrent")

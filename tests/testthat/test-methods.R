@@ -32,12 +32,12 @@ test_that("print methods summarise the result objects", {
 
 test_that("print shows the treatment model of an initial fit", {
   fit <- fixture.fit(30)
-  fit$treatment_model <- A0 ~ L0
+  fit$treatment_model <- treatment ~ biomarker
   fit$arms <- 0:1
 
   expect_output(
     print(fit),
-    "Treatment model: A0 ~ L0, prepared for arms a = 0, 1"
+    "Treatment model: treatment ~ biomarker, prepared for arms a = 0, 1"
   )
 })
 

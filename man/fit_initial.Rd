@@ -26,8 +26,8 @@ the process that jumped), plus any baseline covariates used in
 \code{models}. This is the format of \code{\link[simevent:simulate_events]{simevent::simulate_events()}}.}
 
 \item{models}{A list with the hazard model of each event process: a
-formula such as \code{death ~ L0 + illness}, naming the process on the left and
-its covariates on the right, or a \code{\link[=hazard_model]{hazard_model()}} to also restrict
+formula such as \code{death ~ biomarker + illness}, naming the process on the
+left and its covariates on the right, or a \code{\link[=hazard_model]{hazard_model()}} to also restrict
 when individuals are at risk of it. Other processes can be used as
 covariates by name, giving their number of events so far. Every event
 in \code{data} needs a model, including the censoring process.}
@@ -38,8 +38,8 @@ evaluated at \code{tau}.}
 \item{censoring}{String. Name of the censoring process in \code{models}.}
 
 \item{treatment_model}{Optional logistic regression model for the
-baseline treatment, a two-sided formula such as \code{A0 ~ L0}. Required when
-\code{arms} is given.}
+baseline treatment, a two-sided formula such as
+\code{treatment ~ biomarker}. Required when \code{arms} is given.}
 
 \item{arms}{Integer vector of the baseline treatment values (\code{0}/\code{1}) to
 prepare interventional hazards and clever weights for. Each value can
@@ -129,9 +129,9 @@ head(illness_death)
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(illness ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + illness,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1
 )
@@ -142,17 +142,17 @@ fit
 fit$processes
 fit$models$death
 
-# With a baseline treatment A0, a treatment model prepares estimates under
+# With a baseline treatment, a treatment model prepares estimates under
 # both arms, for `a` in tmle_estimate():
 fit_treated <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(illness ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + illness,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1,
-  treatment_model = A0 ~ L0
+  treatment_model = treatment ~ biomarker
 )
 fit_treated
 
@@ -162,12 +162,12 @@ fit_treated
 # tracked up to max_count:
 if (requireNamespace("simevent", quietly = TRUE)) {
   model <- simevent::sim_model(
-    L0 = simevent::sim_covariate(function(N) rnorm(N)),
+    biomarker = simevent::sim_covariate(function(N) rnorm(N)),
     relapse = simevent::sim_process("transient", eta = 0.6, nu = 1),
     death = simevent::sim_process("terminal", eta = 0.2, nu = 1),
     censoring = simevent::sim_process("censoring", eta = 0.2, nu = 1),
     effects = list(
-      simevent::sim_effect(relapse ~ L0, coef = 0.5),
+      simevent::sim_effect(relapse ~ biomarker, coef = 0.5),
       simevent::sim_effect(death ~ relapse, coef = 0.4)
     )
   )
@@ -175,7 +175,11 @@ if (requireNamespace("simevent", quietly = TRUE)) {
 
   fit_initial(
     relapses,
-    models = list(relapse ~ L0, death ~ L0 + relapse, censoring ~ L0),
+    models = list(
+      relapse ~ biomarker,
+      death ~ biomarker + relapse,
+      censoring ~ biomarker
+    ),
     tau = 2,
     max_count = 3
   )

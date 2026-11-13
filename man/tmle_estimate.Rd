@@ -122,9 +122,9 @@ accounts for the scaling being estimated.
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(illness ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + illness,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1
 )
@@ -137,18 +137,23 @@ observed
 halved
 
 # Several targets at once, here the risks of death and of illness themselves:
-tmle_estimate(fit, risk(death, illness), scale_intensity(illness = 0.5))$estimate
+both <- tmle_estimate(
+  fit,
+  risk(death, illness),
+  scale_intensity(illness = 0.5)
+)
+both$estimate
 
 # The expected years lost before tau rather than the risk:
-tmle_estimate(fit, years_lost(death), scale_intensity(illness = 0.5))$estimate
+coef(tmle_estimate(fit, years_lost(death), scale_intensity(illness = 0.5)))
 
 # Diagnostics: the quantiles over individuals of the largest weights, as a
 # check of positivity.
 halved$checks$weights
 
 \donttest{
-# A calibrated intervention: the risk of death if the risk of illness fell to 80\%
-# of its observed value. The first table gives the scaling alpha that
+# A calibrated intervention: the risk of death if the risk of illness fell
+# to 80\% of its observed value. The first table gives the scaling alpha that
 # achieves it and the risk of illness, theta, it attains:
 cal <- tmle_estimate(
   fit,

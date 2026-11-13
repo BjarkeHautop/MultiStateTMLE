@@ -3,19 +3,19 @@
 # of relapses so far, and compute the truth in closed form.
 #
 # DGP, all hazards constant in time:
-# * relapse: 0.5 * exp(0.5 * L0), any number of times,
+# * relapse: 0.5 * exp(0.5 * biomarker), any number of times,
 # * death: 0.2 * exp(0.4 * k) after k relapses, ends follow-up,
 # * censoring: 0.1, ends follow-up,
-# with L0 ~ N(0, 1).
+# with biomarker ~ N(0, 1).
 
 simulate.recurrent <- function(n, seed) {
   model <- simevent::sim_model(
-    L0 = simevent::sim_covariate(function(N) rnorm(N)),
+    biomarker = simevent::sim_covariate(function(N) rnorm(N)),
     relapse = simevent::sim_process("transient", eta = 0.5, nu = 1),
     death = simevent::sim_process("terminal", eta = 0.2, nu = 1),
     censoring = simevent::sim_process("censoring", eta = 0.1, nu = 1),
     effects = list(
-      simevent::sim_effect(relapse ~ L0, coef = 0.5),
+      simevent::sim_effect(relapse ~ biomarker, coef = 0.5),
       simevent::sim_effect(death ~ relapse, coef = 0.4)
     )
   )
@@ -23,9 +23,9 @@ simulate.recurrent <- function(n, seed) {
 }
 
 recurrent.models <- list(
-  relapse ~ L0,
-  death ~ L0 + relapse,
-  censoring ~ L0
+  relapse ~ biomarker,
+  death ~ biomarker + relapse,
+  censoring ~ biomarker
 )
 
 recurrent.fit <- function(n = 80, seed = 1, max_count = 3) {
@@ -39,17 +39,17 @@ recurrent.fit <- function(n = 80, seed = 1, max_count = 3) {
 
 # The true targets by tau = 1 when the relapse hazard after k relapses, in
 # the time interval number `piece` of `breaks`, is scaled by
-# alpha(k, piece). Given L0, the process is a Markov chain on (alive or
+# alpha(k, piece). Given biomarker, the process is a Markov chain on (alive or
 # dead) x (relapses so far, truncated at K), whose transition probabilities
 # and expected occupation times solve the forward equations; these are
-# integrated over L0 ~ N(0, 1) numerically.
+# integrated over biomarker ~ N(0, 1) numerically.
 recurrent.truth <- function(alpha = function(k, piece) 1, breaks = 1) {
-  by_L0 <- function(L0, K = 15) {
+  by_L0 <- function(biomarker, K = 15) {
     nk <- K + 1
     S <- 2 * nk
     alive <- 1:nk
     dead <- nk + 1:nk
-    h_relapse <- 0.5 * exp(0.5 * L0)
+    h_relapse <- 0.5 * exp(0.5 * biomarker)
     p <- c(1, rep(0, S - 1))
     occupation <- rep(0, S)
     n_relapse <- 0

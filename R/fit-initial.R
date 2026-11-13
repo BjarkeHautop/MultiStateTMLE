@@ -12,8 +12,8 @@
 #'   the process that jumped), plus any baseline covariates used in
 #'   `models`. This is the format of [simevent::simulate_events()].
 #' @param models A list with the hazard model of each event process: a
-#'   formula such as `death ~ L0 + illness`, naming the process on the left and
-#'   its covariates on the right, or a [hazard_model()] to also restrict
+#'   formula such as `death ~ biomarker + illness`, naming the process on the
+#'   left and its covariates on the right, or a [hazard_model()] to also restrict
 #'   when individuals are at risk of it. Other processes can be used as
 #'   covariates by name, giving their number of events so far. Every event
 #'   in `data` needs a model, including the censoring process.
@@ -21,8 +21,8 @@
 #'   evaluated at `tau`.
 #' @param censoring String. Name of the censoring process in `models`.
 #' @param treatment_model Optional logistic regression model for the
-#'   baseline treatment, a two-sided formula such as `A0 ~ L0`. Required when
-#'   `arms` is given.
+#'   baseline treatment, a two-sided formula such as
+#'   `treatment ~ biomarker`. Required when `arms` is given.
 #' @param arms Integer vector of the baseline treatment values (`0`/`1`) to
 #'   prepare interventional hazards and clever weights for. Each value can
 #'   then be passed as `a` to [tmle_estimate()] and
@@ -92,9 +92,9 @@
 #' fit <- fit_initial(
 #'   illness_death,
 #'   models = list(
-#'     hazard_model(illness ~ L0 + A0, limit = 1),
-#'     death ~ L0 + A0 + illness,
-#'     censoring ~ L0
+#'     hazard_model(illness ~ biomarker + treatment, limit = 1),
+#'     death ~ biomarker + treatment + illness,
+#'     censoring ~ biomarker
 #'   ),
 #'   tau = 1
 #' )
@@ -105,17 +105,17 @@
 #' fit$processes
 #' fit$models$death
 #'
-#' # With a baseline treatment A0, a treatment model prepares estimates under
+#' # With a baseline treatment, a treatment model prepares estimates under
 #' # both arms, for `a` in tmle_estimate():
 #' fit_treated <- fit_initial(
 #'   illness_death,
 #'   models = list(
-#'     hazard_model(illness ~ L0 + A0, limit = 1),
-#'     death ~ L0 + A0 + illness,
-#'     censoring ~ L0
+#'     hazard_model(illness ~ biomarker + treatment, limit = 1),
+#'     death ~ biomarker + treatment + illness,
+#'     censoring ~ biomarker
 #'   ),
 #'   tau = 1,
-#'   treatment_model = A0 ~ L0
+#'   treatment_model = treatment ~ biomarker
 #' )
 #' fit_treated
 #'
@@ -125,12 +125,12 @@
 #' # tracked up to max_count:
 #' if (requireNamespace("simevent", quietly = TRUE)) {
 #'   model <- simevent::sim_model(
-#'     L0 = simevent::sim_covariate(function(N) rnorm(N)),
+#'     biomarker = simevent::sim_covariate(function(N) rnorm(N)),
 #'     relapse = simevent::sim_process("transient", eta = 0.6, nu = 1),
 #'     death = simevent::sim_process("terminal", eta = 0.2, nu = 1),
 #'     censoring = simevent::sim_process("censoring", eta = 0.2, nu = 1),
 #'     effects = list(
-#'       simevent::sim_effect(relapse ~ L0, coef = 0.5),
+#'       simevent::sim_effect(relapse ~ biomarker, coef = 0.5),
 #'       simevent::sim_effect(death ~ relapse, coef = 0.4)
 #'     )
 #'   )
@@ -138,7 +138,11 @@
 #'
 #'   fit_initial(
 #'     relapses,
-#'     models = list(relapse ~ L0, death ~ L0 + relapse, censoring ~ L0),
+#'     models = list(
+#'       relapse ~ biomarker,
+#'       death ~ biomarker + relapse,
+#'       censoring ~ biomarker
+#'     ),
 #'     tau = 2,
 #'     max_count = 3
 #'   )
@@ -296,7 +300,7 @@ fit_initial <- function(
   checkmate::assert_flag(verbose)
 
   if (!is.null(treatment_model) && length(treatment_model) != 3) {
-    stop("treatment_model must be a two-sided formula, e.g. A0 ~ L0.")
+    stop("treatment_model must be a two-sided formula, e.g. treatment ~ L0.")
   }
   if (length(arms) > 0 && is.null(treatment_model)) {
     stop("A treatment_model is required when arms is given.")
@@ -365,7 +369,7 @@ fit_initial <- function(
   varnames <- unique(c(
     unlist(lapply(fit_types, function(fit.type) {
       if (length(fit.type[["model"]]) > 0) {
-        # The variables, not the terms, so that e.g. log(L0) gives L0.
+        # The variables, not the terms, so that e.g. log(biomarker) gives L0.
         rhs <- strsplit(fit.type[["model"]], "~")[[1]][2]
         return(all.vars(as.formula(paste("~", rhs))))
       }

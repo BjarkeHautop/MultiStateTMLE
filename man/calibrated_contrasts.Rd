@@ -40,17 +40,17 @@ a calibrated contrast (calibrated versus placebo), with Wald confidence
 intervals based on the influence curves.
 }
 \examples{
-# A trial where treatment A0 lowers the risk of illness, which raises
+# A trial where treatment lowers the risk of illness, which raises
 # the risk of death:
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(illness ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + illness,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1,
-  treatment_model = A0 ~ L0
+  treatment_model = treatment ~ biomarker
 )
 
 \donttest{

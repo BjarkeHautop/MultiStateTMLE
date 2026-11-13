@@ -11,9 +11,9 @@ A data frame with one row per event and columns:
 \item{time}{Event time.}
 \item{event}{The event: \code{"illness"}, \code{"death"} or
 \code{"censoring"}.}
-\item{L0}{Baseline covariate.}
-\item{A0}{Randomised baseline treatment, \code{1} for treatment and \code{0} for
-placebo.}
+\item{biomarker}{Baseline biomarker, standardised.}
+\item{treatment}{Randomised baseline treatment, \code{1} for treatment and
+\code{0} for placebo.}
 }
 }
 \usage{
@@ -21,12 +21,12 @@ illness_death
 }
 \description{
 Simulated event history data for a trial of 200 individuals randomised
-to treatment (\code{A0 = 1}) or placebo (\code{A0 = 0}), at risk of \code{illness},
-which can occur at most once, and \code{death}. Both have exponential hazards.
+to treatment or placebo, at risk of \code{illness}, which can occur at most
+once, and \code{death}. Both have exponential hazards.
 Treatment lowers the hazard of the illness, which raises the hazard of
 death, and also lowers the hazard of death directly, so its effect on
 death is partly through the illness. The illness hazard also depends on a
-standard normal baseline covariate \code{L0}, and follow-up is subject to
+standard normal baseline \code{biomarker}, and follow-up is subject to
 independent censoring. Simulated with \code{\link[simevent:simulate_events]{simevent::simulate_events()}}, see
 \code{data-raw/illness_death.R} in the package source.
 }

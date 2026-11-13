@@ -151,7 +151,7 @@ test_that("calibrate() calibrates to the risk under another arm", {
     fixture.data(100),
     models = illness.death.models,
     tau = 1,
-    treatment_model = A0 ~ L0,
+    treatment_model = treatment ~ biomarker,
     arms = 0:1
   )
 

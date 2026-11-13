@@ -23,15 +23,15 @@ library(MultiStateTMLE)
 ```
 
 We will in this vignette use the following example: how many deaths would be
-prevented by a drug that makes a illness less likely?
+prevented by a drug that makes an illness less likely?
 
 # The Data
 
 `illness_death` is a simulated dataset of a trial of 200 patients who may fall
 ill and may die, with follow-up subject to censoring. The `illness` can occur at
-most once and raises the hazard of death. Patients were randomised to a
-treatment, `A0 = 1`, or placebo, `A0 = 0`, and patients with a higher baseline
-covariate `L0` are more likely to fall ill.
+most once and raises the hazard of death. Patients were randomised to
+`treatment` (`1`) or placebo (`0`), and patients with a higher baseline
+`biomarker` are more likely to fall ill.
 
 ```{r}
 #| label: data
@@ -62,16 +62,16 @@ estimates against the truth below.
 The first step is to model the hazard of each event. `fit_initial()` takes one
 formula per event, with the event on the left and the covariates of its hazard
 on the right. Using another event's name as a covariate gives its number of
-events so far, so `death ~ L0 + A0 + illness` lets the illness change the death
-hazard:
+events so far, so `death ~ biomarker + treatment + illness` lets the illness
+change the death hazard:
 
 ```{r}
 #| label: fit-initial
 
 models <- list(
-  hazard_model(illness ~ L0 + A0, limit = 1),
-  death ~ L0 + A0 + illness,
-  censoring ~ L0
+  hazard_model(illness ~ biomarker + treatment, limit = 1),
+  death ~ biomarker + treatment + illness,
+  censoring ~ biomarker
 )
 fit <- fit_initial(illness_death, models = models, tau = 1)
 fit
@@ -80,12 +80,15 @@ fit
 By default each hazard is a Cox model, so the death hazard is
 
 $$
-  \lambda_{\text{death}}(t)
-  = \lambda_0(t) \exp\left( \beta_1 L_0 + \beta_2 A_0 + \beta_3 Z(t) \right),
+  \begin{aligned}
+    \lambda_{\text{death}}(t) = \lambda_0(t) \exp\big(
+     & \beta_1 \, \text{biomarker} + \beta_2 \, \text{treatment} \\
+     & + \beta_3 \, \text{illness}(t) \big),
+  \end{aligned}
 $$
 
-where $Z(t)$ is 1 once the patient has fallen ill. `tau = 1` is the time
-horizon: everything below concerns what happens by time 1.
+where $\text{illness}(t)$ is 1 once the patient has fallen ill. `tau = 1` is the
+time horizon: everything below concerns what happens by time 1.
 
 ::: {.callout-note title="Hazard models"}
 Every event in the data needs a model, censoring included. A plain formula is
@@ -108,7 +111,7 @@ observed
 
 Now suppose the drug halves the hazard of the illness. `scale_intensity()`
 multiplies a hazard by a factor $\alpha$, and the estimate is the risk of death
-had the illness hazard been $\alpha \lambda_z(t)$:
+had the illness hazard been $\alpha \lambda_{\text{illness}}(t)$:
 
 ```{r}
 #| label: tmle-halved
@@ -148,7 +151,8 @@ expect one or more targeting steps.
 ::: {.callout-note title="Other interventions"}
 A factor of `0` removes the illness, and one above `1` increases it. The factor
 can also be a formula in `time`, the baseline covariates and the events so far,
-for example a drug that only works early, or only for patients with `L0 > 0`:
+for example a drug that only works early, or only for patients with
+`biomarker > 0`:
 
 ```{r}
 #| label: tmle-time-varying
@@ -161,7 +165,7 @@ coef(tmle_estimate(
 coef(tmle_estimate(
   fit,
   risk(death),
-  scale_intensity(illness = ~ ifelse(L0 > 0, 0.5, 1))
+  scale_intensity(illness = ~ ifelse(biomarker > 0, 0.5, 1))
 ))
 ```
 
@@ -236,14 +240,14 @@ censoring and with the illness hazard scaled by `intervene`:
 library(simevent)
 
 true_model <- sim_model(
-  L0 = sim_covariate(function(N) rnorm(N)),
-  A0 = sim_covariate(function(N) rbinom(N, 1, 0.5)),
+  biomarker = sim_covariate(function(N) rnorm(N)),
+  treatment = sim_covariate(function(N) rbinom(N, 1, 0.5)),
   illness = sim_process("transient", limit = 1, eta = 0.7, nu = 1),
   death = sim_process("terminal", eta = 0.3, nu = 1),
   censoring = sim_process("censoring", eta = 0.1, nu = 1),
   effects = list(
-    sim_effect(illness ~ L0 + A0, coef = c(0.5, -1)),
-    sim_effect(death ~ illness + A0, coef = c(1.2, -0.3))
+    sim_effect(illness ~ biomarker + treatment, coef = c(0.5, -1)),
+    sim_effect(death ~ illness + treatment, coef = c(1.2, -0.3))
   )
 )
 
@@ -319,11 +323,11 @@ coef(tmle_estimate(
 
 # Explaining a Treatment Effect
 
-So far `A0` has only been a covariate. Suppose instead we want the effect of the
-trial's treatment on death, and how much of it is because treated patients fall
-ill less often. The calibrated intervention above answers this: give patients
-the treatment, but calibrate their risk of illness to what it would have been on
-placebo. This splits the total effect into two contrasts:
+So far `treatment` has only been a covariate. Suppose instead we want its effect
+on death, and how much of it is because treated patients fall ill less often.
+The calibrated intervention above answers this: give patients the treatment, but
+calibrate their risk of illness to what it would have been on placebo. This
+splits the total effect into two contrasts:
 
 - *mediated*: treatment versus the calibrated intervention, the part that goes
   through the illness, and
@@ -339,7 +343,7 @@ trial_fit <- fit_initial(
   illness_death,
   models = models,
   tau = 1,
-  treatment_model = A0 ~ L0
+  treatment_model = treatment ~ biomarker
 )
 ```
 
@@ -349,26 +353,26 @@ illness to that under placebo:
 ```{r}
 #| label: trial-arms
 
-treatment <- tmle_estimate(trial_fit, risk(death), a = 1)
+treated <- tmle_estimate(trial_fit, risk(death), a = 1)
 placebo <- tmle_estimate(trial_fit, risk(death), a = 0)
-treatment_calibrated <- tmle_estimate(
+treated_calibrated <- tmle_estimate(
   trial_fit,
   risk(death),
   calibrate(risk(illness), relative_change(1), reference_a = 0),
   a = 1
 )
-treatment_calibrated
+treated_calibrated
 ```
 
 To give treated patients the risk of illness they would have had on placebo,
 their illness hazard must be multiplied by about
-`{r} round(treatment_calibrated$calibration$estimate[1], 1)`.
+`{r} round(treated_calibrated$calibration$estimate[1], 1)`.
 `calibrated_contrasts()` then combines the three fits:
 
 ```{r}
 #| label: trial-contrasts
 
-contrasts <- calibrated_contrasts(treatment, placebo, treatment_calibrated)
+contrasts <- calibrated_contrasts(treated, placebo, treated_calibrated)
 contrasts
 ```
 
@@ -385,17 +389,17 @@ the illness hazard that matches the risk of illness on placebo:
 #| label: trial-truth
 #| eval: !expr requireNamespace("simevent", quietly = TRUE)
 
-placebo_risks <- true_risks(list(A0 = 0))
-treatment_risks <- true_risks(list(A0 = 1))
+placebo_risks <- true_risks(list(treatment = 0))
+treatment_risks <- true_risks(list(treatment = 1))
 true_alpha <- uniroot(
   function(alpha) {
-    calibrated <- true_risks(list(A0 = 1, illness = alpha))
+    calibrated <- true_risks(list(treatment = 1, illness = alpha))
     calibrated["illness"] - placebo_risks["illness"]
   },
   interval = c(1, 5),
   tol = 0.01
 )$root
-calibrated_risks <- true_risks(list(A0 = 1, illness = true_alpha))
+calibrated_risks <- true_risks(list(treatment = 1, illness = true_alpha))
 
 check <- contrasts$estimate[, c("contrast", "estimate", "lower", "upper")]
 check$truth <- c(

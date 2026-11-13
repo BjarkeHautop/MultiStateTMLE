@@ -1,10 +1,10 @@
 #' Specify the hazard model of an event process
 #'
 #' Describes how [fit_initial()] models the hazard of one event process. A
-#' plain formula such as `death ~ L0 + illness` in `models` is short for
-#' `hazard_model(death ~ L0 + illness)`; use `hazard_model()` to also restrict
-#' when an individual is at risk of the process, or to change how it is
-#' fitted.
+#' plain formula such as `death ~ biomarker + illness` in `models` is short
+#' for `hazard_model(death ~ biomarker + illness)`; use `hazard_model()` to
+#' also restrict when an individual is at risk of the process, or to change
+#' how it is fitted.
 #'
 #' @param formula A two-sided formula. The left-hand side names the process,
 #'   matching its name in the `event` column of the data, and the right-hand
@@ -27,26 +27,26 @@
 #' @examples
 #' # A plain formula in fit_initial()'s `models` is short for
 #' # hazard_model(formula):
-#' hazard_model(death ~ L0 + illness)
+#' hazard_model(death ~ biomarker + illness)
 #'
 #' # An illness that can happen at most once:
-#' hazard_model(illness ~ L0, limit = 1)
+#' hazard_model(illness ~ biomarker, limit = 1)
 #'
 #' # A relapse that can happen at most twice, and only before death of
 #' # another cause, w:
-#' hazard_model(relapse ~ L0, limit = 2, at_risk = ~ w == 0)
+#' hazard_model(relapse ~ biomarker, limit = 2, at_risk = ~ w == 0)
 #'
 #' # Death depending on having had two or more relapses. As in any R model
 #' # formula, wrap arithmetic and comparisons in I():
-#' hazard_model(death ~ L0 + I(relapse >= 2))
+#' hazard_model(death ~ biomarker + I(relapse >= 2))
 #'
 #' # Use them in fit_initial(), mixed with plain formulas:
 #' fit <- fit_initial(
 #'   illness_death,
 #'   models = list(
-#'     hazard_model(illness ~ L0 + A0, limit = 1),
-#'     death ~ L0 + A0 + illness,
-#'     censoring ~ L0
+#'     hazard_model(illness ~ biomarker + treatment, limit = 1),
+#'     death ~ biomarker + treatment + illness,
+#'     censoring ~ biomarker
 #'   ),
 #'   tau = 1
 #' )
@@ -62,7 +62,7 @@ hazard_model <- function(
   if (length(formula) != 3 || !is.name(formula[[2]])) {
     stop(
       "`formula` must be two-sided with the process name on the left, ",
-      "e.g. death ~ L0 + illness."
+      "e.g. death ~ biomarker + illness."
     )
   }
   checkmate::assert_count(limit, positive = TRUE, null.ok = TRUE)

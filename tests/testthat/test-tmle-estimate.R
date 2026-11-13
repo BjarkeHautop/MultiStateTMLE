@@ -125,8 +125,8 @@ test_that("tmle_estimate() supports when, only_first and target_by_state", {
     tmle_estimate(fit, risk(death))$estimate$estimate
   )
   expect_error(
-    tmle_estimate(fit, risk(death, when = ~ L0 > 0)),
-    "`when` uses L0"
+    tmle_estimate(fit, risk(death, when = ~ biomarker > 0)),
+    "`when` uses biomarker"
   )
 
   expect_true(is.numeric(
@@ -155,13 +155,13 @@ test_that("tmle_estimate() estimates under a baseline intervention 'a'", {
     fixture.data(),
     models = illness.death.models,
     tau = 1,
-    treatment_model = A0 ~ L0,
+    treatment_model = treatment ~ biomarker,
     arms = 0:1
   )
 
   est <- tmle_estimate(fit, risk(death), a = 1)
-  # The treatment weights are 1 / P(A0 = 1 | L0) > 1 for the treated, and
-  # separate from the censoring weights.
+  # The treatment weights are 1 / P(treatment = 1 | biomarker) > 1 for the
+  # treated, and separate from the censoring weights.
   expect_gt(est$checks$weights["treatment", "q100"], 1)
   expect_equal(
     est$checks$weights["censoring", ],
@@ -175,22 +175,22 @@ test_that("tmle_estimate() estimates under a baseline intervention 'a'", {
 
 test_that("without 'a', a treatment model fit uses the observed treatment", {
   models <- list(
-    hazard_model(illness ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + illness,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   )
   plain <- fit_initial(fixture.data(), models = models, tau = 1)
   treated <- fit_initial(
     fixture.data(),
     models = models,
     tau = 1,
-    treatment_model = A0 ~ L0
+    treatment_model = treatment ~ biomarker
   )
 
   interventions <- list(
     NULL,
     scale_intensity(illness = 0.5),
-    scale_intensity(illness = ~ ifelse(A0 == 1, 0.5, 1))
+    scale_intensity(illness = ~ ifelse(treatment == 1, 0.5, 1))
   )
   for (intervention in interventions) {
     expect_equal(
@@ -203,7 +203,7 @@ test_that("without 'a', a treatment model fit uses the observed treatment", {
     fixture.data(),
     models = models,
     tau = 1,
-    treatment_model = A0 ~ L0,
+    treatment_model = treatment ~ biomarker,
     arms = 1
   )
   expect_error(tmle_estimate(one_arm, risk(death)), "both arms")
@@ -213,14 +213,14 @@ test_that("an intervention formula sees the treatment set by 'a'", {
   fit <- fit_initial(
     fixture.data(),
     models = list(
-      hazard_model(illness ~ L0 + A0, limit = 1),
-      death ~ L0 + A0 + illness,
-      censoring ~ L0
+      hazard_model(illness ~ biomarker + treatment, limit = 1),
+      death ~ biomarker + treatment + illness,
+      censoring ~ biomarker
     ),
     tau = 1,
-    treatment_model = A0 ~ L0
+    treatment_model = treatment ~ biomarker
   )
-  treated_only <- scale_intensity(illness = ~ ifelse(A0 == 1, 0.5, 1))
+  treated_only <- scale_intensity(illness = ~ ifelse(treatment == 1, 0.5, 1))
 
   expect_equal(
     tmle_estimate(fit, risk(death), treated_only, a = 0)$estimate,
@@ -310,7 +310,7 @@ test_that("tmle_estimate() only accepts a values prepared by fit_initial()", {
     fixture.data(),
     models = illness.death.models,
     tau = 1,
-    treatment_model = A0 ~ L0,
+    treatment_model = treatment ~ biomarker,
     arms = 1
   )
 
