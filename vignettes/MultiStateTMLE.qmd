@@ -23,15 +23,15 @@ library(MultiStateTMLE)
 ```
 
 We will in this vignette use the following example: how many deaths would be
-prevented by a drug that makes the illness less likely?
+prevented by a drug that makes a illness less likely?
 
 # The Data
 
-`illness_death` is a trial of 200 patients who may fall ill and may die, with
-follow-up subject to censoring. The `illness` can occur at most once and raises
-the hazard of death. Patients were randomised to a treatment, `A0 = 1`, or
-placebo, `A0 = 0`, and patients with a higher baseline covariate `L0` are more
-likely to fall ill.
+`illness_death` is a simulated dataset of a trial of 200 patients who may fall
+ill and may die, with follow-up subject to censoring. The `illness` can occur at
+most once and raises the hazard of death. Patients were randomised to a
+treatment, `A0 = 1`, or placebo, `A0 = 0`, and patients with a higher baseline
+covariate `L0` are more likely to fall ill.
 
 ```{r}
 #| label: data
@@ -91,8 +91,7 @@ horizon: everything below concerns what happens by time 1.
 Every event in the data needs a model, censoring included. A plain formula is
 short for `hazard_model(formula)`, which also takes `limit`, the most events a
 patient can have (here one illness), and `at_risk`, a condition such as
-`~ illness == 0` for when patients are at risk. `fit = "hal"` uses the highly
-adaptive lasso instead of a Cox model (experimental).
+`~ illness == 0` for when patients are at risk.
 :::
 
 # Halving the Illness
