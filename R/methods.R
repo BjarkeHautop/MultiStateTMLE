@@ -97,6 +97,34 @@ Estimates under the calibrated intervention:
     "
 "
   )
+  .print_targeting(x)
+  invisible(x)
+}
+
+# Each iteration checks convergence before updating, so a converged fit made
+# one update fewer than its iterations, and an unconverged one made one per
+# iteration.
+.format_targeting <- function(checks, target) {
+  iter <- checks$iter[[target]]
+  if (!checks$converged[[target]]) {
+    return(paste(
+      "did not converge after",
+      iter,
+      if (iter == 1) "targeting step" else "targeting steps"
+    ))
+  }
+  updates <- iter - 1
+  if (updates == 0) {
+    return("no targeting needed, as it already solves the EIC equation")
+  }
+  paste(
+    "converged after",
+    updates,
+    if (updates == 1) "targeting step" else "targeting steps"
+  )
+}
+
+.print_targeting <- function(x) {
   targets <- names(x$initial_estimate)
   for (target in targets) {
     if (length(targets) > 1) {
@@ -104,12 +132,7 @@ Estimates under the calibrated intervention:
     }
     cat("Initial estimate:", format(x$initial_estimate[[target]], digits = 4))
     if (x$method == "tmle") {
-      iter <- x$checks$iter[[target]]
-      if (x$checks$converged[[target]]) {
-        cat("; converged after", iter, "iterations")
-      } else {
-        cat("; did not converge in", iter, "iterations")
-      }
+      cat(";", .format_targeting(x$checks, target))
     }
     cat(
       "

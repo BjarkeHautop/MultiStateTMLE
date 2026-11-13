@@ -72,7 +72,7 @@ tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))
 #>    <char>     <num>      <num>     <num>     <num>
 #> 1:  death 0.2906665 0.03341164 0.2251809 0.3561521
 #>
-#> Initial estimate: 0.2907; converged after 1 iterations
+#> Initial estimate: 0.2907; no targeting needed, as it already solves the EIC equation
 ```
 
 To simulate multistate event history data, see the

@@ -56,7 +56,10 @@
 #'     * `iter`, `eic_solved_at` and `converged`: vectors, named by target
 #'       process, of the number of iterations, the absolute mean of the
 #'       efficient influence curve, and whether the iterations converged. A
-#'       warning is given if they did not.
+#'       warning is given if they did not. Each iteration checks convergence
+#'       before updating, so a converged fit made `iter - 1` targeting steps:
+#'       `iter = 1` means the initial fit already met the criterion and was
+#'       not updated.
 #'     * `weights`: a matrix with the quantiles (columns `q50`, `q90`, `q99`
 #'       and `q100`) over individuals of each individual's maximal
 #'       `intervention`, `censoring` and `treatment` weight, and of their
@@ -491,7 +494,7 @@ tmle_estimate <- function(
       if (abs(mean(eic)) <= conv_const * se.init / (log(n))) {
         converged <- TRUE
         if (verbose) {
-          message("Converged after ", iter, " iterations.")
+          message("Converged after ", iter - 1, " targeting step(s).")
         }
         break
       }

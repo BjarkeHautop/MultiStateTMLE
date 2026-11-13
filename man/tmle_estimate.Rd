@@ -70,7 +70,10 @@ curve, one value per individual.
 \item \code{iter}, \code{eic_solved_at} and \code{converged}: vectors, named by target
 process, of the number of iterations, the absolute mean of the
 efficient influence curve, and whether the iterations converged. A
-warning is given if they did not.
+warning is given if they did not. Each iteration checks convergence
+before updating, so a converged fit made \code{iter - 1} targeting steps:
+\code{iter = 1} means the initial fit already met the criterion and was
+not updated.
 \item \code{weights}: a matrix with the quantiles (columns \code{q50}, \code{q90}, \code{q99}
 and \code{q100}) over individuals of each individual's maximal
 \code{intervention}, \code{censoring} and \code{treatment} weight, and of their

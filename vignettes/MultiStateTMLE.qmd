@@ -137,6 +137,12 @@ then *targets*: it updates the fitted hazards until the estimate solves the
 efficient influence curve equation. This removes the first-order bias of the
 initial fit, so the confidence interval is valid even with flexible hazard
 models.
+
+Here no targeting was needed: the Cox fits already solve the equation to within
+the stopping criterion, $\text{se} / \log n$, so the estimate is the initial
+estimate. With 200 patients this is common, since the remaining bias is small
+next to the standard error. With larger samples, or more flexible initial fits,
+expect one or more targeting steps.
 :::
 
 ::: {.callout-note title="Other interventions"}

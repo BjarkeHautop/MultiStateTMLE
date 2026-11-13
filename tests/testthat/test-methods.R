@@ -10,7 +10,11 @@ test_that("print methods summarise the result objects", {
     "under scale_intensity(illness = 0.5)",
     fixed = TRUE
   )
-  expect_output(print(est), "converged after")
+  expect_output(
+    print(est),
+    .format_targeting(est$checks, "death"),
+    fixed = TRUE
+  )
   expect_output(
     print(
       tmle_estimate(fit, risk(death), control = list(one_step = TRUE))
@@ -70,4 +74,26 @@ test_that("coef() and confint() extract the estimates by target", {
     ignore_attr = TRUE
   )
   expect_error(confint(cal, "stroke"), "stroke")
+})
+
+test_that("the targeting summary counts updates, not iterations", {
+  checks <- function(iter, converged) {
+    list(iter = c(death = iter), converged = c(death = converged))
+  }
+  expect_equal(
+    .format_targeting(checks(1, TRUE), "death"),
+    "no targeting needed, as it already solves the EIC equation"
+  )
+  expect_equal(
+    .format_targeting(checks(2, TRUE), "death"),
+    "converged after 1 targeting step"
+  )
+  expect_equal(
+    .format_targeting(checks(4, TRUE), "death"),
+    "converged after 3 targeting steps"
+  )
+  expect_equal(
+    .format_targeting(checks(10, FALSE), "death"),
+    "did not converge after 10 targeting steps"
+  )
 })
