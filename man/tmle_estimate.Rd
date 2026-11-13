@@ -24,7 +24,8 @@ more processes, each estimated separately under the same intervention.}
 \code{\link[=calibrate]{calibrate()}}, or \code{NULL} (default) for none.}
 
 \item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on.
-Must be one of the \code{arms} prepared by \code{\link[=fit_initial]{fit_initial()}}.}
+Must be one of the \code{arms} prepared by \code{\link[=fit_initial]{fit_initial()}}. Without it, each
+individual keeps their observed treatment.}
 
 \item{control}{A named list of settings for how the estimate is
 computed:

@@ -18,7 +18,8 @@
 #' @param intervention The intervention: [scale_intensity()],
 #'   [calibrate()], or `NULL` (default) for none.
 #' @param a Optional baseline treatment value (`0` or `1`) to intervene on.
-#'   Must be one of the `arms` prepared by [fit_initial()].
+#'   Must be one of the `arms` prepared by [fit_initial()]. Without it, each
+#'   individual keeps their observed treatment.
 #' @param control A named list of settings for how the estimate is
 #'   computed:
 #'   * `one_step` (`FALSE`): if `TRUE`, return the one-step estimator
@@ -216,6 +217,7 @@ tmle_estimate <- function(
 
   tmp.long <- copy(initial_fit$tmp_long)
   depend.matrix <- copy(initial_fit$depend_matrix)
+  .set_treatment(tmp.long, initial_fit, a)
 
   n <- length(unique(tmp.long[["id"]]))
 
@@ -677,6 +679,45 @@ tmle_estimate <- function(
 
 .assert_initial_fit <- function(initial_fit) {
   checkmate::assert_class(initial_fit, "initial_fit")
+}
+
+# With a treatment_model, fit_initial() keeps the observed treatment in
+# A0.obs, predicts the hazards under each arm `aa` as P.a<aa>.* columns, and
+# leaves the treatment column at the last arm. Set the treatment column to
+# `a`, or, without `a`, to the observed treatment, with each individual's
+# hazards (P.*) those of their observed arm, so that the estimate is under
+# the observed treatment as for a fit without a treatment_model.
+.set_treatment <- function(tmp.long, initial_fit, a) {
+  if (is.null(initial_fit$treatment_model)) {
+    return(invisible(tmp.long))
+  }
+  treatment.name <- all.vars(initial_fit$treatment_model[[2]])
+  if (!is.null(a)) {
+    set(tmp.long, j = treatment.name, value = a)
+    return(invisible(tmp.long))
+  }
+  if (!setequal(initial_fit$arms, 0:1)) {
+    stop(
+      "Without a, tmle_estimate() estimates under the observed treatment, ",
+      "which needs fit_initial() to prepare both arms, but it prepared only ",
+      "a = ",
+      paste(initial_fit$arms, collapse = ", "),
+      ". Give a, or refit with arms = c(0, 1).",
+      call. = FALSE
+    )
+  }
+  treated <- tmp.long[["A0.obs"]] == 1
+  for (col1 in grep("^P[.]a1[.]", names(tmp.long), value = TRUE)) {
+    rest <- substring(col1, nchar("P.a1.") + 1)
+    col0 <- paste0("P.a0.", rest)
+    set(
+      tmp.long,
+      j = paste0("P.", rest),
+      value = ifelse(treated, tmp.long[[col1]], tmp.long[[col0]])
+    )
+  }
+  set(tmp.long, j = treatment.name, value = tmp.long[["A0.obs"]])
+  invisible(tmp.long)
 }
 
 # A baseline treatment value `a` must be one that fit_initial() prepared.

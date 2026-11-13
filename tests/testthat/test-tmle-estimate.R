@@ -173,6 +173,70 @@ test_that("tmle_estimate() estimates under a baseline intervention 'a'", {
   expect_error(tmle_estimate(fit, risk(death), a = 5), "a")
 })
 
+test_that("without 'a', a treatment model fit uses the observed treatment", {
+  models <- list(
+    hazard_model(illness ~ L0 + A0, limit = 1),
+    death ~ L0 + A0 + illness,
+    censoring ~ L0
+  )
+  plain <- fit_initial(fixture.data(), models = models, tau = 1)
+  treated <- fit_initial(
+    fixture.data(),
+    models = models,
+    tau = 1,
+    treatment_model = A0 ~ L0
+  )
+
+  interventions <- list(
+    NULL,
+    scale_intensity(illness = 0.5),
+    scale_intensity(illness = ~ ifelse(A0 == 1, 0.5, 1))
+  )
+  for (intervention in interventions) {
+    expect_equal(
+      tmle_estimate(treated, risk(death), intervention)$estimate,
+      tmle_estimate(plain, risk(death), intervention)$estimate
+    )
+  }
+
+  one_arm <- fit_initial(
+    fixture.data(),
+    models = models,
+    tau = 1,
+    treatment_model = A0 ~ L0,
+    arms = 1
+  )
+  expect_error(tmle_estimate(one_arm, risk(death)), "both arms")
+})
+
+test_that("an intervention formula sees the treatment set by 'a'", {
+  fit <- fit_initial(
+    fixture.data(),
+    models = list(
+      hazard_model(illness ~ L0 + A0, limit = 1),
+      death ~ L0 + A0 + illness,
+      censoring ~ L0
+    ),
+    tau = 1,
+    treatment_model = A0 ~ L0
+  )
+  treated_only <- scale_intensity(illness = ~ ifelse(A0 == 1, 0.5, 1))
+
+  expect_equal(
+    tmle_estimate(fit, risk(death), treated_only, a = 0)$estimate,
+    tmle_estimate(fit, risk(death), a = 0)$estimate
+  )
+  expect_equal(
+    tmle_estimate(fit, risk(death), treated_only, a = 1)$estimate,
+    tmle_estimate(
+      fit,
+      risk(death),
+      scale_intensity(illness = 0.5),
+      a = 1
+    )$estimate
+  )
+})
+
 test_that("scale_intensity() takes time-varying factors", {
   fit <- fixture.fit(30)
   constant <- tmle_estimate(fit, risk(death), scale_intensity(illness = 2))

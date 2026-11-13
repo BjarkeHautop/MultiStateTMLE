@@ -27,7 +27,8 @@ process whose intensity is scaled.}
 \item{alpha}{Non-negative numeric vector. The scalings to evaluate.}
 
 \item{a}{Optional baseline treatment value (\code{0} or \code{1}) to intervene on.
-Must be one of the \code{arms} prepared by \code{\link[=fit_initial]{fit_initial()}}.}
+Must be one of the \code{arms} prepared by \code{\link[=fit_initial]{fit_initial()}}. Without it, each
+individual keeps their observed treatment.}
 
 \item{control}{A named list of settings for how the estimate is
 computed:
