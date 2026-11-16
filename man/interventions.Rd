@@ -24,11 +24,13 @@ relative_change(rho)
 \code{z = 0.5}. Each is a non-negative number, or a one-sided formula giving
 a time-varying factor, such as \code{z = ~ ifelse(time < 0.5, 0.5, 1)}, that
 may use \code{time}, baseline covariates and the processes (their number of
-events so far).}
+events so far, where counts above the \code{max_count} of \code{\link[=fit_initial]{fit_initial()}}
+count as \code{max_count}).}
 
-\item{only_first}{Logical. If \code{TRUE}, follow-up ends at the second event
-of an intervened process, so that only its first event is intervened
-on.}
+\item{only_first}{Logical. If \code{TRUE}, only the first event of each
+intervened process is intervened on: its intensity is scaled until its
+first event and left as it is after. This is the same as the factor
+\code{~ ifelse(z == 0, alpha, 1)} for a process \code{z}.}
 
 \item{exposure}{The exposure to calibrate, a \code{\link[=risk]{risk()}} or \code{\link[=years_lost]{years_lost()}}
 of the single process whose intensity is scaled.}

@@ -23,6 +23,8 @@ utils::globalVariables(c(
   "C.1",
   "clever.weight",
   "clever.weight.alpha",
+  ".d.n",
+  ".ratio",
   "cum.hazard.z",
   "cum.hazard.z.1",
   "delta",

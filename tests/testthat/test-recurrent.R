@@ -157,10 +157,6 @@ test_that("only_first and interventions need a recurrent process in the state sp
 # process is intervened on, so the intervention is the same as a factor that
 # is alpha before the first jump and 1 after it.
 test_that("scale_intensity(only_first = TRUE) intervenes on the first relapse only", {
-  skip(paste(
-    "Known bug: only_first is ignored in the Q recursion, where alpha",
-    "scales the hazard in every state."
-  ))
   skip_if_not_installed("simevent")
   fit <- recurrent.fit(80)
 
@@ -183,10 +179,6 @@ test_that("scale_intensity(only_first = TRUE) intervenes on the first relapse on
 })
 
 test_that("a factor that depends on the count applies in each state", {
-  skip(paste(
-    "Known bug: .alpha_values() evaluates the factor at the observed count,",
-    "not at the count of each state."
-  ))
   skip_if_not_installed("simevent")
   fit <- recurrent.fit(80)
 
@@ -206,11 +198,25 @@ test_that("a factor that depends on the count applies in each state", {
   expect_equal(by_count$estimate, constant$estimate)
 })
 
+test_that("a factor sees the counts capped at max_count", {
+  skip_if_not_installed("simevent")
+  # With max_count = 1, relapse >= 1 and relapse == 1 are the same state,
+  # also on the observed rows of individuals with more relapses.
+  capped <- recurrent.fit(80, max_count = 1)
+  at_least <- tmle_estimate(
+    capped,
+    risk(relapse),
+    scale_intensity(relapse = ~ ifelse(relapse >= 1, 0.5, 1))
+  )
+  exactly <- tmle_estimate(
+    capped,
+    risk(relapse),
+    scale_intensity(relapse = ~ ifelse(relapse == 1, 0.5, 1))
+  )
+  expect_equal(exactly$estimate, at_least$estimate)
+})
+
 test_that(".update_alpha_weights() accumulates the likelihood ratio of a time-varying factor", {
-  skip(paste(
-    "Known bug: the weight uses alpha(t)^N(t-) * exp(-(alpha(t) - 1) *",
-    "Lambda(t-)), which is only right for a constant alpha."
-  ))
   # One individual who relapses at time 0.3 under a factor of 0.5, which
   # is 1 from time 0.6 on.
   tl <- data.table::data.table(

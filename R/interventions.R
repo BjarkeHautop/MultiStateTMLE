@@ -23,10 +23,12 @@
 #'   `z = 0.5`. Each is a non-negative number, or a one-sided formula giving
 #'   a time-varying factor, such as `z = ~ ifelse(time < 0.5, 0.5, 1)`, that
 #'   may use `time`, baseline covariates and the processes (their number of
-#'   events so far).
-#' @param only_first Logical. If `TRUE`, follow-up ends at the second event
-#'   of an intervened process, so that only its first event is intervened
-#'   on.
+#'   events so far, where counts above the `max_count` of [fit_initial()]
+#'   count as `max_count`).
+#' @param only_first Logical. If `TRUE`, only the first event of each
+#'   intervened process is intervened on: its intensity is scaled until its
+#'   first event and left as it is after. This is the same as the factor
+#'   `~ ifelse(z == 0, alpha, 1)` for a process `z`.
 #' @param exposure The exposure to calibrate, a [risk()] or [years_lost()]
 #'   of the single process whose intensity is scaled.
 #' @param toward The calibration rule: `level()`, `absolute_change()` or
