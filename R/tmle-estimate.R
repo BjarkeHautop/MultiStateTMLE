@@ -230,7 +230,10 @@ tmle_estimate <- function(
   state.names <- names(states)
   setkeyv(states, c("state", state.names[state.names %in% process.names]))
 
-  # A terminal or one-jump target has at most one event already.
+  # Only the first event of a recurrent target counts: as a one-jump target,
+  # its Q is 1 in every state after its first event, so the rows there add
+  # nothing to the clever covariates. They are kept, since the Q recursion
+  # of each individual runs over all their rows up to tau.
   if (target$only_first && process.types[[target.name]] == "recurrent") {
     if (!target.name %in% names(tmp.long)) {
       stop(
@@ -241,7 +244,6 @@ tmle_estimate <- function(
       )
     }
     process.types[[target.name]] <- "one_jump"
-    tmp.long <- tmp.long[tmp.long[[target.name]] <= 1]
   }
 
   tmp.long[, at.risk := (time <= final.time)]
@@ -597,8 +599,7 @@ tmle_estimate <- function(
 }
 
 # Combine single-process .tmle_fixed() fits under the same intervention into
-# one. The weight diagnostics are those of the first process; they only
-# differ between processes with only_first, which drops rows by process.
+# one. The weight diagnostics are those of the first process.
 .combine_targets <- function(fits) {
   out <- fits[[1]]
   out$estimate <- rbindlist(lapply(fits, function(fit) fit$estimate))

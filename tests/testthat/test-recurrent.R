@@ -92,6 +92,31 @@ test_that("risk() of a recurrent process is the expected number of events", {
   )
 })
 
+test_that("risk(only_first = TRUE) is the expected number of relapses from the state without any", {
+  skip_if_not_installed("simevent")
+  # Two routes to the risk of a first relapse: as a one-jump target, and as
+  # the expected number of relapses counted only when none came before.
+  # They agree in the plug-in, the targeted estimate and the efficient
+  # influence curve, and so need the Q recursion of every individual to
+  # run up to tau, also after their second relapse.
+  fit <- recurrent.fit(80)
+  for (intervention in list(NULL, scale_intensity(relapse = 0.5))) {
+    first <- tmle_estimate(
+      fit,
+      risk(relapse, only_first = TRUE),
+      intervention
+    )
+    from_none <- tmle_estimate(
+      fit,
+      risk(relapse, when = ~ relapse == 0),
+      intervention
+    )
+    expect_equal(first$initial_estimate, from_none$initial_estimate)
+    expect_equal(first$estimate, from_none$estimate)
+    expect_equal(first$eic, from_none$eic)
+  }
+})
+
 test_that("scale_intensity() of a recurrent process moves its targets monotonically", {
   skip_if_not_installed("simevent")
   fit <- recurrent.fit(80)
