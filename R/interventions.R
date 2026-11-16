@@ -25,10 +25,6 @@
 #'   may use `time`, baseline covariates and the processes (their number of
 #'   events so far, where counts above the `max_count` of [fit_initial()]
 #'   count as `max_count`).
-#' @param only_first Logical. If `TRUE`, only the first event of each
-#'   intervened process is intervened on: its intensity is scaled until its
-#'   first event and left as it is after. This is the same as the factor
-#'   `~ ifelse(z == 0, alpha, 1)` for a process `z`.
 #' @param exposure The exposure to calibrate, a [risk()] or [years_lost()]
 #'   of the single process whose intensity is scaled.
 #' @param toward The calibration rule: `level()`, `absolute_change()` or
@@ -60,6 +56,10 @@
 #' # individuals with L0 > 0.
 #' scale_intensity(z = ~ ifelse(L0 > 0, 0.5, 1))
 #'
+#' # A scaling that depends on the number of events so far: halve the
+#' # intensity of a recurrent process until its first event only.
+#' scale_intensity(relapse = ~ ifelse(relapse == 0, 0.5, 1))
+#'
 #' # Several processes at once:
 #' scale_intensity(z = 0.5, death = 0.8)
 #'
@@ -89,7 +89,7 @@ NULL
 
 #' @rdname interventions
 #' @export
-scale_intensity <- function(..., only_first = FALSE) {
+scale_intensity <- function(...) {
   alpha <- list(...)
   if (length(alpha) == 0) {
     stop("scale_intensity() needs a factor for at least one process.")
@@ -118,9 +118,8 @@ scale_intensity <- function(..., only_first = FALSE) {
       )
     }
   }
-  checkmate::assert_flag(only_first)
   structure(
-    list(type = "scale_intensity", alpha = alpha, only_first = only_first),
+    list(type = "scale_intensity", alpha = alpha),
     class = "tmle_intervention"
   )
 }
@@ -202,9 +201,6 @@ format.tmle_intervention <- function(x, ...) {
       character(1)
     )
     args <- paste(names(x$alpha), "=", factors)
-    if (x$only_first) {
-      args <- c(args, "only_first = TRUE")
-    }
     return(paste0("scale_intensity(", paste(args, collapse = ", "), ")"))
   }
   args <- c(format(x$exposure), format(x$toward))

@@ -9,7 +9,7 @@
 \alias{relative_change}
 \title{Stochastic intensity interventions}
 \usage{
-scale_intensity(..., only_first = FALSE)
+scale_intensity(...)
 
 calibrate(exposure, toward, reference_a = NULL)
 
@@ -26,11 +26,6 @@ a time-varying factor, such as \code{z = ~ ifelse(time < 0.5, 0.5, 1)}, that
 may use \code{time}, baseline covariates and the processes (their number of
 events so far, where counts above the \code{max_count} of \code{\link[=fit_initial]{fit_initial()}}
 count as \code{max_count}).}
-
-\item{only_first}{Logical. If \code{TRUE}, only the first event of each
-intervened process is intervened on: its intensity is scaled until its
-first event and left as it is after. This is the same as the factor
-\code{~ ifelse(z == 0, alpha, 1)} for a process \code{z}.}
 
 \item{exposure}{The exposure to calibrate, a \code{\link[=risk]{risk()}} or \code{\link[=years_lost]{years_lost()}}
 of the single process whose intensity is scaled.}
@@ -91,6 +86,10 @@ scale_intensity(z = ~ ifelse(time < 0.5, 0.5, 1))
 # A scaling that depends on a baseline covariate: halve it only for
 # individuals with L0 > 0.
 scale_intensity(z = ~ ifelse(L0 > 0, 0.5, 1))
+
+# A scaling that depends on the number of events so far: halve the
+# intensity of a recurrent process until its first event only.
+scale_intensity(relapse = ~ ifelse(relapse == 0, 0.5, 1))
 
 # Several processes at once:
 scale_intensity(z = 0.5, death = 0.8)

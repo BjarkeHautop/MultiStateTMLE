@@ -100,16 +100,7 @@ test_that("tmle_estimate() supports when, only_first and target_by_state", {
   fit <- fixture.fit(30)
   plain <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
 
-  # Both halves of only_first are no-ops here: z happens at most once, and
-  # death ends follow-up.
-  expect_equal(
-    tmle_estimate(
-      fit,
-      risk(death),
-      scale_intensity(z = 0.5, only_first = TRUE)
-    )$estimate,
-    plain$estimate
-  )
+  # only_first is a no-op here: death ends follow-up.
   expect_equal(
     tmle_estimate(
       fit,

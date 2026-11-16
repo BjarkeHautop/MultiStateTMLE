@@ -200,8 +200,6 @@ tmle_estimate <- function(
   verbose
 ) {
   alpha <- if (is.null(intervention)) list() else intervention$alpha
-  intervention_only_first <- !is.null(intervention) &&
-    intervention$only_first
 
   one_step <- control$one_step
   block_size <- control$block_size
@@ -302,8 +300,7 @@ tmle_estimate <- function(
       (paste0("alpha.", name.kk)) := .alpha_values(
         alpha[[name.kk]],
         data.observed,
-        name.kk,
-        intervention_only_first
+        name.kk
       )
     ]
   }
@@ -385,8 +382,7 @@ tmle_estimate <- function(
         (varname) := .alpha_values(
           alpha[[name.kk]],
           data.kk,
-          name.kk,
-          intervention_only_first
+          name.kk
         ) *
           get(varname)
       ]
@@ -620,18 +616,9 @@ tmle_estimate <- function(
 
 # The factor `alpha` of scale_intensity() on process `name`, one value per
 # row of `data` (a data.table or a list of equal-length columns): a number,
-# or a one-sided formula evaluated in the columns of `data`. With
-# `only_first`, the factor is 1 once `name` has had an event.
-.alpha_values <- function(alpha, data, name, only_first = FALSE) {
+# or a one-sided formula evaluated in the columns of `data`.
+.alpha_values <- function(alpha, data, name) {
   n.rows <- length(data[["time"]])
-  values <- .alpha_formula_values(alpha, data, name, n.rows)
-  if (only_first && !is.null(data[[name]])) {
-    values[data[[name]] >= 1] <- 1
-  }
-  values
-}
-
-.alpha_formula_values <- function(alpha, data, name, n.rows) {
   if (!inherits(alpha, "formula")) {
     return(rep(alpha, n.rows))
   }

@@ -1,6 +1,6 @@
 # Recurrent processes: a process that can jump any number of times, so that
 # risk() is the expected number of events, the state space is capped at
-# max_count, and only_first differs from the default.
+# max_count, and risk(only_first = TRUE) differs from the default.
 
 test_that("fit_initial() caps the state space of a recurrent process at max_count", {
   skip_if_not_installed("simevent")
@@ -96,11 +96,17 @@ test_that("scale_intensity() of a recurrent process moves its targets monotonica
   skip_if_not_installed("simevent")
   fit <- recurrent.fit(80)
 
-  estimates <- function(target, ..., initial = FALSE) {
+  # The estimates of target under the factor factor(alpha) on relapse, for
+  # increasing alpha.
+  estimates <- function(target, factor = identity, initial = FALSE) {
     vapply(
       c(0.5, 1, 2),
       function(alpha) {
-        est <- tmle_estimate(fit, target, scale_intensity(relapse = alpha, ...))
+        est <- tmle_estimate(
+          fit,
+          target,
+          scale_intensity(relapse = factor(alpha))
+        )
         if (initial) est$initial_estimate[[1]] else est$estimate$estimate
       },
       numeric(1)
@@ -108,7 +114,8 @@ test_that("scale_intensity() of a recurrent process moves its targets monotonica
   }
   expect_true(all(diff(estimates(risk(relapse))) > 0))
   expect_true(all(diff(estimates(risk(relapse, only_first = TRUE))) > 0))
-  expect_true(all(diff(estimates(risk(relapse), only_first = TRUE)) > 0))
+  first_only <- function(alpha) ~ ifelse(relapse == 0, alpha, 1)
+  expect_true(all(diff(estimates(risk(relapse), first_only)) > 0))
   # Relapses raise the fitted death hazard, so the plug-in risk of death
   # grows with alpha. (The targeted estimates need not, with n = 80.)
   expect_true(all(diff(estimates(risk(death), initial = TRUE)) > 0))
@@ -153,29 +160,22 @@ test_that("only_first and interventions need a recurrent process in the state sp
   )
 })
 
-# Under scale_intensity(only_first = TRUE), only the first jump of the
-# process is intervened on, so the intervention is the same as a factor that
-# is alpha before the first jump and 1 after it.
-test_that("scale_intensity(only_first = TRUE) intervenes on the first relapse only", {
+test_that("a factor that depends on the count leaves later relapses as observed", {
   skip_if_not_installed("simevent")
   fit <- recurrent.fit(80)
 
-  only_first <- tmle_estimate(
-    fit,
-    risk(relapse),
-    scale_intensity(relapse = 0.5, only_first = TRUE)
-  )
-  all_jumps <- tmle_estimate(fit, risk(relapse), scale_intensity(relapse = 0.5))
-  # Later relapses are at their observed rate, above the halved one.
-  expect_gt(only_first$initial_estimate, all_jumps$initial_estimate)
-
-  by_count <- tmle_estimate(
-    fit,
-    risk(relapse),
-    scale_intensity(relapse = ~ ifelse(relapse == 0, 0.5, 1))
-  )
-  expect_equal(only_first$initial_estimate, by_count$initial_estimate)
-  expect_equal(only_first$estimate, by_count$estimate)
+  initial <- function(factor) {
+    tmle_estimate(
+      fit,
+      risk(relapse),
+      scale_intensity(relapse = factor)
+    )$initial_estimate
+  }
+  # Halving the first relapse only: later relapses are at their observed
+  # rate, above the halved one.
+  first_only <- initial(~ ifelse(relapse == 0, 0.5, 1))
+  expect_gt(first_only, initial(0.5))
+  expect_lt(first_only, initial(1))
 })
 
 test_that("a factor that depends on the count applies in each state", {
