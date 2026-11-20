@@ -32,11 +32,11 @@ The pipeline has three main steps:
 - [`tmle_estimate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_estimate.md)
   targets the initial fit to estimate a target, such as `risk(death)`,
   under a stochastic intensity intervention: a fixed scaling of the
-  intensity of a process, `scale_intensity(z = 0.5)`, or one calibrated
-  to bring an exposure to a given value,
-  `calibrate(risk(z), relative_change(0.8))` (optionally combined with
-  an intervention on baseline treatment). It returns a TMLE estimate
-  with its standard error and efficient influence curve.
+  intensity of a process, `scale_intensity(illness = 0.5)`, or one
+  calibrated to bring an exposure to a given value,
+  `calibrate(risk(illness), relative_change(0.8))` (optionally combined
+  with an intervention on baseline treatment). It returns a TMLE
+  estimate with its standard error and efficient influence curve.
 - [`intervention_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/intervention_curve.md)
   traces how the target responds to the exposure over a grid of
   scalings, and
@@ -45,30 +45,30 @@ The pipeline has three main steps:
   contrasts.
 
 For example, with the simulated illness-death data `illness_death`,
-where an illness `z` raises the risk of `death`, the risk of death by
-time 1 if the intensity of the illness were halved is estimated by:
+where `illness` raises the risk of `death`, the risk of death by time 1
+if the intensity of the illness were halved is estimated by:
 
 ``` r
 
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1
 )
 
-tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))
 #> TMLE estimate of risk(death)
-#> under scale_intensity(z = 0.5)
+#> under scale_intensity(illness = 0.5)
 #>
 #>    target  estimate         se     lower     upper
 #>    <char>     <num>      <num>     <num>     <num>
-#> 1:  death 0.3040549 0.03853505 0.2285276 0.3795823
+#> 1:  death 0.2906665 0.03341164 0.2251809 0.3561521
 #>
-#> Initial estimate: 0.3124; converged after 2 iterations
+#> Initial estimate: 0.2907; no targeting needed, as it already solves the EIC equation
 ```
 
 To simulate multistate event history data, see the
@@ -147,11 +147,11 @@ for the result objects.
 Example data.
 
 - [`illness_death`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/illness_death.md)
-  : Simulated illness-death data
+  : Simulated illness-death trial data
 
 # Articles
 
 ### All vignettes
 
-- [Getting started with
+- [Getting Started with
   MultiStateTMLE](https://github.com/BjarkeHautop/MultiStateTMLE/articles/MultiStateTMLE.md):

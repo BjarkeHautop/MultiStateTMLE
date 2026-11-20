@@ -63,45 +63,49 @@ confidence intervals with one row per target process.
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1
 )
 fit
-#> Initial fit of 150 individuals up to tau = 1
+#> Initial fit of 200 individuals up to tau = 1
 #> 
-#>         name     type          model at_risk
-#>       <char>   <char>         <char>  <lgcl>
-#> 1:         z one_jump         z ~ L0    TRUE
-#> 2:     death terminal death ~ L0 + z   FALSE
-#> 3: censoring terminal censoring ~ L0   FALSE
+#>         name     type                                   model at_risk
+#>       <char>   <char>                                  <char>  <lgcl>
+#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE
+#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE
+#> 3: censoring terminal                   censoring ~ biomarker   FALSE
 
-est <- tmle_estimate(fit, risk(death, z), scale_intensity(z = 0.5))
+est <- tmle_estimate(
+  fit,
+  risk(death, illness),
+  scale_intensity(illness = 0.5)
+)
 est
-#> TMLE estimate of risk(death, z)
-#> under scale_intensity(z = 0.5)
+#> TMLE estimate of risk(death, illness)
+#> under scale_intensity(illness = 0.5)
 #> 
-#>    target   estimate         se      lower     upper
-#>    <char>      <num>      <num>      <num>     <num>
-#> 1:  death 0.30405495 0.03853505 0.22852763 0.3795823
-#> 2:      z 0.08486244 0.01787691 0.04982433 0.1199005
+#>     target  estimate         se     lower     upper
+#>     <char>     <num>      <num>     <num>     <num>
+#> 1:   death 0.2906665 0.03341164 0.2251809 0.3561521
+#> 2: illness 0.2169103 0.02428345 0.1693156 0.2645050
 #> 
-#> death: Initial estimate: 0.3124; converged after 2 iterations
-#> z: Initial estimate: 0.08486; converged after 1 iterations
+#> death: Initial estimate: 0.2907; no targeting needed, as it already solves the EIC equation
+#> illness: Initial estimate: 0.2169; no targeting needed, as it already solves the EIC equation
 
 # The estimates, named by target process:
 coef(est)
-#>      death          z 
-#> 0.30405495 0.08486244 
+#>     death   illness 
+#> 0.2906665 0.2169103 
 
 # Confidence intervals at another level, for all or some targets:
 confint(est, level = 0.9)
-#>              5 %      95 %
-#> death 0.24067043 0.3674395
-#> z     0.05545753 0.1142673
+#>               5 %      95 %
+#> death   0.2357092 0.3456237
+#> illness 0.1769676 0.2568531
 confint(est, "death")
 #>           2.5 %    97.5 %
-#> death 0.2285276 0.3795823
+#> death 0.2251809 0.3561521
 ```

@@ -22,11 +22,11 @@ relative_change(rho)
 
 - ...:
 
-  Named factors, one per process to intervene on, such as `z = 0.5`.
-  Each is a non-negative number, or a one-sided formula giving a
-  time-varying factor, such as `z = ~ ifelse(time < 0.5, 0.5, 1)`, that
-  may use `time`, baseline covariates and the processes (their number of
-  events so far).
+  Named factors, one per process to intervene on, such as
+  `illness = 0.5`. Each is a non-negative number, or a one-sided formula
+  giving a time-varying factor, such as
+  `illness = ~ ifelse(time < 0.5, 0.5, 1)`, that may use `time`,
+  baseline covariates and the processes (their number of events so far).
 
 - only_first:
 
@@ -97,70 +97,75 @@ rules are:
 ## Examples
 
 ``` r
-# Fixed intensity scalings. Halve the intensity of z, remove z altogether,
-# or double it:
-scale_intensity(z = 0.5)
-#> Intervention: scale_intensity(z = 0.5)
-scale_intensity(z = 0)
-#> Intervention: scale_intensity(z = 0)
-scale_intensity(z = 2)
-#> Intervention: scale_intensity(z = 2)
+# Fixed intensity scalings. Halve the intensity of illness, remove illness
+# altogether, or double it:
+scale_intensity(illness = 0.5)
+#> Intervention: scale_intensity(illness = 0.5)
+scale_intensity(illness = 0)
+#> Intervention: scale_intensity(illness = 0)
+scale_intensity(illness = 2)
+#> Intervention: scale_intensity(illness = 2)
 
-# A time-varying scaling: halve the intensity of z before time 0.5 only.
-scale_intensity(z = ~ ifelse(time < 0.5, 0.5, 1))
-#> Intervention: scale_intensity(z = ~ifelse(time < 0.5, 0.5, 1))
+# A time-varying scaling: halve the intensity of illness before time 0.5
+# only.
+scale_intensity(illness = ~ ifelse(time < 0.5, 0.5, 1))
+#> Intervention: scale_intensity(illness = ~ifelse(time < 0.5, 0.5, 1))
 
 # A scaling that depends on a baseline covariate: halve it only for
-# individuals with L0 > 0.
-scale_intensity(z = ~ ifelse(L0 > 0, 0.5, 1))
-#> Intervention: scale_intensity(z = ~ifelse(L0 > 0, 0.5, 1))
+# individuals with biomarker > 0.
+scale_intensity(illness = ~ ifelse(biomarker > 0, 0.5, 1))
+#> Intervention: scale_intensity(illness = ~ifelse(biomarker > 0, 0.5, 1))
 
 # Several processes at once:
-scale_intensity(z = 0.5, death = 0.8)
-#> Intervention: scale_intensity(z = 0.5, death = 0.8)
+scale_intensity(illness = 0.5, death = 0.8)
+#> Intervention: scale_intensity(illness = 0.5, death = 0.8)
 
-# Calibrated interventions, scaling the intensity of z so that its risk
+# Calibrated interventions, scaling the intensity of illness so that its risk
 # equals 0.1, falls by 0.05, or falls to 80% of its value without
 # intervention:
-calibrate(risk(z), level(0.1))
-#> Intervention: calibrate(risk(z), level(0.1))
-calibrate(risk(z), absolute_change(-0.05))
-#> Intervention: calibrate(risk(z), absolute_change(-0.05))
-calibrate(risk(z), relative_change(0.8))
-#> Intervention: calibrate(risk(z), relative_change(0.8))
+calibrate(risk(illness), level(0.1))
+#> Intervention: calibrate(risk(illness), level(0.1))
+calibrate(risk(illness), absolute_change(-0.05))
+#> Intervention: calibrate(risk(illness), absolute_change(-0.05))
+calibrate(risk(illness), relative_change(0.8))
+#> Intervention: calibrate(risk(illness), relative_change(0.8))
 
 # Use them in tmle_estimate():
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1
 )
-tmle_estimate(fit, risk(death), scale_intensity(z = ~ ifelse(L0 > 0, 0.5, 1)))
+tmle_estimate(
+  fit,
+  risk(death),
+  scale_intensity(illness = ~ ifelse(biomarker > 0, 0.5, 1))
+)
 #> TMLE estimate of risk(death)
-#> under scale_intensity(z = ~ifelse(L0 > 0, 0.5, 1))
+#> under scale_intensity(illness = ~ifelse(biomarker > 0, 0.5, 1))
 #> 
-#>    target  estimate        se     lower     upper
-#>    <char>     <num>     <num>     <num>     <num>
-#> 1:  death 0.3159039 0.0390286 0.2394092 0.3923985
+#>    target  estimate         se     lower     upper
+#>    <char>     <num>      <num>     <num>     <num>
+#> 1:  death 0.3053054 0.03359683 0.2394568 0.3711539
 #> 
-#> Initial estimate: 0.3159; converged after 1 iterations
+#> Initial estimate: 0.3053; no targeting needed, as it already solves the EIC equation
 # \donttest{
-tmle_estimate(fit, risk(death), calibrate(risk(z), level(0.1)))
+tmle_estimate(fit, risk(death), calibrate(risk(illness), level(0.1)))
 #> TMLE estimate of risk(death)
-#> under calibrate(risk(z), level(0.1))
+#> under calibrate(risk(illness), level(0.1))
 #> 
-#>    quantity  estimate       se     lower     upper
-#>      <char>     <num>    <num>     <num>     <num>
-#> 1:    alpha 0.6157885 0.139007 0.3433398 0.8882371
-#> 2:    theta 0.1000000 0.000000 0.1000000 0.1000000
+#>    quantity  estimate         se     lower     upper
+#>      <char>     <num>      <num>     <num>     <num>
+#> 1:    alpha 0.2176164 0.02987141 0.1590696 0.2761633
+#> 2:    theta 0.1000000 0.00000000 0.1000000 0.1000000
 #> 
 #> Estimates under the calibrated intervention:
-#>    target estimate         se     lower     upper   se_crude
-#>    <char>    <num>      <num>     <num>     <num>      <num>
-#> 1:  death 0.315415 0.03871762 0.2395298 0.3913001 0.03850806
+#>    target  estimate         se    lower     upper   se_crude
+#>    <char>     <num>      <num>    <num>     <num>      <num>
+#> 1:  death 0.2607342 0.03592421 0.190324 0.3311443 0.03559196
 # }
 ```

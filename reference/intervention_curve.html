@@ -93,7 +93,8 @@ process whose intensity is scaled.</p></dd>
 
 <dt id="arg-a">a<a class="anchor" aria-label="anchor" href="#arg-a"></a></dt>
 <dd><p>Optional baseline treatment value (<code>0</code> or <code>1</code>) to intervene on.
-Must be one of the <code>arms</code> prepared by <code><a href="fit_initial.html">fit_initial()</a></code>.</p></dd>
+Must be one of the <code>arms</code> prepared by <code><a href="fit_initial.html">fit_initial()</a></code>. Without it, each
+individual keeps their observed treatment.</p></dd>
 
 
 <dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
@@ -150,40 +151,41 @@ as known (<code>eic_alpha_known</code>), as in <code><a href="tmle_estimate.html
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="fit_initial.html">fit_initial</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">illness_death</span>,</span></span>
 <span class="r-in"><span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">z</span> <span class="op">~</span> <span class="va">L0</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">z</span>,</span></span>
-<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">L0</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">illness</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span> <span class="op">+</span> <span class="va">illness</span>,</span></span>
+<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">biomarker</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  tau <span class="op">=</span> <span class="fl">1</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span><span class="co"># How the risk of death responds to the risk of z, as the intensity of z</span></span></span>
-<span class="r-in"><span><span class="co"># is scaled from 0 (no illness) to 2 (twice the observed intensity):</span></span></span>
+<span class="r-in"><span><span class="co"># How the risk of death responds to the risk of illness, as the intensity</span></span></span>
+<span class="r-in"><span><span class="co"># of illness is scaled from 0 (no illness) to 2 (twice the observed</span></span></span>
+<span class="r-in"><span><span class="co"># intensity):</span></span></span>
 <span class="r-in"><span><span class="va">curve</span> <span class="op">&lt;-</span> <span class="fu">intervention_curve</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">fit</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  exposure <span class="op">=</span> <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  exposure <span class="op">=</span> <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">illness</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  alpha <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">curve</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention curve of risk(death) against risk(z)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> over 4 scalings of the intensity of z</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention curve of risk(death) against risk(illness)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> over 4 scalings of the intensity of illness</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    alpha target exposure_estimate exposure_se  estimate         se     lower</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;num&gt; &lt;char&gt;             &lt;num&gt;       &lt;num&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   0.0  death        0.00000000  0.00000000 0.2820265 0.03975707 0.2041041</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:   0.5  death        0.08486244  0.01787691 0.3040549 0.03899060 0.2276348</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3:   1.0  death        0.15891283  0.03132140 0.3250469 0.03915660 0.2483014</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4:   2.0  death        0.29250854  0.04980121 0.3584115 0.04287637 0.2743753</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   0.0  death         0.0000000  0.00000000 0.2336750 0.03966975 0.1559237</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:   0.5  death         0.2169103  0.02428345 0.2906665 0.03374676 0.2245241</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:   1.0  death         0.3687958  0.03488168 0.3326759 0.03427321 0.2655017</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4:   2.0  death         0.5616300  0.04251611 0.3893948 0.04055059 0.3099171</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>        upper</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>        &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 0.3599489</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 0.3804751</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: 0.4017924</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4: 0.4424476</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1: 0.3114263</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: 0.3568089</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: 0.3998502</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4: 0.4688724</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Plot the risk of death against the risk of z, with 95% confidence</span></span></span>
+<span class="r-in"><span><span class="co"># Plot the risk of death against the risk of illness, with 95% confidence</span></span></span>
 <span class="r-in"><span><span class="co"># intervals:</span></span></span>
 <span class="r-in"><span><span class="va">est</span> <span class="op">&lt;-</span> <span class="va">curve</span><span class="op">$</span><span class="va">estimate</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span></span></span>
@@ -191,7 +193,7 @@ as known (<code>eic_alpha_known</code>), as in <code><a href="tmle_estimate.html
 <span class="r-in"><span>  <span class="va">est</span><span class="op">$</span><span class="va">estimate</span>,</span></span>
 <span class="r-in"><span>  type <span class="op">=</span> <span class="st">"b"</span>,</span></span>
 <span class="r-in"><span>  ylim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">est</span><span class="op">$</span><span class="va">lower</span>, <span class="va">est</span><span class="op">$</span><span class="va">upper</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  xlab <span class="op">=</span> <span class="st">"Risk of z by time 1"</span>,</span></span>
+<span class="r-in"><span>  xlab <span class="op">=</span> <span class="st">"Risk of illness by time 1"</span>,</span></span>
 <span class="r-in"><span>  ylab <span class="op">=</span> <span class="st">"Risk of death by time 1"</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/arrows.html" class="external-link">arrows</a></span><span class="op">(</span></span></span>

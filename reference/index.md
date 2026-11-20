@@ -64,4 +64,4 @@ for the result objects.
 Example data.
 
 - [`illness_death`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/illness_death.md)
-  : Simulated illness-death data
+  : Simulated illness-death trial data

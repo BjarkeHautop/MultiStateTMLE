@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<title>Getting started with MultiStateTMLE • MultiStateTMLE</title>
+<title>Getting Started with MultiStateTMLE • MultiStateTMLE</title>
 <!-- katex math --><link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
 <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script><script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script><script src="../katex-auto.js"></script><script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
@@ -12,7 +12,7 @@
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><script src="MultiStateTMLE_files/libs/quarto-html/popper.min.js"></script><script src="MultiStateTMLE_files/libs/quarto-html/tippy.umd.min.js"></script><link href="MultiStateTMLE_files/libs/quarto-html/tippy.css" rel="stylesheet">
 <link href="MultiStateTMLE_files/libs/quarto-html/light-border.css" rel="stylesheet">
-<!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Getting started with MultiStateTMLE">
+<!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Getting Started with MultiStateTMLE">
 </head>
 <body>
     <a href="#main" class="visually-hidden-focusable">Skip to contents</a>
@@ -48,7 +48,7 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
 
-      <h1>Getting started with MultiStateTMLE</h1>
+      <h1>Getting Started with MultiStateTMLE</h1>
 
 
 
@@ -62,82 +62,84 @@
 
 
 
-    <p>MultiStateTMLE estimates causal parameters of multistate event processes under <em>stochastic intensity interventions</em>: hypothetical interventions that scale the intensity of one event process (for example, an illness) by a factor <code>alpha</code>, and ask how the risk of another process (for example, death) would change. Estimation uses targeted maximum likelihood estimation (TMLE), which updates an initial fit of the hazards so that the resulting estimator is efficient and comes with influence curve based standard errors.</p>
-<p>This vignette walks through the main workflow:</p>
-<ol type="1">
-<li>Fit the initial hazard models with <code><a href="../reference/fit_initial.html">fit_initial()</a></code>.</li>
-<li>Estimate a target, such as <code>risk(death)</code>, under a fixed intensity scaling, <code><a href="../reference/interventions.html">scale_intensity()</a></code>, with <code><a href="../reference/tmle_estimate.html">tmle_estimate()</a></code>.</li>
-<li>Trace how the outcome risk depends on the exposure risk with <code><a href="../reference/intervention_curve.html">intervention_curve()</a></code>.</li>
-<li>Calibrate the intervention to a target exposure risk with <code><a href="../reference/interventions.html">calibrate()</a></code>.</li>
-<li>Decompose a treatment effect with <code><a href="../reference/calibrated_contrasts.html">calibrated_contrasts()</a></code>.</li>
-</ol>
-<div class="cell">
+    <div class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/BjarkeHautop/MultiStateTMLE">MultiStateTMLE</a></span><span class="op">)</span></span></code></pre></div>
 </div>
-<section class="level2"><h2 id="the-data">The data<a class="anchor" aria-label="anchor" href="#the-data"></a>
+<p>We will in this vignette use the following example: how many deaths would be prevented by a drug that makes an illness less likely?</p>
+<section class="section level2"><h2 id="the-data">The Data<a class="anchor" aria-label="anchor" href="#the-data"></a>
 </h2>
-<p>The package ships with <code>illness_death</code>, simulated event history data for 150 individuals at risk of an illness <code>z</code>, which can occur at most once, and of <code>death</code>. The illness raises the hazard of death, and both hazards depend on a baseline covariate <code>L0</code>. Follow-up is subject to censoring.</p>
+<p><code>illness_death</code> is a simulated dataset of a trial of 200 patients who may fall ill and may die, with follow-up subject to censoring. The <code>illness</code> can occur at most once and raises the hazard of death. Patients were randomised to <code>treatment</code> (<code>1</code>) or placebo (<code>0</code>), and patients with a higher baseline <code>biomarker</code> are more likely to fall ill.</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">illness_death</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   id      time event         L0</span></span>
-<span><span class="co">#&gt; 1  1 1.0836890 death  0.2724785</span></span>
-<span><span class="co">#&gt; 2  2 0.6539194 death  0.3572619</span></span>
-<span><span class="co">#&gt; 3  3 0.1212156 death -0.8616620</span></span>
-<span><span class="co">#&gt; 4  4 1.1416233     z  0.8083350</span></span>
-<span><span class="co">#&gt; 5  4 3.6778032 death  0.8083350</span></span>
-<span><span class="co">#&gt; 6  5 1.0962284     z  0.6127352</span></span></code></pre></div>
+<span><span class="co">#&gt;   id      time     event  biomarker treatment</span></span>
+<span><span class="co">#&gt; 1  1 2.8926838 censoring  0.2724785         1</span></span>
+<span><span class="co">#&gt; 2  2 0.1282264   illness  0.3572619         0</span></span>
+<span><span class="co">#&gt; 3  2 1.2558891     death  0.3572619         0</span></span>
+<span><span class="co">#&gt; 4  3 0.6567113     death -0.8616620         0</span></span>
+<span><span class="co">#&gt; 5  4 0.1752960   illness  0.8083350         1</span></span>
+<span><span class="co">#&gt; 6  4 0.2409278     death  0.8083350         1</span></span></code></pre></div>
 </div>
-<p>The data are in long format with one row per event and the columns:</p>
-<ul>
-<li>
-<code>id</code>: individual identifier.</li>
-<li>
-<code>time</code>: event time.</li>
-<li>
-<code>event</code>: the name of the process that jumped, here <code>"z"</code>, <code>"death"</code> or <code>"censoring"</code>.</li>
-<li>Baseline covariates, here <code>L0</code>.</li>
-</ul>
-<p>This is the format that <code><a href="https://rdrr.io/pkg/simevent/man/simulate_events.html" class="external-link">simevent::simulate_events()</a></code> returns, so simulated data can be passed straight to <code><a href="../reference/fit_initial.html">fit_initial()</a></code>.</p>
-<p>An individual who dies without falling ill has a single row, while one who falls ill and later dies has two rows. For example, individual 3 dies, while individual 4 falls ill and then dies:</p>
+<p>Each row is an event: the patient <code>id</code>, the <code>time</code> of the event, which <code>event</code> it was, and the baseline covariates. A patient who dies without falling ill has one row, like patient 3, while one who falls ill and then dies has two, like patient 2:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">illness_death</span><span class="op">[</span><span class="va">illness_death</span><span class="op">$</span><span class="va">id</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">4</span><span class="op">)</span>, <span class="op">]</span></span>
-<span><span class="co">#&gt;   id      time event        L0</span></span>
-<span><span class="co">#&gt; 3  3 0.1212156 death -0.861662</span></span>
-<span><span class="co">#&gt; 4  4 1.1416233     z  0.808335</span></span>
-<span><span class="co">#&gt; 5  4 3.6778032 death  0.808335</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="va">illness_death</span><span class="op">[</span><span class="va">illness_death</span><span class="op">$</span><span class="va">id</span> <span class="op"><a href="https://rdrr.io/r/base/match.html" class="external-link">%in%</a></span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">3</span><span class="op">)</span>, <span class="op">]</span></span>
+<span><span class="co">#&gt;   id      time   event  biomarker treatment</span></span>
+<span><span class="co">#&gt; 2  2 0.1282264 illness  0.3572619         0</span></span>
+<span><span class="co">#&gt; 3  2 1.2558891   death  0.3572619         0</span></span>
+<span><span class="co">#&gt; 4  3 0.6567113   death -0.8616620         0</span></span></code></pre></div>
 </div>
-</section><section class="level2"><h2 id="step-1-fit-the-initial-hazard-models">Step 1: Fit the initial hazard models<a class="anchor" aria-label="anchor" href="#step-1-fit-the-initial-hazard-models"></a>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container"><i class="callout-icon"></i></div>
+<div class="callout-title-container flex-fill">Simulated data</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>This is the format <code><a href="https://rdrr.io/pkg/simevent/man/simulate_events.html" class="external-link">simevent::simulate_events()</a></code> returns, so data simulated with <a href="https://github.com/BjarkeHautop/simevent" class="external-link">simevent</a> can be used directly. <code>illness_death</code> itself was simulated with simevent, which lets us check the estimates against the truth below.</p>
+</div>
+</div>
+</section><section class="section level2"><h2 id="fitting-the-hazards">Fitting the Hazards<a class="anchor" aria-label="anchor" href="#fitting-the-hazards"></a>
 </h2>
-<p><code><a href="../reference/fit_initial.html">fit_initial()</a></code> fits one hazard model per event process, expands the data to the grid of observed event times up to the horizon <code>tau</code>, and builds the discrete state space that the targeting step works on.</p>
-<p>Each process gets a formula in <code>models</code>, with the process name on the left and the covariates of its hazard on the right. Other processes can be used as covariates by name, giving their number of events so far: here the death hazard depends on whether the individual has fallen ill (<code>z</code>). The illness can occur at most once, which <code><a href="../reference/hazard_model.html">hazard_model()</a></code> expresses with <code>limit = 1</code>. Every event in the data needs a model, including censoring.</p>
+<p>The first step is to model the hazard of each event. <code><a href="../reference/fit_initial.html">fit_initial()</a></code> takes one formula per event, with the event on the left and the covariates of its hazard on the right. Using another event’s name as a covariate gives its number of events so far, so <code>death ~ biomarker + treatment + illness</code> lets the illness change the death hazard:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb4"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_initial.html">fit_initial</a></span><span class="op">(</span></span>
-<span>  <span class="va">illness_death</span>,</span>
-<span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="../reference/hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">z</span> <span class="op">~</span> <span class="va">L0</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
-<span>    <span class="va">death</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">z</span>,</span>
-<span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">L0</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  tau <span class="op">=</span> <span class="fl">1</span></span>
+<code class="sourceCode R"><span><span class="va">models</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="../reference/hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">illness</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  <span class="va">death</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span> <span class="op">+</span> <span class="va">illness</span>,</span>
+<span>  <span class="va">censoring</span> <span class="op">~</span> <span class="va">biomarker</span></span>
 <span><span class="op">)</span></span>
+<span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_initial.html">fit_initial</a></span><span class="op">(</span><span class="va">illness_death</span>, models <span class="op">=</span> <span class="va">models</span>, tau <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="va">fit</span></span>
-<span><span class="co">#&gt; Initial fit of 150 individuals up to tau = 1</span></span>
+<span><span class="co">#&gt; Initial fit of 200 individuals up to tau = 1</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;         name     type          model at_risk</span></span>
-<span><span class="co">#&gt;       &lt;char&gt;   &lt;char&gt;         &lt;char&gt;  &lt;lgcl&gt;</span></span>
-<span><span class="co">#&gt; 1:         z one_jump         z ~ L0    TRUE</span></span>
-<span><span class="co">#&gt; 2:     death terminal death ~ L0 + z   FALSE</span></span>
-<span><span class="co">#&gt; 3: censoring terminal censoring ~ L0   FALSE</span></span></code></pre></div>
+<span><span class="co">#&gt;         name     type                                   model at_risk</span></span>
+<span><span class="co">#&gt;       &lt;char&gt;   &lt;char&gt;                                  &lt;char&gt;  &lt;lgcl&gt;</span></span>
+<span><span class="co">#&gt; 1:   illness one_jump         illness ~ biomarker + treatment    TRUE</span></span>
+<span><span class="co">#&gt; 2:     death terminal death ~ biomarker + treatment + illness   FALSE</span></span>
+<span><span class="co">#&gt; 3: censoring terminal                   censoring ~ biomarker   FALSE</span></span></code></pre></div>
 </div>
-<p>The <code>type</code> of each process is inferred from the data: death and censoring end follow-up, and the illness occurs at most once.</p>
-<p>By default the hazards are fitted with Cox models. <code><a href="../reference/hazard_model.html">hazard_model()</a></code> can also restrict when individuals are at risk with a condition on the processes, such as <code>at_risk = ~ z == 0</code>, and <code>fit = "hal"</code> uses the highly adaptive lasso instead (experimental).</p>
-</section><section class="level2"><h2 id="step-2-estimate-under-a-fixed-intervention">Step 2: Estimate under a fixed intervention<a class="anchor" aria-label="anchor" href="#step-2-estimate-under-a-fixed-intervention"></a>
+<p>By default each hazard is a Cox model, so the death hazard is</p>
+<p><span class="math display">
+  \begin{aligned}
+    \lambda_{\text{death}}(t) = \lambda_0(t) \exp\big(
+     &amp; \beta_1 \, \text{biomarker} + \beta_2 \, \text{treatment} \\
+     &amp; + \beta_3 \, \text{illness}(t) \big),
+  \end{aligned}
+</span></p>
+<p>where <span class="math inline">\text{illness}(t)</span> is 1 once the patient has fallen ill. <code>tau = 1</code> is the time horizon: everything below concerns what happens by time 1.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container"><i class="callout-icon"></i></div>
+<div class="callout-title-container flex-fill">Hazard models</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>Every event in the data needs a model, censoring included. A plain formula is short for <code>hazard_model(formula)</code>, which also takes <code>limit</code>, the most events a patient can have (here one illness), and <code>at_risk</code>, a condition such as <code>~ illness == 0</code> for when patients are at risk.</p>
+</div>
+</div>
+</section><section class="section level2"><h2 id="halving-the-illness">Halving the Illness<a class="anchor" aria-label="anchor" href="#halving-the-illness"></a>
 </h2>
-<p><code><a href="../reference/tmle_estimate.html">tmle_estimate()</a></code> estimates a target parameter under an intervention. The target is given by <code><a href="../reference/target-parameters.html">risk()</a></code>, here the risk of death by time <code>tau</code>. Without an intervention, this is the observed risk of death by time 1:</p>
+<p>Without any intervention, <code><a href="../reference/tmle_estimate.html">tmle_estimate()</a></code> estimates the risk of death by <code>tau</code>, given by <code><a href="../reference/target-parameters.html">risk()</a></code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">observed</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span><span class="op">)</span></span>
@@ -147,76 +149,105 @@
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;    target  estimate         se     lower     upper</span></span>
 <span><span class="co">#&gt;    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:  death 0.3250469 0.03906316 0.2484845 0.4016093</span></span>
+<span><span class="co">#&gt; 1:  death 0.3326759 0.03439736 0.2652584 0.4000935</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Initial estimate: 0.325; converged after 1 iterations</span></span></code></pre></div>
+<span><span class="co">#&gt; Initial estimate: 0.3327; no targeting needed, as it already solves the EIC equation</span></span></code></pre></div>
 </div>
-<p>The printed table gives the targeted estimate with its standard error and a 95% confidence interval, and it is stored as <code>observed$estimate</code>. The intervention <code>scale_intensity(z = 0.5)</code> halves the intensity of the illness:</p>
+<p>Now suppose the drug halves the hazard of the illness. <code><a href="../reference/interventions.html">scale_intensity()</a></code> multiplies a hazard by a factor <span class="math inline">\alpha</span>, and the estimate is the risk of death had the illness hazard been <span class="math inline">\alpha \lambda_{\text{illness}}(t)</span>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb6"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">halved</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu"><a href="../reference/interventions.html">scale_intensity</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
+<code class="sourceCode R"><span><span class="va">halved</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu"><a href="../reference/interventions.html">scale_intensity</a></span><span class="op">(</span>illness <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">halved</span></span>
 <span><span class="co">#&gt; TMLE estimate of risk(death)</span></span>
-<span><span class="co">#&gt; under scale_intensity(z = 0.5)</span></span>
+<span><span class="co">#&gt; under scale_intensity(illness = 0.5)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;    target  estimate         se     lower     upper</span></span>
 <span><span class="co">#&gt;    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:  death 0.3040549 0.03853505 0.2285276 0.3795823</span></span>
+<span><span class="co">#&gt; 1:  death 0.2906665 0.03341164 0.2251809 0.3561521</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Initial estimate: 0.3124; converged after 2 iterations</span></span></code></pre></div>
+<span><span class="co">#&gt; Initial estimate: 0.2907; no targeting needed, as it already solves the EIC equation</span></span></code></pre></div>
 </div>
-<p><code><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef()</a></code> and <code><a href="https://rdrr.io/r/stats/confint.html" class="external-link">confint()</a></code> extract the estimate and confidence intervals at other levels:</p>
+<p>Halving the illness lowers the risk of death from 0.333 to 0.291. The other hazards, death given illness included, are left as they are.</p>
+<p><code><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef()</a></code> and <code><a href="https://rdrr.io/r/stats/confint.html" class="external-link">confint()</a></code> extract the estimate and its confidence interval:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="va">halved</span><span class="op">)</span></span>
 <span><span class="co">#&gt;     death </span></span>
-<span><span class="co">#&gt; 0.3040549</span></span>
+<span><span class="co">#&gt; 0.2906665</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/stats/confint.html" class="external-link">confint</a></span><span class="op">(</span><span class="va">halved</span>, level <span class="op">=</span> <span class="fl">0.9</span><span class="op">)</span></span>
 <span><span class="co">#&gt;             5 %      95 %</span></span>
-<span><span class="co">#&gt; death 0.2406704 0.3674395</span></span></code></pre></div>
+<span><span class="co">#&gt; death 0.2357092 0.3456237</span></span></code></pre></div>
 </div>
-<p>A factor of <code>0</code> removes the illness altogether, while a factor above <code>1</code> increases its intensity. The factor can also vary over time, given as a formula in <code>time</code>, baseline covariates and the processes:</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container"><i class="callout-icon"></i></div>
+<div class="callout-title-container flex-fill">Reading the output</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The standard error comes from the efficient influence curve, so no bootstrap is needed. The last line gives the estimate from the initial fit alone, which TMLE then <em>targets</em>: it updates the fitted hazards until the estimate solves the efficient influence curve equation. This removes the first-order bias of the initial fit, so the confidence interval is valid even with flexible hazard models.</p>
+<p>Here no targeting was needed: the Cox fits already solve the equation to within the stopping criterion, <span class="math inline">\text{se} / \log n</span>, so the estimate is the initial estimate. With 200 patients this is common, since the remaining bias is small next to the standard error. With larger samples, or more flexible initial fits, expect one or more targeting steps.</p>
+</div>
+</div>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container"><i class="callout-icon"></i></div>
+<div class="callout-title-container flex-fill">Other interventions</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>A factor of <code>0</code> removes the illness, and one above <code>1</code> increases it. The factor can also be a formula in <code>time</code>, the baseline covariates and the events so far, for example a drug that only works early, or only for patients with <code>biomarker &gt; 0</code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb8"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span></span>
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span></span>
 <span>  <span class="va">fit</span>,</span>
 <span>  <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="../reference/interventions.html">scale_intensity</a></span><span class="op">(</span>z <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">time</span> <span class="op">&lt;</span> <span class="fl">0.5</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span><span class="op">$</span><span class="va">estimate</span></span>
-<span><span class="co">#&gt;    target  estimate         se     lower    upper</span></span>
-<span><span class="co">#&gt;    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;    &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:  death 0.3163871 0.03873481 0.2404683 0.392306</span></span></code></pre></div>
+<span>  <span class="fu"><a href="../reference/interventions.html">scale_intensity</a></span><span class="op">(</span>illness <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">time</span> <span class="op">&lt;</span> <span class="fl">0.5</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;    death </span></span>
+<span><span class="co">#&gt; 0.302683</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit</span>,</span>
+<span>  <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/interventions.html">scale_intensity</a></span><span class="op">(</span>illness <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">biomarker</span> <span class="op">&gt;</span> <span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;     death </span></span>
+<span><span class="co">#&gt; 0.3053054</span></span></code></pre></div>
 </div>
-</section><section class="level2"><h2 id="step-3-trace-the-intervention-curve">Step 3: Trace the intervention curve<a class="anchor" aria-label="anchor" href="#step-3-trace-the-intervention-curve"></a>
+<p>Several events can be scaled at once, as in <code>scale_intensity(illness = 0.5, death = 0.8)</code>.</p>
+</div>
+</div>
+</section><section class="section level2"><h2 id="from-hazards-to-risks">From Hazards to Risks<a class="anchor" aria-label="anchor" href="#from-hazards-to-risks"></a>
 </h2>
-<p>An intensity scaling is not always easy to interpret. It is often more natural to ask what happens to the outcome when the <em>risk</em> of the exposure is changed by a given amount. <code><a href="../reference/intervention_curve.html">intervention_curve()</a></code> evaluates a grid of scalings <code>alpha</code> of the exposure’s intensity and, for each, estimates both the exposure, here the risk of the illness, and the target:</p>
+<p>“Halve the hazard” is hard to interpret: what does it mean for how many patients fall ill? <code><a href="../reference/intervention_curve.html">intervention_curve()</a></code> answers this for a grid of factors <span class="math inline">\alpha</span>, estimating both the risk of the illness, the <em>exposure</em>, and the risk of death:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">curve</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/intervention_curve.html">intervention_curve</a></span><span class="op">(</span></span>
 <span>  <span class="va">fit</span>,</span>
 <span>  <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span>
-<span>  exposure <span class="op">=</span> <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>,</span>
+<span>  exposure <span class="op">=</span> <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">illness</span><span class="op">)</span>,</span>
 <span>  alpha <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">2</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
-<span><span class="va">curve</span><span class="op">$</span><span class="va">estimate</span></span>
+<span><span class="va">curve</span></span>
+<span><span class="co">#&gt; Intervention curve of risk(death) against risk(illness)</span></span>
+<span><span class="co">#&gt; over 6 scalings of the intensity of illness</span></span>
+<span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;    alpha target exposure_estimate exposure_se  estimate         se     lower</span></span>
 <span><span class="co">#&gt;    &lt;num&gt; &lt;char&gt;             &lt;num&gt;       &lt;num&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:  0.00  death        0.00000000 0.000000000 0.2820265 0.03975707 0.2041041</span></span>
-<span><span class="co">#&gt; 2:  0.25  death        0.04391205 0.009617945 0.2933270 0.03919098 0.2165141</span></span>
-<span><span class="co">#&gt; 3:  0.50  death        0.08486244 0.017876912 0.3040549 0.03899060 0.2276348</span></span>
-<span><span class="co">#&gt; 4:  1.00  death        0.15891283 0.031321396 0.3250469 0.03915660 0.2483014</span></span>
-<span><span class="co">#&gt; 5:  1.50  death        0.23212809 0.041662682 0.3367827 0.04049368 0.2574166</span></span>
-<span><span class="co">#&gt; 6:  2.00  death        0.29250854 0.049801208 0.3584115 0.04287637 0.2743753</span></span>
+<span><span class="co">#&gt; 1:  0.00  death         0.0000000  0.00000000 0.2336750 0.03966975 0.1559237</span></span>
+<span><span class="co">#&gt; 2:  0.25  death         0.1145766  0.01453457 0.2644432 0.03553681 0.1947923</span></span>
+<span><span class="co">#&gt; 3:  0.50  death         0.2169103  0.02428345 0.2906665 0.03374676 0.2245241</span></span>
+<span><span class="co">#&gt; 4:  1.00  death         0.3687958  0.03488168 0.3326759 0.03427321 0.2655017</span></span>
+<span><span class="co">#&gt; 5:  1.50  death         0.4790098  0.03999024 0.3645547 0.03712284 0.2917953</span></span>
+<span><span class="co">#&gt; 6:  2.00  death         0.5616300  0.04251611 0.3893948 0.04055059 0.3099171</span></span>
 <span><span class="co">#&gt;        upper</span></span>
 <span><span class="co">#&gt;        &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1: 0.3599489</span></span>
-<span><span class="co">#&gt; 2: 0.3701399</span></span>
-<span><span class="co">#&gt; 3: 0.3804751</span></span>
-<span><span class="co">#&gt; 4: 0.4017924</span></span>
-<span><span class="co">#&gt; 5: 0.4161489</span></span>
-<span><span class="co">#&gt; 6: 0.4424476</span></span></code></pre></div>
+<span><span class="co">#&gt; 1: 0.3114263</span></span>
+<span><span class="co">#&gt; 2: 0.3340941</span></span>
+<span><span class="co">#&gt; 3: 0.3568089</span></span>
+<span><span class="co">#&gt; 4: 0.3998502</span></span>
+<span><span class="co">#&gt; 5: 0.4373141</span></span>
+<span><span class="co">#&gt; 6: 0.4688724</span></span></code></pre></div>
 </div>
-<p>Plotting the target risk against the exposure risk shows how the risk of death responds to the risk of illness:</p>
+<p>Plotting one against the other shows how the risk of death responds to the risk of illness:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">ce</span> <span class="op">&lt;-</span> <span class="va">curve</span><span class="op">$</span><span class="va">estimate</span></span>
@@ -226,6 +257,8 @@
 <span>  <span class="va">ce</span><span class="op">$</span><span class="va">estimate</span>,</span>
 <span>  type <span class="op">=</span> <span class="st">"b"</span>,</span>
 <span>  pch <span class="op">=</span> <span class="fl">19</span>,</span>
+<span>  las <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  bty <span class="op">=</span> <span class="st">"l"</span>,</span>
 <span>  ylim <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/range.html" class="external-link">range</a></span><span class="op">(</span><span class="va">ce</span><span class="op">$</span><span class="va">lower</span>, <span class="va">ce</span><span class="op">$</span><span class="va">upper</span><span class="op">)</span>,</span>
 <span>  xlab <span class="op">=</span> <span class="st">"Risk of illness by time 1"</span>,</span>
 <span>  ylab <span class="op">=</span> <span class="st">"Risk of death by time 1"</span></span>
@@ -241,106 +274,220 @@
 <span><span class="op">)</span></span></code></pre></div>
 <div class="cell-output-display">
 <div>
-<figure><p><img src="MultiStateTMLE_files/figure-html/intervention-plot-1.png" alt="Estimated risk of death plotted against the estimated risk of illness across interventions on the illness intensity, with 95% confidence bands. The risk of death increases with the risk of illness." width="672"></p>
+<figure><p><img src="MultiStateTMLE_files/figure-html/intervention-plot-1.png" alt="Estimated risk of death plotted against the estimated risk of illness across interventions on the illness hazard, with 95% confidence intervals. The risk of death increases with the risk of illness." width="672"></p>
 </figure>
 </div>
 </div>
 </div>
-</section><section class="level2"><h2 id="step-4-calibrate-the-intervention">Step 4: Calibrate the intervention<a class="anchor" aria-label="anchor" href="#step-4-calibrate-the-intervention"></a>
-</h2>
-<p><code><a href="../reference/interventions.html">calibrate()</a></code> describes a calibrated intervention: the scaling of the exposure’s intensity is chosen so that the exposure attains a given value, and the target is estimated under it. The value is given by a calibration rule:</p>
-<ul>
-<li>
-<code>level(theta)</code>: the exposure equals <code>theta</code>.</li>
-<li>
-<code>absolute_change(delta)</code>: the exposure is <code>delta</code> plus its observed value.</li>
-<li>
-<code>relative_change(rho)</code>: the exposure is <code>rho</code> times its observed value.</li>
-</ul>
-<p>For example, the risk of death if the risk of illness were reduced to 80% of its observed value:</p>
+<p>Removing the illness altogether (the leftmost point) lowers the risk of death by about 10 percentage points.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container"><i class="callout-icon"></i></div>
+<div class="callout-title-container flex-fill">Checking against the truth</div>
+</div>
+<div class="callout-body-container callout-body">
+<p><code>illness_death</code> was simulated from the model below, so simevent can tell us the true risks under each intervention, by simulating many patients without censoring and with the illness hazard scaled by <code>intervene</code>:</p>
 <div class="cell">
 <div class="sourceCode cell-code" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cal</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu"><a href="../reference/interventions.html">calibrate</a></span><span class="op">(</span><span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>, <span class="fu"><a href="../reference/interventions.html">relative_change</a></span><span class="op">(</span><span class="fl">0.8</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">cal</span></span>
-<span><span class="co">#&gt; TMLE estimate of risk(death)</span></span>
-<span><span class="co">#&gt; under calibrate(risk(z), relative_change(0.8))</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    quantity  estimate         se      lower     upper</span></span>
-<span><span class="co">#&gt;      &lt;char&gt;     &lt;num&gt;      &lt;num&gt;      &lt;num&gt;     &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:    alpha 0.7927238 0.00995552 0.77321133 0.8122363</span></span>
-<span><span class="co">#&gt; 2:    theta 0.1271303 0.02505712 0.07801922 0.1762413</span></span>
-<span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt; Estimates under the calibrated intervention:</span></span>
-<span><span class="co">#&gt;    target  estimate         se     lower     upper   se_crude</span></span>
-<span><span class="co">#&gt;    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;      &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:  death 0.3199203 0.03864198 0.2441835 0.3956572 0.03866085</span></span></code></pre></div>
-</div>
-<p>The first table gives the calibrated scaling <code>alpha</code> and the exposure risk <code>theta</code> it attains, and the second the risk of death under it. Its standard error <code>se</code> accounts for <code>alpha</code> being estimated, whereas <code>se_crude</code> treats it as known.</p>
-<p>The target can also be the expected years of life lost before <code>tau</code>, with <code><a href="../reference/target-parameters.html">years_lost()</a></code>, while the exposure is still calibrated on its risk:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span></span>
-<span>  <span class="va">fit</span>,</span>
-<span>  <span class="fu"><a href="../reference/target-parameters.html">years_lost</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="../reference/interventions.html">calibrate</a></span><span class="op">(</span><span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>, <span class="fu"><a href="../reference/interventions.html">relative_change</a></span><span class="op">(</span><span class="fl">0.8</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="op">)</span><span class="op">$</span><span class="va">estimate</span></span>
-<span><span class="co">#&gt;    target  estimate         se     lower     upper   se_crude</span></span>
-<span><span class="co">#&gt;    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;      &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:  death 0.1644942 0.02295448 0.1195042 0.2094842 0.02295436</span></span></code></pre></div>
-</div>
-</section><section class="level2"><h2 id="step-5-decompose-a-treatment-effect">Step 5: Decompose a treatment effect<a class="anchor" aria-label="anchor" href="#step-5-decompose-a-treatment-effect"></a>
-</h2>
-<p>With a baseline treatment <code>A0</code>, the total effect of treatment on the outcome can be split into the part that goes through its effect on the exposure and the remainder. The calibrated intervention sets the treated individuals’ exposure risk to what it would have been under placebo, and <code><a href="../reference/calibrated_contrasts.html">calibrated_contrasts()</a></code> then decomposes the total effect into:</p>
-<ul>
-<li>a <em>mediated</em> contrast: treatment versus the calibrated intervention, and</li>
-<li>a <em>calibrated</em> contrast: the calibrated intervention versus placebo.</li>
-</ul>
-<p><code>illness_death</code> has no treatment, so for illustration we add a randomised treatment that has no actual effect. The treatment model is given in <code>treatment_model</code>, and <code><a href="../reference/fit_initial.html">fit_initial()</a></code> then prepares estimates under both treatment values, <code>a = 0</code> and <code>a = 1</code>.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">treated</span> <span class="op">&lt;-</span> <span class="va">illness_death</span></span>
-<span><span class="va">a0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">rbinom</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">treated</span><span class="op">$</span><span class="va">id</span><span class="op">)</span>, <span class="fl">1</span>, <span class="fl">0.5</span><span class="op">)</span></span>
-<span><span class="va">treated</span><span class="op">$</span><span class="va">A0</span> <span class="op">&lt;-</span> <span class="va">a0</span><span class="op">[</span><span class="va">treated</span><span class="op">$</span><span class="va">id</span><span class="op">]</span></span>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/BjarkeHautop/simevent" class="external-link">simevent</a></span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">fit_treated</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_initial.html">fit_initial</a></span><span class="op">(</span></span>
-<span>  <span class="va">treated</span>,</span>
-<span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="../reference/hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">z</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">A0</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
-<span>    <span class="va">death</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">A0</span> <span class="op">+</span> <span class="va">z</span>,</span>
-<span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">L0</span></span>
-<span>  <span class="op">)</span>,</span>
-<span>  tau <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  treatment_model <span class="op">=</span> <span class="va">A0</span> <span class="op">~</span> <span class="va">L0</span></span>
-<span><span class="op">)</span></span></code></pre></div>
-</div>
-<p>The contrasts are computed from the influence curves that each fit returns. In the calibrated arm we set <code>a = 1</code> and calibrate to a relative change of 1 from the risk of illness under placebo, <code>reference_a = 0</code>, so the risk of illness under treatment is calibrated to equal that under placebo:</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">treatment_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit_treated</span>, <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, a <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
-<span><span class="va">placebo_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit_treated</span>, <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, a <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
-<span><span class="va">calibrated_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span></span>
-<span>  <span class="va">fit_treated</span>,</span>
-<span>  <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span>
-<span>  <span class="fu"><a href="../reference/interventions.html">calibrate</a></span><span class="op">(</span><span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>, <span class="fu"><a href="../reference/interventions.html">relative_change</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, reference_a <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
-<span>  a <span class="op">=</span> <span class="fl">1</span></span>
+<span><span class="va">true_model</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_model.html" class="external-link">sim_model</a></span><span class="op">(</span></span>
+<span>  biomarker <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_covariate.html" class="external-link">sim_covariate</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">N</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">N</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  treatment <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_covariate.html" class="external-link">sim_covariate</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">N</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">rbinom</a></span><span class="op">(</span><span class="va">N</span>, <span class="fl">1</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>  illness <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_process.html" class="external-link">sim_process</a></span><span class="op">(</span><span class="st">"transient"</span>, limit <span class="op">=</span> <span class="fl">1</span>, eta <span class="op">=</span> <span class="fl">0.7</span>, nu <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  death <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_process.html" class="external-link">sim_process</a></span><span class="op">(</span><span class="st">"terminal"</span>, eta <span class="op">=</span> <span class="fl">0.3</span>, nu <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  censoring <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_process.html" class="external-link">sim_process</a></span><span class="op">(</span><span class="st">"censoring"</span>, eta <span class="op">=</span> <span class="fl">0.1</span>, nu <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
+<span>  effects <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
+<span>    <span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_effect.html" class="external-link">sim_effect</a></span><span class="op">(</span><span class="va">illness</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span>, coef <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="op">-</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>    <span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_effect.html" class="external-link">sim_effect</a></span><span class="op">(</span><span class="va">death</span> <span class="op">~</span> <span class="va">illness</span> <span class="op">+</span> <span class="va">treatment</span>, coef <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.2</span>, <span class="op">-</span><span class="fl">0.3</span><span class="op">)</span><span class="op">)</span></span>
+<span>  <span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="../reference/calibrated_contrasts.html">calibrated_contrasts</a></span><span class="op">(</span><span class="va">treatment_fit</span>, <span class="va">placebo_fit</span>, <span class="va">calibrated_fit</span><span class="op">)</span></span>
+<span><span class="va">true_risks</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="va">intervene</span><span class="op">)</span> <span class="op">{</span></span>
+<span>  <span class="va">sim</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/simevent/man/simulate_events.html" class="external-link">simulate_events</a></span><span class="op">(</span></span>
+<span>    <span class="va">true_model</span>,</span>
+<span>    n <span class="op">=</span> <span class="fl">1e5</span>,</span>
+<span>    cens <span class="op">=</span> <span class="fl">0</span>,</span>
+<span>    intervene <span class="op">=</span> <span class="va">intervene</span>,</span>
+<span>    seed <span class="op">=</span> <span class="fl">1</span></span>
+<span>  <span class="op">)</span></span>
+<span>  <span class="va">risks</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/pkg/simevent/man/event_risk.html" class="external-link">event_risk</a></span><span class="op">(</span><span class="va">sim</span>, <span class="va">true_model</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"illness"</span>, <span class="st">"death"</span><span class="op">)</span>, tau <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/stats/setNames.html" class="external-link">setNames</a></span><span class="op">(</span><span class="va">risks</span><span class="op">$</span><span class="va">risk</span>, <span class="va">risks</span><span class="op">$</span><span class="va">process</span><span class="op">)</span></span>
+<span><span class="op">}</span></span>
+<span></span>
+<span><span class="va">check</span> <span class="op">&lt;-</span> <span class="va">ce</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"alpha"</span>, <span class="st">"estimate"</span>, <span class="st">"lower"</span>, <span class="st">"upper"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">check</span><span class="op">$</span><span class="va">truth</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span></span>
+<span>  <span class="va">check</span><span class="op">$</span><span class="va">alpha</span>,</span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">alpha</span><span class="op">)</span> <span class="fu">true_risks</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>illness <span class="op">=</span> <span class="va">alpha</span><span class="op">)</span><span class="op">)</span><span class="op">[</span><span class="st">"death"</span><span class="op">]</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">check</span></span>
+<span><span class="co">#&gt;    alpha  estimate     lower     upper   truth</span></span>
+<span><span class="co">#&gt;    &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt;   &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:  0.00 0.2336750 0.1559237 0.3114263 0.22972</span></span>
+<span><span class="co">#&gt; 2:  0.25 0.2644432 0.1947923 0.3340941 0.25350</span></span>
+<span><span class="co">#&gt; 3:  0.50 0.2906665 0.2245241 0.3568089 0.27619</span></span>
+<span><span class="co">#&gt; 4:  1.00 0.3326759 0.2655017 0.3998502 0.31160</span></span>
+<span><span class="co">#&gt; 5:  1.50 0.3645547 0.2917953 0.4373141 0.34098</span></span>
+<span><span class="co">#&gt; 6:  2.00 0.3893948 0.3099171 0.4688724 0.36302</span></span></code></pre></div>
+</div>
+<p>Every interval covers the truth, and the estimates follow the true curve closely, removing the illness included.</p>
+</div>
+</div>
+</section><section class="section level2"><h2 id="calibrating-the-drug">Calibrating the Drug<a class="anchor" aria-label="anchor" href="#calibrating-the-drug"></a>
+</h2>
+<p>Often the question is about risks directly: what if the drug prevented 20% of illnesses? <code><a href="../reference/interventions.html">calibrate()</a></code> finds the factor <span class="math inline">\alpha</span> for which the risk of illness reaches a given value, and estimates the risk of death under it:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">calibrated</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit</span>,</span>
+<span>  <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/interventions.html">calibrate</a></span><span class="op">(</span><span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">illness</span><span class="op">)</span>, <span class="fu"><a href="../reference/interventions.html">relative_change</a></span><span class="op">(</span><span class="fl">0.8</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">calibrated</span></span>
+<span><span class="co">#&gt; TMLE estimate of risk(death)</span></span>
+<span><span class="co">#&gt; under calibrate(risk(illness), relative_change(0.8))</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;    quantity  estimate         se     lower     upper</span></span>
+<span><span class="co">#&gt;      &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:    alpha 0.7443751 0.01232345 0.7202216 0.7685287</span></span>
+<span><span class="co">#&gt; 2:    theta 0.2950367 0.02790535 0.2403432 0.3497301</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Estimates under the calibrated intervention:</span></span>
+<span><span class="co">#&gt;    target  estimate         se    lower     upper   se_crude</span></span>
+<span><span class="co">#&gt;    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;    &lt;num&gt;     &lt;num&gt;      &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:  death 0.3127176 0.03330144 0.247448 0.3779872 0.03338458</span></span></code></pre></div>
+</div>
+<p>The first table gives the calibrated <span class="math inline">\alpha</span> and the risk of illness <span class="math inline">\theta</span> it reaches, 80% of the observed 0.369. The second gives the risk of death under it.</p>
+<div class="callout callout-style-default callout-note callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container"><i class="callout-icon"></i></div>
+<div class="callout-title-container flex-fill">Calibration rules</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>The target risk of illness can be given in three ways:</p>
+<ul>
+<li>
+<code>level(theta)</code>: the risk is <code>theta</code>.</li>
+<li>
+<code>absolute_change(delta)</code>: the risk is <code>delta</code> plus its observed value.</li>
+<li>
+<code>relative_change(rho)</code>: the risk is <code>rho</code> times its observed value.</li>
+</ul>
+<p>Because <span class="math inline">\alpha</span> is itself estimated, the standard error <code>se</code> accounts for its uncertainty. <code>se_crude</code> is the standard error if <span class="math inline">\alpha</span> were known.</p>
+</div>
+</div>
+<p><code><a href="../reference/target-parameters.html">years_lost()</a></code> gives the expected years of life lost before <code>tau</code> instead of the risk, and can be used wherever <code><a href="../reference/target-parameters.html">risk()</a></code> can:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span></span>
+<span>  <span class="va">fit</span>,</span>
+<span>  <span class="fu"><a href="../reference/target-parameters.html">years_lost</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/interventions.html">calibrate</a></span><span class="op">(</span><span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">illness</span><span class="op">)</span>, <span class="fu"><a href="../reference/interventions.html">relative_change</a></span><span class="op">(</span><span class="fl">0.8</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt;     death </span></span>
+<span><span class="co">#&gt; 0.1596098</span></span></code></pre></div>
+</div>
+</section><section class="section level2"><h2 id="explaining-a-treatment-effect">Explaining a Treatment Effect<a class="anchor" aria-label="anchor" href="#explaining-a-treatment-effect"></a>
+</h2>
+<p>So far <code>treatment</code> has only been a covariate. Suppose instead we want its effect on death, and how much of it is because treated patients fall ill less often. The calibrated intervention above answers this: give patients the treatment, but calibrate their risk of illness to what it would have been on placebo. This splits the total effect into two contrasts:</p>
+<ul>
+<li>
+<em>mediated</em>: treatment versus the calibrated intervention, the part that goes through the illness, and</li>
+<li>
+<em>calibrated</em>: the calibrated intervention versus placebo, the rest.</li>
+</ul>
+<p><code>treatment_model</code> tells <code><a href="../reference/fit_initial.html">fit_initial()</a></code> how treatment was assigned, so that estimates can be made with everyone treated or everyone on placebo:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb14"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">trial_fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/fit_initial.html">fit_initial</a></span><span class="op">(</span></span>
+<span>  <span class="va">illness_death</span>,</span>
+<span>  models <span class="op">=</span> <span class="va">models</span>,</span>
+<span>  tau <span class="op">=</span> <span class="fl">1</span>,</span>
+<span>  treatment_model <span class="op">=</span> <span class="va">treatment</span> <span class="op">~</span> <span class="va">biomarker</span></span>
+<span><span class="op">)</span></span></code></pre></div>
+</div>
+<p><code>a</code> sets everyone’s treatment, and <code>reference_a = 0</code> calibrates the risk of illness to that under placebo:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">treated</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">trial_fit</span>, <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, a <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
+<span><span class="va">placebo</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">trial_fit</span>, <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, a <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span>
+<span><span class="va">treated_calibrated</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span></span>
+<span>  <span class="va">trial_fit</span>,</span>
+<span>  <span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span>
+<span>  <span class="fu"><a href="../reference/interventions.html">calibrate</a></span><span class="op">(</span><span class="fu"><a href="../reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">illness</span><span class="op">)</span>, <span class="fu"><a href="../reference/interventions.html">relative_change</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, reference_a <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span>
+<span>  a <span class="op">=</span> <span class="fl">1</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">treated_calibrated</span></span>
+<span><span class="co">#&gt; TMLE estimate of risk(death)</span></span>
+<span><span class="co">#&gt; under calibrate(risk(illness), relative_change(1), reference_a = 0), with a = 1</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;    quantity  estimate         se     lower    upper</span></span>
+<span><span class="co">#&gt;      &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;    &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:    alpha 2.6814303 0.72116544 1.2679720 4.094889</span></span>
+<span><span class="co">#&gt; 2:    theta 0.4974118 0.05135867 0.3967507 0.598073</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Estimates under the calibrated intervention:</span></span>
+<span><span class="co">#&gt;    target  estimate         se    lower     upper   se_crude</span></span>
+<span><span class="co">#&gt;    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;    &lt;num&gt;     &lt;num&gt;      &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:  death 0.3112979 0.06357508 0.186693 0.4359028 0.06411261</span></span></code></pre></div>
+</div>
+<p>To give treated patients the risk of illness they would have had on placebo, their illness hazard must be multiplied by about 2.7. <code><a href="../reference/calibrated_contrasts.html">calibrated_contrasts()</a></code> then combines the three fits:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">contrasts</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/calibrated_contrasts.html">calibrated_contrasts</a></span><span class="op">(</span><span class="va">treated</span>, <span class="va">placebo</span>, <span class="va">treated_calibrated</span><span class="op">)</span></span>
+<span><span class="va">contrasts</span></span>
 <span><span class="co">#&gt; Decomposition of the effect of a on death into mediated and calibrated contrasts</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;    target   contrast   estimate         se       lower      upper</span></span>
-<span><span class="co">#&gt;    &lt;char&gt;     &lt;char&gt;      &lt;num&gt;      &lt;num&gt;       &lt;num&gt;      &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:  death      total -0.1405813 0.07724416 -0.29197704 0.01081449</span></span>
-<span><span class="co">#&gt; 2:  death   mediated -0.0234265 0.01632300 -0.05541899 0.00856599</span></span>
-<span><span class="co">#&gt; 3:  death calibrated -0.1171548 0.08141345 -0.27672220 0.04241266</span></span></code></pre></div>
+<span><span class="co">#&gt;    target   contrast    estimate         se      lower         upper</span></span>
+<span><span class="co">#&gt;    &lt;char&gt;     &lt;char&gt;       &lt;num&gt;      &lt;num&gt;      &lt;num&gt;         &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:  death      total -0.18273318 0.06913193 -0.3182293 -0.0472370913</span></span>
+<span><span class="co">#&gt; 2:  death   mediated -0.06387838 0.03275458 -0.1280762  0.0003194037</span></span>
+<span><span class="co">#&gt; 3:  death calibrated -0.11885480 0.08063644 -0.2768993  0.0391897229</span></span></code></pre></div>
 </div>
-<p>The treatment was randomised without any effect, so the confidence intervals of all three contrasts cover zero, as expected.</p>
-</section><section class="level2"><h2 id="further-reading">Further reading<a class="anchor" aria-label="anchor" href="#further-reading"></a>
+<p>Treatment lowers the risk of death by 18 percentage points, of which 6 go through the illness.</p>
+<div class="callout callout-style-default callout-tip callout-titled">
+<div class="callout-header d-flex align-content-center">
+<div class="callout-icon-container"><i class="callout-icon"></i></div>
+<div class="callout-title-container flex-fill">Checking against the truth</div>
+</div>
+<div class="callout-body-container callout-body">
+<p>With <code>true_model</code> from before, simevent gives the true contrasts too: simulate each arm without censoring, and for the calibrated arm search for the factor on the illness hazard that matches the risk of illness on placebo:</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb17"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">placebo_risks</span> <span class="op">&lt;-</span> <span class="fu">true_risks</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>treatment <span class="op">=</span> <span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">treatment_risks</span> <span class="op">&lt;-</span> <span class="fu">true_risks</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>treatment <span class="op">=</span> <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">true_alpha</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/uniroot.html" class="external-link">uniroot</a></span><span class="op">(</span></span>
+<span>  <span class="kw">function</span><span class="op">(</span><span class="va">alpha</span><span class="op">)</span> <span class="op">{</span></span>
+<span>    <span class="va">calibrated</span> <span class="op">&lt;-</span> <span class="fu">true_risks</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>treatment <span class="op">=</span> <span class="fl">1</span>, illness <span class="op">=</span> <span class="va">alpha</span><span class="op">)</span><span class="op">)</span></span>
+<span>    <span class="va">calibrated</span><span class="op">[</span><span class="st">"illness"</span><span class="op">]</span> <span class="op">-</span> <span class="va">placebo_risks</span><span class="op">[</span><span class="st">"illness"</span><span class="op">]</span></span>
+<span>  <span class="op">}</span>,</span>
+<span>  interval <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">5</span><span class="op">)</span>,</span>
+<span>  tol <span class="op">=</span> <span class="fl">0.01</span></span>
+<span><span class="op">)</span><span class="op">$</span><span class="va">root</span></span>
+<span><span class="va">calibrated_risks</span> <span class="op">&lt;-</span> <span class="fu">true_risks</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>treatment <span class="op">=</span> <span class="fl">1</span>, illness <span class="op">=</span> <span class="va">true_alpha</span><span class="op">)</span><span class="op">)</span></span>
+<span></span>
+<span><span class="va">check</span> <span class="op">&lt;-</span> <span class="va">contrasts</span><span class="op">$</span><span class="va">estimate</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"contrast"</span>, <span class="st">"estimate"</span>, <span class="st">"lower"</span>, <span class="st">"upper"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="va">check</span><span class="op">$</span><span class="va">truth</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span></span>
+<span>  <span class="va">treatment_risks</span><span class="op">[</span><span class="st">"death"</span><span class="op">]</span> <span class="op">-</span> <span class="va">placebo_risks</span><span class="op">[</span><span class="st">"death"</span><span class="op">]</span>,</span>
+<span>  <span class="va">treatment_risks</span><span class="op">[</span><span class="st">"death"</span><span class="op">]</span> <span class="op">-</span> <span class="va">calibrated_risks</span><span class="op">[</span><span class="st">"death"</span><span class="op">]</span>,</span>
+<span>  <span class="va">calibrated_risks</span><span class="op">[</span><span class="st">"death"</span><span class="op">]</span> <span class="op">-</span> <span class="va">placebo_risks</span><span class="op">[</span><span class="st">"death"</span><span class="op">]</span></span>
+<span><span class="op">)</span></span>
+<span><span class="va">check</span></span>
+<span><span class="co">#&gt;      contrast    estimate      lower         upper    truth</span></span>
+<span><span class="co">#&gt;        &lt;char&gt;       &lt;num&gt;      &lt;num&gt;         &lt;num&gt;    &lt;num&gt;</span></span>
+<span><span class="co">#&gt; 1:      total -0.18273318 -0.3182293 -0.0472370913 -0.13528</span></span>
+<span><span class="co">#&gt; 2:   mediated -0.06387838 -0.1280762  0.0003194037 -0.05329</span></span>
+<span><span class="co">#&gt; 3: calibrated -0.11885480 -0.2768993  0.0391897229 -0.08199</span></span></code></pre></div>
+</div>
+<p>Every interval covers the truth. With 200 patients the contrasts are estimated less precisely than the risks, since each compares two arms of about 100.</p>
+</div>
+</div>
+</section><section class="section level2"><h2 id="where-next">Where Next<a class="anchor" aria-label="anchor" href="#where-next"></a>
 </h2>
 <ul>
-<li>The function reference documents further options, such as recurrent targets, only counting events in some states (<code>risk(death, when = ~ z == 0)</code>), only counting first events (<code>only_first</code>), and intervening on several processes at once (<code>scale_intensity(z = 0.5, w = 2)</code>).</li>
-<li>To simulate multistate event history data, see the <a href="https://github.com/BjarkeHautop/simevent" class="external-link">simevent</a> package.</li>
+<li>
+<code><a href="../reference/target-parameters.html">risk()</a></code> and <code><a href="../reference/target-parameters.html">years_lost()</a></code> take several events at once, as in <code>risk(death, illness)</code>, count only events in some states, as in <code>risk(death, when = ~ illness == 0)</code>, and for recurrent events give the expected number of events, or the risk of a first one with <code>only_first = TRUE</code>. See <code><a href="../reference/target-parameters.html">?"target-parameters"</a></code>.</li>
+<li>To simulate event history data, and the truth under interventions, see <a href="https://github.com/BjarkeHautop/simevent" class="external-link">simevent</a>.</li>
 </ul></section><script id="quarto-html-after-body" type="application/javascript">
   window.document.addEventListener("DOMContentLoaded", function (event) {
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
@@ -487,8 +634,7 @@
       }
     }
   });
-  </script></main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
-    </nav></aside>
+  </script></main>
 </div>
 
 

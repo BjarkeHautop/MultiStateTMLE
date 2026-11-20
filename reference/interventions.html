@@ -59,10 +59,10 @@ under.</p>
 
 <dl><dt id="arg--">...<a class="anchor" aria-label="anchor" href="#arg--"></a></dt>
 <dd><p>Named factors, one per process to intervene on, such as
-<code>z = 0.5</code>. Each is a non-negative number, or a one-sided formula giving
-a time-varying factor, such as <code>z = ~ ifelse(time &lt; 0.5, 0.5, 1)</code>, that
-may use <code>time</code>, baseline covariates and the processes (their number of
-events so far).</p></dd>
+<code>illness = 0.5</code>. Each is a non-negative number, or a one-sided formula
+giving a time-varying factor, such as
+<code>illness = ~ ifelse(time &lt; 0.5, 0.5, 1)</code>, that may use <code>time</code>, baseline
+covariates and the processes (their number of events so far).</p></dd>
 
 
 <dt id="arg-only-first">only_first<a class="anchor" aria-label="anchor" href="#arg-only-first"></a></dt>
@@ -126,71 +126,76 @@ intervention.</p></li>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Fixed intensity scalings. Halve the intensity of z, remove z altogether,</span></span></span>
-<span class="r-in"><span><span class="co"># or double it:</span></span></span>
-<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>z <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(z = 0.5)</span>
-<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>z <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(z = 0)</span>
-<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>z <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(z = 2)</span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Fixed intensity scalings. Halve the intensity of illness, remove illness</span></span></span>
+<span class="r-in"><span><span class="co"># altogether, or double it:</span></span></span>
+<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>illness <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(illness = 0.5)</span>
+<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>illness <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(illness = 0)</span>
+<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>illness <span class="op">=</span> <span class="fl">2</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(illness = 2)</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># A time-varying scaling: halve the intensity of z before time 0.5 only.</span></span></span>
-<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>z <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">time</span> <span class="op">&lt;</span> <span class="fl">0.5</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(z = ~ifelse(time &lt; 0.5, 0.5, 1))</span>
+<span class="r-in"><span><span class="co"># A time-varying scaling: halve the intensity of illness before time 0.5</span></span></span>
+<span class="r-in"><span><span class="co"># only.</span></span></span>
+<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>illness <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">time</span> <span class="op">&lt;</span> <span class="fl">0.5</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(illness = ~ifelse(time &lt; 0.5, 0.5, 1))</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># A scaling that depends on a baseline covariate: halve it only for</span></span></span>
-<span class="r-in"><span><span class="co"># individuals with L0 &gt; 0.</span></span></span>
-<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>z <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">L0</span> <span class="op">&gt;</span> <span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(z = ~ifelse(L0 &gt; 0, 0.5, 1))</span>
+<span class="r-in"><span><span class="co"># individuals with biomarker &gt; 0.</span></span></span>
+<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>illness <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">biomarker</span> <span class="op">&gt;</span> <span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(illness = ~ifelse(biomarker &gt; 0, 0.5, 1))</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Several processes at once:</span></span></span>
-<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>z <span class="op">=</span> <span class="fl">0.5</span>, death <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(z = 0.5, death = 0.8)</span>
+<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>illness <span class="op">=</span> <span class="fl">0.5</span>, death <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(illness = 0.5, death = 0.8)</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Calibrated interventions, scaling the intensity of z so that its risk</span></span></span>
+<span class="r-in"><span><span class="co"># Calibrated interventions, scaling the intensity of illness so that its risk</span></span></span>
 <span class="r-in"><span><span class="co"># equals 0.1, falls by 0.05, or falls to 80% of its value without</span></span></span>
 <span class="r-in"><span><span class="co"># intervention:</span></span></span>
-<span class="r-in"><span><span class="fu">calibrate</span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>, <span class="fu">level</span><span class="op">(</span><span class="fl">0.1</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: calibrate(risk(z), level(0.1))</span>
-<span class="r-in"><span><span class="fu">calibrate</span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>, <span class="fu">absolute_change</span><span class="op">(</span><span class="op">-</span><span class="fl">0.05</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: calibrate(risk(z), absolute_change(-0.05))</span>
-<span class="r-in"><span><span class="fu">calibrate</span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>, <span class="fu">relative_change</span><span class="op">(</span><span class="fl">0.8</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: calibrate(risk(z), relative_change(0.8))</span>
+<span class="r-in"><span><span class="fu">calibrate</span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">illness</span><span class="op">)</span>, <span class="fu">level</span><span class="op">(</span><span class="fl">0.1</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: calibrate(risk(illness), level(0.1))</span>
+<span class="r-in"><span><span class="fu">calibrate</span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">illness</span><span class="op">)</span>, <span class="fu">absolute_change</span><span class="op">(</span><span class="op">-</span><span class="fl">0.05</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: calibrate(risk(illness), absolute_change(-0.05))</span>
+<span class="r-in"><span><span class="fu">calibrate</span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">illness</span><span class="op">)</span>, <span class="fu">relative_change</span><span class="op">(</span><span class="fl">0.8</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: calibrate(risk(illness), relative_change(0.8))</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use them in tmle_estimate():</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="fit_initial.html">fit_initial</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">illness_death</span>,</span></span>
 <span class="r-in"><span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">z</span> <span class="op">~</span> <span class="va">L0</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">z</span>,</span></span>
-<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">L0</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">illness</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span> <span class="op">+</span> <span class="va">illness</span>,</span></span>
+<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">biomarker</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  tau <span class="op">=</span> <span class="fl">1</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu">scale_intensity</span><span class="op">(</span>z <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">L0</span> <span class="op">&gt;</span> <span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">fit</span>,</span></span>
+<span class="r-in"><span>  <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="fu">scale_intensity</span><span class="op">(</span>illness <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">biomarker</span> <span class="op">&gt;</span> <span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> TMLE estimate of risk(death)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> under scale_intensity(z = ~ifelse(L0 &gt; 0, 0.5, 1))</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> under scale_intensity(illness = ~ifelse(biomarker &gt; 0, 0.5, 1))</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    target  estimate        se     lower     upper</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.3159039 0.0390286 0.2394092 0.3923985</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    target  estimate         se     lower     upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.3053054 0.03359683 0.2394568 0.3711539</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Initial estimate: 0.3159; converged after 1 iterations</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Initial estimate: 0.3053; no targeting needed, as it already solves the EIC equation</span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu">calibrate</span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>, <span class="fu">level</span><span class="op">(</span><span class="fl">0.1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu">calibrate</span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">illness</span><span class="op">)</span>, <span class="fu">level</span><span class="op">(</span><span class="fl">0.1</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> TMLE estimate of risk(death)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> under calibrate(risk(z), level(0.1))</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> under calibrate(risk(illness), level(0.1))</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    quantity  estimate       se     lower     upper</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;char&gt;     &lt;num&gt;    &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    alpha 0.6157885 0.139007 0.3433398 0.8882371</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    theta 0.1000000 0.000000 0.1000000 0.1000000</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    quantity  estimate         se     lower     upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    alpha 0.2176164 0.02987141 0.1590696 0.2761633</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    theta 0.1000000 0.00000000 0.1000000 0.1000000</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Estimates under the calibrated intervention:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    target estimate         se     lower     upper   se_crude</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;    &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;      &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.315415 0.03871762 0.2395298 0.3913001 0.03850806</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    target  estimate         se    lower     upper   se_crude</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;    &lt;num&gt;     &lt;num&gt;      &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.2607342 0.03592421 0.190324 0.3311443 0.03559196</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

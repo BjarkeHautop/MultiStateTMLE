@@ -83,8 +83,8 @@ the process that jumped), plus any baseline covariates used in
 
 <dt id="arg-models">models<a class="anchor" aria-label="anchor" href="#arg-models"></a></dt>
 <dd><p>A list with the hazard model of each event process: a
-formula such as <code>death ~ L0 + z</code>, naming the process on the left and
-its covariates on the right, or a <code><a href="hazard_model.html">hazard_model()</a></code> to also restrict
+formula such as <code>death ~ biomarker + illness</code>, naming the process on the
+left and its covariates on the right, or a <code><a href="hazard_model.html">hazard_model()</a></code> to also restrict
 when individuals are at risk of it. Other processes can be used as
 covariates by name, giving their number of events so far. Every event
 in <code>data</code> needs a model, including the censoring process.</p></dd>
@@ -101,8 +101,8 @@ evaluated at <code>tau</code>.</p></dd>
 
 <dt id="arg-treatment-model">treatment_model<a class="anchor" aria-label="anchor" href="#arg-treatment-model"></a></dt>
 <dd><p>Optional logistic regression model for the
-baseline treatment, a two-sided formula such as <code>A0 ~ L0</code>. Required when
-<code>arms</code> is given.</p></dd>
+baseline treatment, a two-sided formula such as
+<code>treatment ~ biomarker</code>. Required when <code>arms</code> is given.</p></dd>
 
 
 <dt id="arg-arms">arms<a class="anchor" aria-label="anchor" href="#arg-arms"></a></dt>
@@ -121,11 +121,12 @@ recurrent process in the state space.</p></dd>
 <dt id="arg-depend-time">depend_time<a class="anchor" aria-label="anchor" href="#arg-depend-time"></a></dt>
 <dd><p>Experimental, and may change. Named list of one-sided
 formulas in <code>time</code>, making hazards depend on the time of a jump. Each is
-named by a state variable: a process <code>z</code> that jumps once, or <code>z.k</code> for
-the <code>k</code>th jump of a recurrent process <code>z</code>. It adds the covariate
-<code>T.&lt;name&gt;</code>, <code>0</code> before that jump and the formula evaluated at the time
-of the jump after it, which can be used (as a factor) in <code>models</code>. For
-example, <code>list(z = ~ time &gt; 0.5)</code> distinguishes early from late
+named by a state variable: a process <code>illness</code> that jumps once, or
+<code>illness.k</code> for the <code>k</code>th jump of a recurrent process <code>illness</code>. It adds
+the covariate <code>T.&lt;name&gt;</code>, <code>0</code> before that jump and the formula evaluated
+at the time of the jump after it, which can be used (as a factor) in
+<code>models</code>. For
+example, <code>list(illness = ~ time &gt; 0.5)</code> distinguishes early from late
 jumps.</p></dd>
 
 
@@ -186,72 +187,70 @@ recomputed from <code>event</code>.</p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Illness-death data: z is an illness that can occur once, death ends</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Illness-death data: illness is an illness that can occur once, death ends</span></span></span>
 <span class="r-in"><span><span class="co"># follow-up, and so does censoring. One row per event:</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">illness_death</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   id      time event         L0</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1  1 1.0836890 death  0.2724785</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2  2 0.6539194 death  0.3572619</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3  3 0.1212156 death -0.8616620</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 4  4 1.1416233     z  0.8083350</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 5  4 3.6778032 death  0.8083350</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 6  5 1.0962284     z  0.6127352</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   id      time     event  biomarker treatment</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1  1 2.8926838 censoring  0.2724785         1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2  2 0.1282264   illness  0.3572619         0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3  2 1.2558891     death  0.3572619         0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 4  3 0.6567113     death -0.8616620         0</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 5  4 0.1752960   illness  0.8083350         1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 6  4 0.2409278     death  0.8083350         1</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># One hazard model per process. The death hazard depends on whether the</span></span></span>
 <span class="r-in"><span><span class="co"># individual has fallen ill, and the illness can occur at most once:</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu">fit_initial</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">illness_death</span>,</span></span>
 <span class="r-in"><span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">z</span> <span class="op">~</span> <span class="va">L0</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">z</span>,</span></span>
-<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">L0</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">illness</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span> <span class="op">+</span> <span class="va">illness</span>,</span></span>
+<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">biomarker</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  tau <span class="op">=</span> <span class="fl">1</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fit</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Initial fit of 150 individuals up to tau = 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Initial fit of 200 individuals up to tau = 1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         name     type          model at_risk</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt;   &lt;char&gt;         &lt;char&gt;  &lt;lgcl&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:         z one_jump         z ~ L0    TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     death terminal death ~ L0 + z   FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: censoring terminal censoring ~ L0   FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         name     type                                   model at_risk</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt;   &lt;char&gt;                                  &lt;char&gt;  &lt;lgcl&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     death terminal death ~ biomarker + treatment + illness   FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: censoring terminal                   censoring ~ biomarker   FALSE</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The process types are inferred from the data, and the hazard models are</span></span></span>
 <span class="r-in"><span><span class="co"># kept for reference:</span></span></span>
 <span class="r-in"><span><span class="va">fit</span><span class="op">$</span><span class="va">processes</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         name     type          model at_risk</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt;   &lt;char&gt;         &lt;char&gt;  &lt;lgcl&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:         z one_jump         z ~ L0    TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     death terminal death ~ L0 + z   FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: censoring terminal censoring ~ L0   FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         name     type                                   model at_risk</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt;   &lt;char&gt;                                  &lt;char&gt;  &lt;lgcl&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     death terminal death ~ biomarker + treatment + illness   FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: censoring terminal                   censoring ~ biomarker   FALSE</span>
 <span class="r-in"><span><span class="va">fit</span><span class="op">$</span><span class="va">models</span><span class="op">$</span><span class="va">death</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Hazard model: death ~ L0 + z</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Hazard model: death ~ biomarker + treatment + illness</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># With a baseline treatment A0, a treatment model prepares estimates under</span></span></span>
+<span class="r-in"><span><span class="co"># With a baseline treatment, a treatment model prepares estimates under</span></span></span>
 <span class="r-in"><span><span class="co"># both arms, for `a` in tmle_estimate():</span></span></span>
-<span class="r-in"><span><span class="va">treated</span> <span class="op">&lt;-</span> <span class="va">illness_death</span></span></span>
-<span class="r-in"><span><span class="va">treated</span><span class="op">$</span><span class="va">A0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">rbinom</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">treated</span><span class="op">$</span><span class="va">id</span><span class="op">)</span>, <span class="fl">1</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">[</span><span class="va">treated</span><span class="op">$</span><span class="va">id</span><span class="op">]</span></span></span>
 <span class="r-in"><span><span class="va">fit_treated</span> <span class="op">&lt;-</span> <span class="fu">fit_initial</span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">treated</span>,</span></span>
+<span class="r-in"><span>  <span class="va">illness_death</span>,</span></span>
 <span class="r-in"><span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">z</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">A0</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">A0</span> <span class="op">+</span> <span class="va">z</span>,</span></span>
-<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">L0</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">illness</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span> <span class="op">+</span> <span class="va">illness</span>,</span></span>
+<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">biomarker</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  tau <span class="op">=</span> <span class="fl">1</span>,</span></span>
-<span class="r-in"><span>  treatment_model <span class="op">=</span> <span class="va">A0</span> <span class="op">~</span> <span class="va">L0</span></span></span>
+<span class="r-in"><span>  treatment_model <span class="op">=</span> <span class="va">treatment</span> <span class="op">~</span> <span class="va">biomarker</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fit_treated</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Initial fit of 150 individuals up to tau = 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Initial fit of 200 individuals up to tau = 1</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         name     type               model at_risk</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt;   &lt;char&gt;              &lt;char&gt;  &lt;lgcl&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:         z one_jump         z ~ L0 + A0    TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     death terminal death ~ L0 + A0 + z   FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: censoring terminal      censoring ~ L0   FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         name     type                                   model at_risk</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt;   &lt;char&gt;                                  &lt;char&gt;  &lt;lgcl&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     death terminal death ~ biomarker + treatment + illness   FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: censoring terminal                   censoring ~ biomarker   FALSE</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Treatment model: A0 ~ L0, prepared for arms a = 0, 1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Treatment model: treatment ~ biomarker, prepared for arms a = 0, 1</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="co"># Data simulated with simevent can be passed as is. Here relapse is</span></span></span>
@@ -259,12 +258,12 @@ recomputed from <code>event</code>.</p>
 <span class="r-in"><span><span class="co"># tracked up to max_count:</span></span></span>
 <span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace</a></span><span class="op">(</span><span class="st">"simevent"</span>, quietly <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span>  <span class="va">model</span> <span class="op">&lt;-</span> <span class="fu">simevent</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_model.html" class="external-link">sim_model</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    L0 <span class="op">=</span> <span class="fu">simevent</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_covariate.html" class="external-link">sim_covariate</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">N</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">N</span><span class="op">)</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    biomarker <span class="op">=</span> <span class="fu">simevent</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_covariate.html" class="external-link">sim_covariate</a></span><span class="op">(</span><span class="kw">function</span><span class="op">(</span><span class="va">N</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/Normal.html" class="external-link">rnorm</a></span><span class="op">(</span><span class="va">N</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    relapse <span class="op">=</span> <span class="fu">simevent</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_process.html" class="external-link">sim_process</a></span><span class="op">(</span><span class="st">"transient"</span>, eta <span class="op">=</span> <span class="fl">0.6</span>, nu <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    death <span class="op">=</span> <span class="fu">simevent</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_process.html" class="external-link">sim_process</a></span><span class="op">(</span><span class="st">"terminal"</span>, eta <span class="op">=</span> <span class="fl">0.2</span>, nu <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    censoring <span class="op">=</span> <span class="fu">simevent</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_process.html" class="external-link">sim_process</a></span><span class="op">(</span><span class="st">"censoring"</span>, eta <span class="op">=</span> <span class="fl">0.2</span>, nu <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    effects <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>      <span class="fu">simevent</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_effect.html" class="external-link">sim_effect</a></span><span class="op">(</span><span class="va">relapse</span> <span class="op">~</span> <span class="va">L0</span>, coef <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>      <span class="fu">simevent</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_effect.html" class="external-link">sim_effect</a></span><span class="op">(</span><span class="va">relapse</span> <span class="op">~</span> <span class="va">biomarker</span>, coef <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>      <span class="fu">simevent</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/simevent/man/sim_effect.html" class="external-link">sim_effect</a></span><span class="op">(</span><span class="va">death</span> <span class="op">~</span> <span class="va">relapse</span>, coef <span class="op">=</span> <span class="fl">0.4</span><span class="op">)</span></span></span>
 <span class="r-in"><span>    <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
@@ -272,18 +271,22 @@ recomputed from <code>event</code>.</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span>  <span class="fu">fit_initial</span><span class="op">(</span></span></span>
 <span class="r-in"><span>    <span class="va">relapses</span>,</span></span>
-<span class="r-in"><span>    models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">relapse</span> <span class="op">~</span> <span class="va">L0</span>, <span class="va">death</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">relapse</span>, <span class="va">censoring</span> <span class="op">~</span> <span class="va">L0</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
+<span class="r-in"><span>      <span class="va">relapse</span> <span class="op">~</span> <span class="va">biomarker</span>,</span></span>
+<span class="r-in"><span>      <span class="va">death</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">relapse</span>,</span></span>
+<span class="r-in"><span>      <span class="va">censoring</span> <span class="op">~</span> <span class="va">biomarker</span></span></span>
+<span class="r-in"><span>    <span class="op">)</span>,</span></span>
 <span class="r-in"><span>    tau <span class="op">=</span> <span class="fl">2</span>,</span></span>
 <span class="r-in"><span>    max_count <span class="op">=</span> <span class="fl">3</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Initial fit of 200 individuals up to tau = 2</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         name      type                model at_risk</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt;    &lt;char&gt;               &lt;char&gt;  &lt;lgcl&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   relapse recurrent         relapse ~ L0   FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     death  terminal death ~ L0 + relapse   FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: censoring  terminal       censoring ~ L0   FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         name      type                       model at_risk</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt;    &lt;char&gt;                      &lt;char&gt;  &lt;lgcl&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   relapse recurrent         relapse ~ biomarker   FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     death  terminal death ~ biomarker + relapse   FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: censoring  terminal       censoring ~ biomarker   FALSE</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

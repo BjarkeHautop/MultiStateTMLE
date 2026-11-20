@@ -2,5 +2,5 @@
 
 ### All vignettes
 
-- [Getting started with
+- [Getting Started with
   MultiStateTMLE](https://github.com/BjarkeHautop/MultiStateTMLE/articles/MultiStateTMLE.md):

@@ -49,6 +49,7 @@ tmle_estimate(
   Optional baseline treatment value (`0` or `1`) to intervene on. Must
   be one of the `arms` prepared by
   [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
+  Without it, each individual keeps their observed treatment.
 
 - control:
 
@@ -111,7 +112,10 @@ An object of class `tmle_estimate`, a list with elements:
   - `iter`, `eic_solved_at` and `converged`: vectors, named by target
     process, of the number of iterations, the absolute mean of the
     efficient influence curve, and whether the iterations converged. A
-    warning is given if they did not.
+    warning is given if they did not. Each iteration checks convergence
+    before updating, so a converged fit made `iter - 1` targeting steps:
+    `iter = 1` means the initial fit already met the criterion and was
+    not updated.
 
   - `weights`: a matrix with the quantiles (columns `q50`, `q90`, `q99`
     and `q100`) over individuals of each individual's maximal
@@ -159,86 +163,90 @@ standard error accounts for the scaling being estimated.
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1
 )
 
 # The risk of death by tau = 1 without intervention, and if the intensity
-# of the illness z were halved:
+# of illness were halved:
 observed <- tmle_estimate(fit, risk(death))
-halved <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+halved <- tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))
 observed
 #> TMLE estimate of risk(death)
 #> without intervention
 #> 
 #>    target  estimate         se     lower     upper
 #>    <char>     <num>      <num>     <num>     <num>
-#> 1:  death 0.3250469 0.03906316 0.2484845 0.4016093
+#> 1:  death 0.3326759 0.03439736 0.2652584 0.4000935
 #> 
-#> Initial estimate: 0.325; converged after 1 iterations
+#> Initial estimate: 0.3327; no targeting needed, as it already solves the EIC equation
 halved
 #> TMLE estimate of risk(death)
-#> under scale_intensity(z = 0.5)
+#> under scale_intensity(illness = 0.5)
 #> 
 #>    target  estimate         se     lower     upper
 #>    <char>     <num>      <num>     <num>     <num>
-#> 1:  death 0.3040549 0.03853505 0.2285276 0.3795823
+#> 1:  death 0.2906665 0.03341164 0.2251809 0.3561521
 #> 
-#> Initial estimate: 0.3124; converged after 2 iterations
+#> Initial estimate: 0.2907; no targeting needed, as it already solves the EIC equation
 
-# Several targets at once, here the risks of death and of z themselves:
-tmle_estimate(fit, risk(death, z), scale_intensity(z = 0.5))$estimate
-#>    target   estimate         se      lower     upper
-#>    <char>      <num>      <num>      <num>     <num>
-#> 1:  death 0.30405495 0.03853505 0.22852763 0.3795823
-#> 2:      z 0.08486244 0.01787691 0.04982433 0.1199005
+# Several targets at once, here the risks of death and of illness themselves:
+both <- tmle_estimate(
+  fit,
+  risk(death, illness),
+  scale_intensity(illness = 0.5)
+)
+both$estimate
+#>     target  estimate         se     lower     upper
+#>     <char>     <num>      <num>     <num>     <num>
+#> 1:   death 0.2906665 0.03341164 0.2251809 0.3561521
+#> 2: illness 0.2169103 0.02428345 0.1693156 0.2645050
 
 # The expected years lost before tau rather than the risk:
-tmle_estimate(fit, years_lost(death), scale_intensity(z = 0.5))$estimate
-#>    target  estimate         se     lower     upper
-#>    <char>     <num>      <num>     <num>     <num>
-#> 1:  death 0.1616395 0.02292384 0.1167096 0.2065694
+coef(tmle_estimate(fit, years_lost(death), scale_intensity(illness = 0.5)))
+#>    death 
+#> 0.149752 
 
 # Diagnostics: the quantiles over individuals of the largest weights, as a
 # check of positivity.
 halved$checks$weights
 #>                   q50      q90      q99     q100
-#> intervention 1.058794 1.167886 1.421183 1.463658
-#> censoring    1.091642 1.104036 1.116678 1.117490
+#> intervention 1.142203 1.462249 1.906350 2.589352
+#> censoring    1.110138 1.158804 1.201243 1.216979
 #> treatment    1.000000 1.000000 1.000000 1.000000
-#> total        1.152459 1.289156 1.586979 1.635622
+#> total        1.249050 1.638933 2.228221 3.151186
 
 # \donttest{
-# A calibrated intervention: the risk of death if the risk of z fell to 80%
-# of its observed value. The first table gives the scaling alpha that
-# achieves it and the risk of z, theta, it attains:
+# A calibrated intervention: the risk of death if the risk of illness fell
+# to 80% of its observed value. The first table gives the scaling alpha that
+# achieves it and the risk of illness, theta, it attains:
 cal <- tmle_estimate(
   fit,
   risk(death),
-  calibrate(risk(z), relative_change(0.8))
+  calibrate(risk(illness), relative_change(0.8))
 )
 cal
 #> TMLE estimate of risk(death)
-#> under calibrate(risk(z), relative_change(0.8))
+#> under calibrate(risk(illness), relative_change(0.8))
 #> 
-#>    quantity  estimate         se      lower     upper
-#>      <char>     <num>      <num>      <num>     <num>
-#> 1:    alpha 0.7927238 0.00995552 0.77321133 0.8122363
-#> 2:    theta 0.1271303 0.02505712 0.07801922 0.1762413
+#>    quantity  estimate         se     lower     upper
+#>      <char>     <num>      <num>     <num>     <num>
+#> 1:    alpha 0.7443751 0.01232345 0.7202216 0.7685287
+#> 2:    theta 0.2950367 0.02790535 0.2403432 0.3497301
 #> 
 #> Estimates under the calibrated intervention:
-#>    target  estimate         se     lower     upper   se_crude
-#>    <char>     <num>      <num>     <num>     <num>      <num>
-#> 1:  death 0.3199203 0.03864198 0.2441835 0.3956572 0.03866085
+#>    target  estimate         se    lower     upper   se_crude
+#>    <char>     <num>      <num>    <num>     <num>      <num>
+#> 1:  death 0.3127176 0.03330144 0.247448 0.3779872 0.03338458
 
 # Its standard error accounts for alpha being estimated; se_crude treats
 # alpha as known:
 cal$estimate[, c("target", "estimate", "se", "se_crude")]
 #>    target  estimate         se   se_crude
 #>    <char>     <num>      <num>      <num>
-#> 1:  death 0.3199203 0.03864198 0.03866085
+#> 1:  death 0.3127176 0.03330144 0.03338458
 # }
 ```

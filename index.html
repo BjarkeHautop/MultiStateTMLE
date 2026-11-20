@@ -70,31 +70,31 @@
 <li>
 <code><a href="reference/fit_initial.html">fit_initial()</a></code> fits the initial (nuisance) hazard models for each event process in the data, and builds the discrete product state space used internally.</li>
 <li>
-<code><a href="reference/tmle_estimate.html">tmle_estimate()</a></code> targets the initial fit to estimate a target, such as <code>risk(death)</code>, under a stochastic intensity intervention: a fixed scaling of the intensity of a process, <code>scale_intensity(z = 0.5)</code>, or one calibrated to bring an exposure to a given value, <code>calibrate(risk(z), relative_change(0.8))</code> (optionally combined with an intervention on baseline treatment). It returns a TMLE estimate with its standard error and efficient influence curve.</li>
+<code><a href="reference/tmle_estimate.html">tmle_estimate()</a></code> targets the initial fit to estimate a target, such as <code>risk(death)</code>, under a stochastic intensity intervention: a fixed scaling of the intensity of a process, <code>scale_intensity(illness = 0.5)</code>, or one calibrated to bring an exposure to a given value, <code>calibrate(risk(illness), relative_change(0.8))</code> (optionally combined with an intervention on baseline treatment). It returns a TMLE estimate with its standard error and efficient influence curve.</li>
 <li>
 <code><a href="reference/intervention_curve.html">intervention_curve()</a></code> traces how the target responds to the exposure over a grid of scalings, and <code><a href="reference/calibrated_contrasts.html">calibrated_contrasts()</a></code> decomposes a total treatment effect into mediated and calibrated contrasts.</li>
 </ul>
-<p>For example, with the simulated illness-death data <code>illness_death</code>, where an illness <code>z</code> raises the risk of <code>death</code>, the risk of death by time 1 if the intensity of the illness were halved is estimated by:</p>
+<p>For example, with the simulated illness-death data <code>illness_death</code>, where <code>illness</code> raises the risk of <code>death</code>, the risk of death by time 1 if the intensity of the illness were halved is estimated by:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/fit_initial.html">fit_initial</a></span><span class="op">(</span></span>
 <span>  <span class="va">illness_death</span>,</span>
 <span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span>
-<span>    <span class="fu"><a href="reference/hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">z</span> <span class="op">~</span> <span class="va">L0</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
-<span>    <span class="va">death</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">z</span>,</span>
-<span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">L0</span></span>
+<span>    <span class="fu"><a href="reference/hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">illness</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span>
+<span>    <span class="va">death</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span> <span class="op">+</span> <span class="va">illness</span>,</span>
+<span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">biomarker</span></span>
 <span>  <span class="op">)</span>,</span>
 <span>  tau <span class="op">=</span> <span class="fl">1</span></span>
 <span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu"><a href="reference/interventions.html">scale_intensity</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="fu"><a href="reference/tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="reference/target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu"><a href="reference/interventions.html">scale_intensity</a></span><span class="op">(</span>illness <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; TMLE estimate of risk(death)</span></span>
-<span><span class="co">#&gt; under scale_intensity(z = 0.5)</span></span>
+<span><span class="co">#&gt; under scale_intensity(illness = 0.5)</span></span>
 <span><span class="co">#&gt;</span></span>
 <span><span class="co">#&gt;    target  estimate         se     lower     upper</span></span>
 <span><span class="co">#&gt;    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span></span>
-<span><span class="co">#&gt; 1:  death 0.3040549 0.03853505 0.2285276 0.3795823</span></span>
+<span><span class="co">#&gt; 1:  death 0.2906665 0.03341164 0.2251809 0.3561521</span></span>
 <span><span class="co">#&gt;</span></span>
-<span><span class="co">#&gt; Initial estimate: 0.3124; converged after 2 iterations</span></span></code></pre></div>
+<span><span class="co">#&gt; Initial estimate: 0.2907; no targeting needed, as it already solves the EIC equation</span></span></code></pre></div>
 <p>To simulate multistate event history data, see the <a href="https://github.com/BjarkeHautop/simevent" class="external-link">simevent</a> package, whose output <code><a href="reference/fit_initial.html">fit_initial()</a></code> takes as is.</p>
 </div>
 <div class="section level2">

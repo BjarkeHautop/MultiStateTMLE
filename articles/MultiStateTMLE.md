@@ -1,134 +1,106 @@
-# Getting started with MultiStateTMLE
-
-MultiStateTMLE estimates causal parameters of multistate event processes
-under *stochastic intensity interventions*: hypothetical interventions
-that scale the intensity of one event process (for example, an illness)
-by a factor `alpha`, and ask how the risk of another process (for
-example, death) would change. Estimation uses targeted maximum
-likelihood estimation (TMLE), which updates an initial fit of the
-hazards so that the resulting estimator is efficient and comes with
-influence curve based standard errors.
-
-This vignette walks through the main workflow:
-
-1.  Fit the initial hazard models with
-    [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
-2.  Estimate a target, such as `risk(death)`, under a fixed intensity
-    scaling,
-    [`scale_intensity()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/interventions.md),
-    with
-    [`tmle_estimate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_estimate.md).
-3.  Trace how the outcome risk depends on the exposure risk with
-    [`intervention_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/intervention_curve.md).
-4.  Calibrate the intervention to a target exposure risk with
-    [`calibrate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/interventions.md).
-5.  Decompose a treatment effect with
-    [`calibrated_contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.md).
+# Getting Started with MultiStateTMLE
 
 ``` r
 
 library(MultiStateTMLE)
 ```
 
-## The data
+We will in this vignette use the following example: how many deaths
+would be prevented by a drug that makes an illness less likely?
 
-The package ships with `illness_death`, simulated event history data for
-150 individuals at risk of an illness `z`, which can occur at most once,
-and of `death`. The illness raises the hazard of death, and both hazards
-depend on a baseline covariate `L0`. Follow-up is subject to censoring.
+## The Data
+
+`illness_death` is a simulated dataset of a trial of 200 patients who
+may fall ill and may die, with follow-up subject to censoring. The
+`illness` can occur at most once and raises the hazard of death.
+Patients were randomised to `treatment` (`1`) or placebo (`0`), and
+patients with a higher baseline `biomarker` are more likely to fall ill.
 
 ``` r
 
 head(illness_death)
-#>   id      time event         L0
-#> 1  1 1.0836890 death  0.2724785
-#> 2  2 0.6539194 death  0.3572619
-#> 3  3 0.1212156 death -0.8616620
-#> 4  4 1.1416233     z  0.8083350
-#> 5  4 3.6778032 death  0.8083350
-#> 6  5 1.0962284     z  0.6127352
+#>   id      time     event  biomarker treatment
+#> 1  1 2.8926838 censoring  0.2724785         1
+#> 2  2 0.1282264   illness  0.3572619         0
+#> 3  2 1.2558891     death  0.3572619         0
+#> 4  3 0.6567113     death -0.8616620         0
+#> 5  4 0.1752960   illness  0.8083350         1
+#> 6  4 0.2409278     death  0.8083350         1
 ```
 
-The data are in long format with one row per event and the columns:
+Each row is an event: the patient `id`, the `time` of the event, which
+`event` it was, and the baseline covariates. A patient who dies without
+falling ill has one row, like patient 3, while one who falls ill and
+then dies has two, like patient 2:
 
-- `id`: individual identifier.
-- `time`: event time.
-- `event`: the name of the process that jumped, here `"z"`, `"death"` or
-  `"censoring"`.
-- Baseline covariates, here `L0`.
+``` r
 
-This is the format that
+illness_death[illness_death$id %in% c(2, 3), ]
+#>   id      time   event  biomarker treatment
+#> 2  2 0.1282264 illness  0.3572619         0
+#> 3  2 1.2558891   death  0.3572619         0
+#> 4  3 0.6567113   death -0.8616620         0
+```
+
+Simulated data
+
+This is the format
 [`simevent::simulate_events()`](https://rdrr.io/pkg/simevent/man/simulate_events.html)
-returns, so simulated data can be passed straight to
-[`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
+returns, so data simulated with
+[simevent](https://github.com/BjarkeHautop/simevent) can be used
+directly. `illness_death` itself was simulated with simevent, which lets
+us check the estimates against the truth below.
 
-An individual who dies without falling ill has a single row, while one
-who falls ill and later dies has two rows. For example, individual 3
-dies, while individual 4 falls ill and then dies:
+## Fitting the Hazards
 
-``` r
-
-illness_death[illness_death$id %in% c(3, 4), ]
-#>   id      time event        L0
-#> 3  3 0.1212156 death -0.861662
-#> 4  4 1.1416233     z  0.808335
-#> 5  4 3.6778032 death  0.808335
-```
-
-## Step 1: Fit the initial hazard models
-
+The first step is to model the hazard of each event.
 [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
-fits one hazard model per event process, expands the data to the grid of
-observed event times up to the horizon `tau`, and builds the discrete
-state space that the targeting step works on.
-
-Each process gets a formula in `models`, with the process name on the
-left and the covariates of its hazard on the right. Other processes can
-be used as covariates by name, giving their number of events so far:
-here the death hazard depends on whether the individual has fallen ill
-(`z`). The illness can occur at most once, which
-[`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md)
-expresses with `limit = 1`. Every event in the data needs a model,
-including censoring.
+takes one formula per event, with the event on the left and the
+covariates of its hazard on the right. Using another event’s name as a
+covariate gives its number of events so far, so
+`death ~ biomarker + treatment + illness` lets the illness change the
+death hazard:
 
 ``` r
 
-fit <- fit_initial(
-  illness_death,
-  models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
-    censoring ~ L0
-  ),
-  tau = 1
+models <- list(
+  hazard_model(illness ~ biomarker + treatment, limit = 1),
+  death ~ biomarker + treatment + illness,
+  censoring ~ biomarker
 )
+fit <- fit_initial(illness_death, models = models, tau = 1)
 fit
-#> Initial fit of 150 individuals up to tau = 1
+#> Initial fit of 200 individuals up to tau = 1
 #> 
-#>         name     type          model at_risk
-#>       <char>   <char>         <char>  <lgcl>
-#> 1:         z one_jump         z ~ L0    TRUE
-#> 2:     death terminal death ~ L0 + z   FALSE
-#> 3: censoring terminal censoring ~ L0   FALSE
+#>         name     type                                   model at_risk
+#>       <char>   <char>                                  <char>  <lgcl>
+#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE
+#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE
+#> 3: censoring terminal                   censoring ~ biomarker   FALSE
 ```
 
-The `type` of each process is inferred from the data: death and
-censoring end follow-up, and the illness occurs at most once.
+By default each hazard is a Cox model, so the death hazard is
 
-By default the hazards are fitted with Cox models.
-[`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md)
-can also restrict when individuals are at risk with a condition on the
-processes, such as `at_risk = ~ z == 0`, and `fit = "hal"` uses the
-highly adaptive lasso instead (experimental).
+\begin{aligned} \lambda\_{\text{death}}(t) = \lambda_0(t) \exp\big( &
+\beta_1 \\ \text{biomarker} + \beta_2 \\ \text{treatment} \\ & + \beta_3
+\\ \text{illness}(t) \big), \end{aligned}
 
-## Step 2: Estimate under a fixed intervention
+where \text{illness}(t) is 1 once the patient has fallen ill. `tau = 1`
+is the time horizon: everything below concerns what happens by time 1.
 
+Hazard models
+
+Every event in the data needs a model, censoring included. A plain
+formula is short for `hazard_model(formula)`, which also takes `limit`,
+the most events a patient can have (here one illness), and `at_risk`, a
+condition such as `~ illness == 0` for when patients are at risk.
+
+## Halving the Illness
+
+Without any intervention,
 [`tmle_estimate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_estimate.md)
-estimates a target parameter under an intervention. The target is given
-by
-[`risk()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/target-parameters.md),
-here the risk of death by time `tau`. Without an intervention, this is
-the observed risk of death by time 1:
+estimates the risk of death by `tau`, given by
+[`risk()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/target-parameters.md):
 
 ``` r
 
@@ -139,99 +111,130 @@ observed
 #> 
 #>    target  estimate         se     lower     upper
 #>    <char>     <num>      <num>     <num>     <num>
-#> 1:  death 0.3250469 0.03906316 0.2484845 0.4016093
+#> 1:  death 0.3326759 0.03439736 0.2652584 0.4000935
 #> 
-#> Initial estimate: 0.325; converged after 1 iterations
+#> Initial estimate: 0.3327; no targeting needed, as it already solves the EIC equation
 ```
 
-The printed table gives the targeted estimate with its standard error
-and a 95% confidence interval, and it is stored as `observed$estimate`.
-The intervention `scale_intensity(z = 0.5)` halves the intensity of the
-illness:
+Now suppose the drug halves the hazard of the illness.
+[`scale_intensity()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/interventions.md)
+multiplies a hazard by a factor \alpha, and the estimate is the risk of
+death had the illness hazard been \alpha \lambda\_{\text{illness}}(t):
 
 ``` r
 
-halved <- tmle_estimate(fit, risk(death), scale_intensity(z = 0.5))
+halved <- tmle_estimate(fit, risk(death), scale_intensity(illness = 0.5))
 halved
 #> TMLE estimate of risk(death)
-#> under scale_intensity(z = 0.5)
+#> under scale_intensity(illness = 0.5)
 #> 
 #>    target  estimate         se     lower     upper
 #>    <char>     <num>      <num>     <num>     <num>
-#> 1:  death 0.3040549 0.03853505 0.2285276 0.3795823
+#> 1:  death 0.2906665 0.03341164 0.2251809 0.3561521
 #> 
-#> Initial estimate: 0.3124; converged after 2 iterations
+#> Initial estimate: 0.2907; no targeting needed, as it already solves the EIC equation
 ```
+
+Halving the illness lowers the risk of death from 0.333 to 0.291. The
+other hazards, death given illness included, are left as they are.
 
 [`coef()`](https://rdrr.io/r/stats/coef.html) and
 [`confint()`](https://rdrr.io/r/stats/confint.html) extract the estimate
-and confidence intervals at other levels:
+and its confidence interval:
 
 ``` r
 
 coef(halved)
 #>     death 
-#> 0.3040549
+#> 0.2906665
 confint(halved, level = 0.9)
 #>             5 %      95 %
-#> death 0.2406704 0.3674395
+#> death 0.2357092 0.3456237
 ```
 
-A factor of `0` removes the illness altogether, while a factor above `1`
-increases its intensity. The factor can also vary over time, given as a
-formula in `time`, baseline covariates and the processes:
+Reading the output
+
+The standard error comes from the efficient influence curve, so no
+bootstrap is needed. The last line gives the estimate from the initial
+fit alone, which TMLE then *targets*: it updates the fitted hazards
+until the estimate solves the efficient influence curve equation. This
+removes the first-order bias of the initial fit, so the confidence
+interval is valid even with flexible hazard models.
+
+Here no targeting was needed: the Cox fits already solve the equation to
+within the stopping criterion, \text{se} / \log n, so the estimate is
+the initial estimate. With 200 patients this is common, since the
+remaining bias is small next to the standard error. With larger samples,
+or more flexible initial fits, expect one or more targeting steps.
+
+Other interventions
+
+A factor of `0` removes the illness, and one above `1` increases it. The
+factor can also be a formula in `time`, the baseline covariates and the
+events so far, for example a drug that only works early, or only for
+patients with `biomarker > 0`:
 
 ``` r
 
-tmle_estimate(
+coef(tmle_estimate(
   fit,
   risk(death),
-  scale_intensity(z = ~ ifelse(time < 0.5, 0.5, 1))
-)$estimate
-#>    target  estimate         se     lower    upper
-#>    <char>     <num>      <num>     <num>    <num>
-#> 1:  death 0.3163871 0.03873481 0.2404683 0.392306
+  scale_intensity(illness = ~ ifelse(time < 0.5, 0.5, 1))
+))
+#>    death 
+#> 0.302683
+coef(tmle_estimate(
+  fit,
+  risk(death),
+  scale_intensity(illness = ~ ifelse(biomarker > 0, 0.5, 1))
+))
+#>     death 
+#> 0.3053054
 ```
 
-## Step 3: Trace the intervention curve
+Several events can be scaled at once, as in
+`scale_intensity(illness = 0.5, death = 0.8)`.
 
-An intensity scaling is not always easy to interpret. It is often more
-natural to ask what happens to the outcome when the *risk* of the
-exposure is changed by a given amount.
+## From Hazards to Risks
+
+“Halve the hazard” is hard to interpret: what does it mean for how many
+patients fall ill?
 [`intervention_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/intervention_curve.md)
-evaluates a grid of scalings `alpha` of the exposure’s intensity and,
-for each, estimates both the exposure, here the risk of the illness, and
-the target:
+answers this for a grid of factors \alpha, estimating both the risk of
+the illness, the *exposure*, and the risk of death:
 
 ``` r
 
 curve <- intervention_curve(
   fit,
   risk(death),
-  exposure = risk(z),
+  exposure = risk(illness),
   alpha = c(0, 0.25, 0.5, 1, 1.5, 2)
 )
-curve$estimate
+curve
+#> Intervention curve of risk(death) against risk(illness)
+#> over 6 scalings of the intensity of illness
+#> 
 #>    alpha target exposure_estimate exposure_se  estimate         se     lower
 #>    <num> <char>             <num>       <num>     <num>      <num>     <num>
-#> 1:  0.00  death        0.00000000 0.000000000 0.2820265 0.03975707 0.2041041
-#> 2:  0.25  death        0.04391205 0.009617945 0.2933270 0.03919098 0.2165141
-#> 3:  0.50  death        0.08486244 0.017876912 0.3040549 0.03899060 0.2276348
-#> 4:  1.00  death        0.15891283 0.031321396 0.3250469 0.03915660 0.2483014
-#> 5:  1.50  death        0.23212809 0.041662682 0.3367827 0.04049368 0.2574166
-#> 6:  2.00  death        0.29250854 0.049801208 0.3584115 0.04287637 0.2743753
+#> 1:  0.00  death         0.0000000  0.00000000 0.2336750 0.03966975 0.1559237
+#> 2:  0.25  death         0.1145766  0.01453457 0.2644432 0.03553681 0.1947923
+#> 3:  0.50  death         0.2169103  0.02428345 0.2906665 0.03374676 0.2245241
+#> 4:  1.00  death         0.3687958  0.03488168 0.3326759 0.03427321 0.2655017
+#> 5:  1.50  death         0.4790098  0.03999024 0.3645547 0.03712284 0.2917953
+#> 6:  2.00  death         0.5616300  0.04251611 0.3893948 0.04055059 0.3099171
 #>        upper
 #>        <num>
-#> 1: 0.3599489
-#> 2: 0.3701399
-#> 3: 0.3804751
-#> 4: 0.4017924
-#> 5: 0.4161489
-#> 6: 0.4424476
+#> 1: 0.3114263
+#> 2: 0.3340941
+#> 3: 0.3568089
+#> 4: 0.3998502
+#> 5: 0.4373141
+#> 6: 0.4688724
 ```
 
-Plotting the target risk against the exposure risk shows how the risk of
-death responds to the risk of illness:
+Plotting one against the other shows how the risk of death responds to
+the risk of illness:
 
 ``` r
 
@@ -242,6 +245,8 @@ plot(
   ce$estimate,
   type = "b",
   pch = 19,
+  las = 1,
+  bty = "l",
   ylim = range(ce$lower, ce$upper),
   xlab = "Risk of illness by time 1",
   ylab = "Risk of death by time 1"
@@ -258,141 +263,253 @@ arrows(
 ```
 
 ![Estimated risk of death plotted against the estimated risk of illness
-across interventions on the illness intensity, with 95% confidence
-bands. The risk of death increases with the risk of
+across interventions on the illness hazard, with 95% confidence
+intervals. The risk of death increases with the risk of
 illness.](MultiStateTMLE_files/figure-html/intervention-plot-1.png)
 
-## Step 4: Calibrate the intervention
+Removing the illness altogether (the leftmost point) lowers the risk of
+death by about 10 percentage points.
 
-[`calibrate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/interventions.md)
-describes a calibrated intervention: the scaling of the exposure’s
-intensity is chosen so that the exposure attains a given value, and the
-target is estimated under it. The value is given by a calibration rule:
+Checking against the truth
 
-- `level(theta)`: the exposure equals `theta`.
-- `absolute_change(delta)`: the exposure is `delta` plus its observed
-  value.
-- `relative_change(rho)`: the exposure is `rho` times its observed
-  value.
-
-For example, the risk of death if the risk of illness were reduced to
-80% of its observed value:
+`illness_death` was simulated from the model below, so simevent can tell
+us the true risks under each intervention, by simulating many patients
+without censoring and with the illness hazard scaled by `intervene`:
 
 ``` r
 
-cal <- tmle_estimate(fit, risk(death), calibrate(risk(z), relative_change(0.8)))
-cal
+library(simevent)
+
+true_model <- sim_model(
+  biomarker = sim_covariate(function(N) rnorm(N)),
+  treatment = sim_covariate(function(N) rbinom(N, 1, 0.5)),
+  illness = sim_process("transient", limit = 1, eta = 0.7, nu = 1),
+  death = sim_process("terminal", eta = 0.3, nu = 1),
+  censoring = sim_process("censoring", eta = 0.1, nu = 1),
+  effects = list(
+    sim_effect(illness ~ biomarker + treatment, coef = c(0.5, -1)),
+    sim_effect(death ~ illness + treatment, coef = c(1.2, -0.3))
+  )
+)
+
+true_risks <- function(intervene) {
+  sim <- simulate_events(
+    true_model,
+    n = 1e5,
+    cens = 0,
+    intervene = intervene,
+    seed = 1
+  )
+  risks <- event_risk(sim, true_model, c("illness", "death"), tau = 1)
+  setNames(risks$risk, risks$process)
+}
+
+check <- ce[, c("alpha", "estimate", "lower", "upper")]
+check$truth <- sapply(
+  check$alpha,
+  function(alpha) true_risks(list(illness = alpha))["death"]
+)
+check
+#>    alpha  estimate     lower     upper   truth
+#>    <num>     <num>     <num>     <num>   <num>
+#> 1:  0.00 0.2336750 0.1559237 0.3114263 0.22972
+#> 2:  0.25 0.2644432 0.1947923 0.3340941 0.25350
+#> 3:  0.50 0.2906665 0.2245241 0.3568089 0.27619
+#> 4:  1.00 0.3326759 0.2655017 0.3998502 0.31160
+#> 5:  1.50 0.3645547 0.2917953 0.4373141 0.34098
+#> 6:  2.00 0.3893948 0.3099171 0.4688724 0.36302
+```
+
+Every interval covers the truth, and the estimates follow the true curve
+closely, removing the illness included.
+
+## Calibrating the Drug
+
+Often the question is about risks directly: what if the drug prevented
+20% of illnesses?
+[`calibrate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/interventions.md)
+finds the factor \alpha for which the risk of illness reaches a given
+value, and estimates the risk of death under it:
+
+``` r
+
+calibrated <- tmle_estimate(
+  fit,
+  risk(death),
+  calibrate(risk(illness), relative_change(0.8))
+)
+calibrated
 #> TMLE estimate of risk(death)
-#> under calibrate(risk(z), relative_change(0.8))
+#> under calibrate(risk(illness), relative_change(0.8))
 #> 
-#>    quantity  estimate         se      lower     upper
-#>      <char>     <num>      <num>      <num>     <num>
-#> 1:    alpha 0.7927238 0.00995552 0.77321133 0.8122363
-#> 2:    theta 0.1271303 0.02505712 0.07801922 0.1762413
+#>    quantity  estimate         se     lower     upper
+#>      <char>     <num>      <num>     <num>     <num>
+#> 1:    alpha 0.7443751 0.01232345 0.7202216 0.7685287
+#> 2:    theta 0.2950367 0.02790535 0.2403432 0.3497301
 #> 
 #> Estimates under the calibrated intervention:
-#>    target  estimate         se     lower     upper   se_crude
-#>    <char>     <num>      <num>     <num>     <num>      <num>
-#> 1:  death 0.3199203 0.03864198 0.2441835 0.3956572 0.03866085
+#>    target  estimate         se    lower     upper   se_crude
+#>    <char>     <num>      <num>    <num>     <num>      <num>
+#> 1:  death 0.3127176 0.03330144 0.247448 0.3779872 0.03338458
 ```
 
-The first table gives the calibrated scaling `alpha` and the exposure
-risk `theta` it attains, and the second the risk of death under it. Its
-standard error `se` accounts for `alpha` being estimated, whereas
-`se_crude` treats it as known.
+The first table gives the calibrated \alpha and the risk of illness
+\theta it reaches, 80% of the observed 0.369. The second gives the risk
+of death under it.
 
-The target can also be the expected years of life lost before `tau`,
-with
-[`years_lost()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/target-parameters.md),
-while the exposure is still calibrated on its risk:
+Calibration rules
+
+The target risk of illness can be given in three ways:
+
+- `level(theta)`: the risk is `theta`.
+- `absolute_change(delta)`: the risk is `delta` plus its observed value.
+- `relative_change(rho)`: the risk is `rho` times its observed value.
+
+Because \alpha is itself estimated, the standard error `se` accounts for
+its uncertainty. `se_crude` is the standard error if \alpha were known.
+
+[`years_lost()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/target-parameters.md)
+gives the expected years of life lost before `tau` instead of the risk,
+and can be used wherever
+[`risk()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/target-parameters.md)
+can:
 
 ``` r
 
-tmle_estimate(
+coef(tmle_estimate(
   fit,
   years_lost(death),
-  calibrate(risk(z), relative_change(0.8))
-)$estimate
-#>    target  estimate         se     lower     upper   se_crude
-#>    <char>     <num>      <num>     <num>     <num>      <num>
-#> 1:  death 0.1644942 0.02295448 0.1195042 0.2094842 0.02295436
+  calibrate(risk(illness), relative_change(0.8))
+))
+#>     death 
+#> 0.1596098
 ```
 
-## Step 5: Decompose a treatment effect
+## Explaining a Treatment Effect
 
-With a baseline treatment `A0`, the total effect of treatment on the
-outcome can be split into the part that goes through its effect on the
-exposure and the remainder. The calibrated intervention sets the treated
-individuals’ exposure risk to what it would have been under placebo, and
-[`calibrated_contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.md)
-then decomposes the total effect into:
+So far `treatment` has only been a covariate. Suppose instead we want
+its effect on death, and how much of it is because treated patients fall
+ill less often. The calibrated intervention above answers this: give
+patients the treatment, but calibrate their risk of illness to what it
+would have been on placebo. This splits the total effect into two
+contrasts:
 
-- a *mediated* contrast: treatment versus the calibrated intervention,
-  and
-- a *calibrated* contrast: the calibrated intervention versus placebo.
+- *mediated*: treatment versus the calibrated intervention, the part
+  that goes through the illness, and
+- *calibrated*: the calibrated intervention versus placebo, the rest.
 
-`illness_death` has no treatment, so for illustration we add a
-randomised treatment that has no actual effect. The treatment model is
-given in `treatment_model`, and
+`treatment_model` tells
 [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
-then prepares estimates under both treatment values, `a = 0` and
-`a = 1`.
+how treatment was assigned, so that estimates can be made with everyone
+treated or everyone on placebo:
 
 ``` r
 
-set.seed(1)
-treated <- illness_death
-a0 <- rbinom(max(treated$id), 1, 0.5)
-treated$A0 <- a0[treated$id]
-
-fit_treated <- fit_initial(
-  treated,
-  models = list(
-    hazard_model(z ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + z,
-    censoring ~ L0
-  ),
+trial_fit <- fit_initial(
+  illness_death,
+  models = models,
   tau = 1,
-  treatment_model = A0 ~ L0
+  treatment_model = treatment ~ biomarker
 )
 ```
 
-The contrasts are computed from the influence curves that each fit
-returns. In the calibrated arm we set `a = 1` and calibrate to a
-relative change of 1 from the risk of illness under placebo,
-`reference_a = 0`, so the risk of illness under treatment is calibrated
-to equal that under placebo:
+`a` sets everyone’s treatment, and `reference_a = 0` calibrates the risk
+of illness to that under placebo:
 
 ``` r
 
-treatment_fit <- tmle_estimate(fit_treated, risk(death), a = 1)
-placebo_fit <- tmle_estimate(fit_treated, risk(death), a = 0)
-calibrated_fit <- tmle_estimate(
-  fit_treated,
+treated <- tmle_estimate(trial_fit, risk(death), a = 1)
+placebo <- tmle_estimate(trial_fit, risk(death), a = 0)
+treated_calibrated <- tmle_estimate(
+  trial_fit,
   risk(death),
-  calibrate(risk(z), relative_change(1), reference_a = 0),
+  calibrate(risk(illness), relative_change(1), reference_a = 0),
   a = 1
 )
-
-calibrated_contrasts(treatment_fit, placebo_fit, calibrated_fit)
-#> Decomposition of the effect of a on death into mediated and calibrated contrasts
+treated_calibrated
+#> TMLE estimate of risk(death)
+#> under calibrate(risk(illness), relative_change(1), reference_a = 0), with a = 1
 #> 
-#>    target   contrast   estimate         se       lower      upper
-#>    <char>     <char>      <num>      <num>       <num>      <num>
-#> 1:  death      total -0.1405813 0.07724416 -0.29197704 0.01081449
-#> 2:  death   mediated -0.0234265 0.01632300 -0.05541899 0.00856599
-#> 3:  death calibrated -0.1171548 0.08141345 -0.27672220 0.04241266
+#>    quantity  estimate         se     lower    upper
+#>      <char>     <num>      <num>     <num>    <num>
+#> 1:    alpha 2.6814303 0.72116544 1.2679720 4.094889
+#> 2:    theta 0.4974118 0.05135867 0.3967507 0.598073
+#> 
+#> Estimates under the calibrated intervention:
+#>    target  estimate         se    lower     upper   se_crude
+#>    <char>     <num>      <num>    <num>     <num>      <num>
+#> 1:  death 0.3112979 0.06357508 0.186693 0.4359028 0.06411261
 ```
 
-The treatment was randomised without any effect, so the confidence
-intervals of all three contrasts cover zero, as expected.
+To give treated patients the risk of illness they would have had on
+placebo, their illness hazard must be multiplied by about 2.7.
+[`calibrated_contrasts()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/calibrated_contrasts.md)
+then combines the three fits:
 
-## Further reading
+``` r
 
-- The function reference documents further options, such as recurrent
-  targets, only counting events in some states
-  (`risk(death, when = ~ z == 0)`), only counting first events
-  (`only_first`), and intervening on several processes at once
-  (`scale_intensity(z = 0.5, w = 2)`).
-- To simulate multistate event history data, see the
-  [simevent](https://github.com/BjarkeHautop/simevent) package.
+contrasts <- calibrated_contrasts(treated, placebo, treated_calibrated)
+contrasts
+#> Decomposition of the effect of a on death into mediated and calibrated contrasts
+#> 
+#>    target   contrast    estimate         se      lower         upper
+#>    <char>     <char>       <num>      <num>      <num>         <num>
+#> 1:  death      total -0.18273318 0.06913193 -0.3182293 -0.0472370913
+#> 2:  death   mediated -0.06387838 0.03275458 -0.1280762  0.0003194037
+#> 3:  death calibrated -0.11885480 0.08063644 -0.2768993  0.0391897229
+```
+
+Treatment lowers the risk of death by 18 percentage points, of which 6
+go through the illness.
+
+Checking against the truth
+
+With `true_model` from before, simevent gives the true contrasts too:
+simulate each arm without censoring, and for the calibrated arm search
+for the factor on the illness hazard that matches the risk of illness on
+placebo:
+
+``` r
+
+placebo_risks <- true_risks(list(treatment = 0))
+treatment_risks <- true_risks(list(treatment = 1))
+true_alpha <- uniroot(
+  function(alpha) {
+    calibrated <- true_risks(list(treatment = 1, illness = alpha))
+    calibrated["illness"] - placebo_risks["illness"]
+  },
+  interval = c(1, 5),
+  tol = 0.01
+)$root
+calibrated_risks <- true_risks(list(treatment = 1, illness = true_alpha))
+
+check <- contrasts$estimate[, c("contrast", "estimate", "lower", "upper")]
+check$truth <- c(
+  treatment_risks["death"] - placebo_risks["death"],
+  treatment_risks["death"] - calibrated_risks["death"],
+  calibrated_risks["death"] - placebo_risks["death"]
+)
+check
+#>      contrast    estimate      lower         upper    truth
+#>        <char>       <num>      <num>         <num>    <num>
+#> 1:      total -0.18273318 -0.3182293 -0.0472370913 -0.13528
+#> 2:   mediated -0.06387838 -0.1280762  0.0003194037 -0.05329
+#> 3: calibrated -0.11885480 -0.2768993  0.0391897229 -0.08199
+```
+
+Every interval covers the truth. With 200 patients the contrasts are
+estimated less precisely than the risks, since each compares two arms of
+about 100.
+
+## Where Next
+
+- [`risk()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/target-parameters.md)
+  and
+  [`years_lost()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/target-parameters.md)
+  take several events at once, as in `risk(death, illness)`, count only
+  events in some states, as in `risk(death, when = ~ illness == 0)`, and
+  for recurrent events give the expected number of events, or the risk
+  of a first one with `only_first = TRUE`. See
+  [`?"target-parameters"`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/target-parameters.md).
+- To simulate event history data, and the truth under interventions, see
+  [simevent](https://github.com/BjarkeHautop/simevent).

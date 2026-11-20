@@ -32,8 +32,8 @@ years_lost(..., when = NULL, only_first = FALSE)
 - when:
 
   Optional one-sided formula of a condition on the state, such as
-  `~ z == 0`: only events while it holds count. It may use the processes
-  that hazards depend on (their number of events so far).
+  `~ illness == 0`: only events while it holds count. It may use the
+  processes that hazards depend on (their number of events so far).
 
 - only_first:
 
@@ -53,12 +53,12 @@ years_lost(death)
 #> Target: years_lost(death)
 
 # Several processes, each estimated separately under the same intervention:
-risk(death, z)
-#> Target: risk(death, z)
+risk(death, illness)
+#> Target: risk(death, illness)
 
 # Only deaths before illness count:
-risk(death, when = ~ z == 0)
-#> Target: risk(death, when = ~z == 0)
+risk(death, when = ~ illness == 0)
+#> Target: risk(death, when = ~illness == 0)
 
 # For a recurrent process, the risk of a first event rather than the
 # expected number of events:
@@ -66,33 +66,33 @@ risk(relapse, only_first = TRUE)
 #> Target: risk(relapse, only_first = TRUE)
 
 # Processes held in a character vector:
-targets <- c("death", "z")
+targets <- c("death", "illness")
 do.call(risk, as.list(targets))
-#> Target: risk(death, z)
+#> Target: risk(death, illness)
 
 # Use them in tmle_estimate():
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1
 )
-tmle_estimate(fit, risk(death, z))
-#> TMLE estimate of risk(death, z)
+tmle_estimate(fit, risk(death, illness))
+#> TMLE estimate of risk(death, illness)
 #> without intervention
 #> 
-#>    target  estimate         se      lower     upper
-#>    <char>     <num>      <num>      <num>     <num>
-#> 1:  death 0.3250469 0.03906316 0.24848453 0.4016093
-#> 2:      z 0.1589128 0.03132140 0.09752402 0.2203016
+#>     target  estimate         se     lower     upper
+#>     <char>     <num>      <num>     <num>     <num>
+#> 1:   death 0.3326759 0.03439736 0.2652584 0.4000935
+#> 2: illness 0.3687958 0.03488168 0.3004290 0.4371627
 #> 
-#> death: Initial estimate: 0.325; converged after 1 iterations
-#> z: Initial estimate: 0.1589; converged after 1 iterations
-tmle_estimate(fit, risk(death, when = ~ z == 0))$estimate
+#> death: Initial estimate: 0.3327; no targeting needed, as it already solves the EIC equation
+#> illness: Initial estimate: 0.3688; no targeting needed, as it already solves the EIC equation
+tmle_estimate(fit, risk(death, when = ~ illness == 0))$estimate
 #>    target  estimate         se     lower     upper
 #>    <char>     <num>      <num>     <num>     <num>
-#> 1:  death 0.2608621 0.03686855 0.1886011 0.3331231
+#> 1:  death 0.1713816 0.02734643 0.1177836 0.2249796
 ```

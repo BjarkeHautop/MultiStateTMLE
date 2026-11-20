@@ -53,44 +53,41 @@ An object of class `calibrated_contrasts`, a list with elements:
 ## Examples
 
 ``` r
-# illness_death with a randomised treatment A0 added, for illustration.
-set.seed(1)
-treated <- illness_death
-treated$A0 <- rbinom(max(treated$id), 1, 0.5)[treated$id]
-
+# A trial where treatment lowers the risk of illness, which raises
+# the risk of death:
 fit <- fit_initial(
-  treated,
+  illness_death,
   models = list(
-    hazard_model(z ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + z,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1,
-  treatment_model = A0 ~ L0
+  treatment_model = treatment ~ biomarker
 )
 
 # \donttest{
 # How much of the effect of treatment on death goes through its effect on
-# the risk of z? The calibrated intervention gives the treated the risk of z
-# they would have had under placebo (reference_a = 0):
+# the risk of illness? The calibrated intervention gives the treated the
+# risk of illness they would have had under placebo (reference_a = 0):
 contrasts <- calibrated_contrasts(
   treatment_fit = tmle_estimate(fit, risk(death), a = 1),
   placebo_fit = tmle_estimate(fit, risk(death), a = 0),
   calibrated_fit = tmle_estimate(
     fit,
     risk(death),
-    calibrate(risk(z), relative_change(1), reference_a = 0),
+    calibrate(risk(illness), relative_change(1), reference_a = 0),
     a = 1
   )
 )
 contrasts
 #> Decomposition of the effect of a on death into mediated and calibrated contrasts
 #> 
-#>    target   contrast   estimate         se       lower      upper
-#>    <char>     <char>      <num>      <num>       <num>      <num>
-#> 1:  death      total -0.1405813 0.07724416 -0.29197704 0.01081449
-#> 2:  death   mediated -0.0234265 0.01632300 -0.05541899 0.00856599
-#> 3:  death calibrated -0.1171548 0.08141345 -0.27672220 0.04241266
+#>    target   contrast    estimate         se      lower         upper
+#>    <char>     <char>       <num>      <num>      <num>         <num>
+#> 1:  death      total -0.18273318 0.06913193 -0.3182293 -0.0472370913
+#> 2:  death   mediated -0.06387838 0.03275458 -0.1280762  0.0003194037
+#> 3:  death calibrated -0.11885480 0.08063644 -0.2768993  0.0391897229
 
 # The total effect is the sum of the mediated and calibrated contrasts:
 sum(contrasts$estimate$estimate[2:3]) - contrasts$estimate$estimate[1]

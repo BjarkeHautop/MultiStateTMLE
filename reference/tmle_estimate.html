@@ -82,7 +82,8 @@ more processes, each estimated separately under the same intervention.</p></dd>
 
 <dt id="arg-a">a<a class="anchor" aria-label="anchor" href="#arg-a"></a></dt>
 <dd><p>Optional baseline treatment value (<code>0</code> or <code>1</code>) to intervene on.
-Must be one of the <code>arms</code> prepared by <code><a href="fit_initial.html">fit_initial()</a></code>.</p></dd>
+Must be one of the <code>arms</code> prepared by <code><a href="fit_initial.html">fit_initial()</a></code>. Without it, each
+individual keeps their observed treatment.</p></dd>
 
 
 <dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
@@ -130,7 +131,10 @@ curve, one value per individual.</p></li>
 <li><p><code>checks</code>: a list of diagnostics:</p><ul><li><p><code>iter</code>, <code>eic_solved_at</code> and <code>converged</code>: vectors, named by target
 process, of the number of iterations, the absolute mean of the
 efficient influence curve, and whether the iterations converged. A
-warning is given if they did not.</p></li>
+warning is given if they did not. Each iteration checks convergence
+before updating, so a converged fit made <code>iter - 1</code> targeting steps:
+<code>iter = 1</code> means the initial fit already met the criterion and was
+not updated.</p></li>
 <li><p><code>weights</code>: a matrix with the quantiles (columns <code>q50</code>, <code>q90</code>, <code>q99</code>
 and <code>q100</code>) over individuals of each individual's maximal
 <code>intervention</code>, <code>censoring</code> and <code>treatment</code> weight, and of their
@@ -167,87 +171,91 @@ accounts for the scaling being estimated.</p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="fit_initial.html">fit_initial</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">illness_death</span>,</span></span>
 <span class="r-in"><span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">z</span> <span class="op">~</span> <span class="va">L0</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">z</span>,</span></span>
-<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">L0</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">illness</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span> <span class="op">+</span> <span class="va">illness</span>,</span></span>
+<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">biomarker</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  tau <span class="op">=</span> <span class="fl">1</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The risk of death by tau = 1 without intervention, and if the intensity</span></span></span>
-<span class="r-in"><span><span class="co"># of the illness z were halved:</span></span></span>
+<span class="r-in"><span><span class="co"># of illness were halved:</span></span></span>
 <span class="r-in"><span><span class="va">observed</span> <span class="op">&lt;-</span> <span class="fu">tmle_estimate</span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">halved</span> <span class="op">&lt;-</span> <span class="fu">tmle_estimate</span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu"><a href="interventions.html">scale_intensity</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">halved</span> <span class="op">&lt;-</span> <span class="fu">tmle_estimate</span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu"><a href="interventions.html">scale_intensity</a></span><span class="op">(</span>illness <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">observed</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> TMLE estimate of risk(death)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> without intervention</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    target  estimate         se     lower     upper</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.3250469 0.03906316 0.2484845 0.4016093</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.3326759 0.03439736 0.2652584 0.4000935</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Initial estimate: 0.325; converged after 1 iterations</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Initial estimate: 0.3327; no targeting needed, as it already solves the EIC equation</span>
 <span class="r-in"><span><span class="va">halved</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> TMLE estimate of risk(death)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> under scale_intensity(z = 0.5)</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> under scale_intensity(illness = 0.5)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    target  estimate         se     lower     upper</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.3040549 0.03853505 0.2285276 0.3795823</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.2906665 0.03341164 0.2251809 0.3561521</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Initial estimate: 0.3124; converged after 2 iterations</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Initial estimate: 0.2907; no targeting needed, as it already solves the EIC equation</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Several targets at once, here the risks of death and of z themselves:</span></span></span>
-<span class="r-in"><span><span class="fu">tmle_estimate</span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span>, <span class="va">z</span><span class="op">)</span>, <span class="fu"><a href="interventions.html">scale_intensity</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span><span class="op">$</span><span class="va">estimate</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    target   estimate         se      lower     upper</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;      &lt;num&gt;      &lt;num&gt;      &lt;num&gt;     &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.30405495 0.03853505 0.22852763 0.3795823</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:      z 0.08486244 0.01787691 0.04982433 0.1199005</span>
+<span class="r-in"><span><span class="co"># Several targets at once, here the risks of death and of illness themselves:</span></span></span>
+<span class="r-in"><span><span class="va">both</span> <span class="op">&lt;-</span> <span class="fu">tmle_estimate</span><span class="op">(</span></span></span>
+<span class="r-in"><span>  <span class="va">fit</span>,</span></span>
+<span class="r-in"><span>  <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span>, <span class="va">illness</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>  <span class="fu"><a href="interventions.html">scale_intensity</a></span><span class="op">(</span>illness <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">both</span><span class="op">$</span><span class="va">estimate</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     target  estimate         se     lower     upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>     &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   death 0.2906665 0.03341164 0.2251809 0.3561521</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2: illness 0.2169103 0.02428345 0.1693156 0.2645050</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The expected years lost before tau rather than the risk:</span></span></span>
-<span class="r-in"><span><span class="fu">tmle_estimate</span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="target-parameters.html">years_lost</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu"><a href="interventions.html">scale_intensity</a></span><span class="op">(</span>z <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span><span class="op">$</span><span class="va">estimate</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    target  estimate         se     lower     upper</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.1616395 0.02292384 0.1167096 0.2065694</span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef</a></span><span class="op">(</span><span class="fu">tmle_estimate</span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="target-parameters.html">years_lost</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, <span class="fu"><a href="interventions.html">scale_intensity</a></span><span class="op">(</span>illness <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    death </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 0.149752 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Diagnostics: the quantiles over individuals of the largest weights, as a</span></span></span>
 <span class="r-in"><span><span class="co"># check of positivity.</span></span></span>
 <span class="r-in"><span><span class="va">halved</span><span class="op">$</span><span class="va">checks</span><span class="op">$</span><span class="va">weights</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                   q50      q90      q99     q100</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> intervention 1.058794 1.167886 1.421183 1.463658</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> censoring    1.091642 1.104036 1.116678 1.117490</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> intervention 1.142203 1.462249 1.906350 2.589352</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> censoring    1.110138 1.158804 1.201243 1.216979</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> treatment    1.000000 1.000000 1.000000 1.000000</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> total        1.152459 1.289156 1.586979 1.635622</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> total        1.249050 1.638933 2.228221 3.151186</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span><span class="co"># A calibrated intervention: the risk of death if the risk of z fell to 80%</span></span></span>
-<span class="r-in"><span><span class="co"># of its observed value. The first table gives the scaling alpha that</span></span></span>
-<span class="r-in"><span><span class="co"># achieves it and the risk of z, theta, it attains:</span></span></span>
+<span class="r-in"><span><span class="co"># A calibrated intervention: the risk of death if the risk of illness fell</span></span></span>
+<span class="r-in"><span><span class="co"># to 80% of its observed value. The first table gives the scaling alpha that</span></span></span>
+<span class="r-in"><span><span class="co"># achieves it and the risk of illness, theta, it attains:</span></span></span>
 <span class="r-in"><span><span class="va">cal</span> <span class="op">&lt;-</span> <span class="fu">tmle_estimate</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  <span class="va">fit</span>,</span></span>
 <span class="r-in"><span>  <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  <span class="fu"><a href="interventions.html">calibrate</a></span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>, <span class="fu"><a href="interventions.html">relative_change</a></span><span class="op">(</span><span class="fl">0.8</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-in"><span>  <span class="fu"><a href="interventions.html">calibrate</a></span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">illness</span><span class="op">)</span>, <span class="fu"><a href="interventions.html">relative_change</a></span><span class="op">(</span><span class="fl">0.8</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">cal</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> TMLE estimate of risk(death)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> under calibrate(risk(z), relative_change(0.8))</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> under calibrate(risk(illness), relative_change(0.8))</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    quantity  estimate         se      lower     upper</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;char&gt;     &lt;num&gt;      &lt;num&gt;      &lt;num&gt;     &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    alpha 0.7927238 0.00995552 0.77321133 0.8122363</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    theta 0.1271303 0.02505712 0.07801922 0.1762413</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    quantity  estimate         se     lower     upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>      &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:    alpha 0.7443751 0.01232345 0.7202216 0.7685287</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:    theta 0.2950367 0.02790535 0.2403432 0.3497301</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Estimates under the calibrated intervention:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    target  estimate         se     lower     upper   se_crude</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;     &lt;num&gt;     &lt;num&gt;      &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.3199203 0.03864198 0.2441835 0.3956572 0.03866085</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    target  estimate         se    lower     upper   se_crude</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;    &lt;num&gt;     &lt;num&gt;      &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.3127176 0.03330144 0.247448 0.3779872 0.03338458</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Its standard error accounts for alpha being estimated; se_crude treats</span></span></span>
 <span class="r-in"><span><span class="co"># alpha as known:</span></span></span>
 <span class="r-in"><span><span class="va">cal</span><span class="op">$</span><span class="va">estimate</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"target"</span>, <span class="st">"estimate"</span>, <span class="st">"se"</span>, <span class="st">"se_crude"</span><span class="op">)</span><span class="op">]</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    target  estimate         se   se_crude</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;num&gt;      &lt;num&gt;      &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.3199203 0.03864198 0.03866085</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death 0.3127176 0.03330144 0.03338458</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>

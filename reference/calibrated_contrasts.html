@@ -92,44 +92,41 @@ zero up to numerical error.</p></li>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># illness_death with a randomised treatment A0 added, for illustration.</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">treated</span> <span class="op">&lt;-</span> <span class="va">illness_death</span></span></span>
-<span class="r-in"><span><span class="va">treated</span><span class="op">$</span><span class="va">A0</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/stats/Binomial.html" class="external-link">rbinom</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="va">treated</span><span class="op">$</span><span class="va">id</span><span class="op">)</span>, <span class="fl">1</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">[</span><span class="va">treated</span><span class="op">$</span><span class="va">id</span><span class="op">]</span></span></span>
-<span class="r-in"><span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># A trial where treatment lowers the risk of illness, which raises</span></span></span>
+<span class="r-in"><span><span class="co"># the risk of death:</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="fit_initial.html">fit_initial</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>  <span class="va">treated</span>,</span></span>
+<span class="r-in"><span>  <span class="va">illness_death</span>,</span></span>
 <span class="r-in"><span>  models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>
-<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">z</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">A0</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">L0</span> <span class="op">+</span> <span class="va">A0</span> <span class="op">+</span> <span class="va">z</span>,</span></span>
-<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">L0</span></span></span>
+<span class="r-in"><span>    <span class="fu"><a href="hazard_model.html">hazard_model</a></span><span class="op">(</span><span class="va">illness</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span>, limit <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="va">death</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">treatment</span> <span class="op">+</span> <span class="va">illness</span>,</span></span>
+<span class="r-in"><span>    <span class="va">censoring</span> <span class="op">~</span> <span class="va">biomarker</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span>,</span></span>
 <span class="r-in"><span>  tau <span class="op">=</span> <span class="fl">1</span>,</span></span>
-<span class="r-in"><span>  treatment_model <span class="op">=</span> <span class="va">A0</span> <span class="op">~</span> <span class="va">L0</span></span></span>
+<span class="r-in"><span>  treatment_model <span class="op">=</span> <span class="va">treatment</span> <span class="op">~</span> <span class="va">biomarker</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="co"># How much of the effect of treatment on death goes through its effect on</span></span></span>
-<span class="r-in"><span><span class="co"># the risk of z? The calibrated intervention gives the treated the risk of z</span></span></span>
-<span class="r-in"><span><span class="co"># they would have had under placebo (reference_a = 0):</span></span></span>
+<span class="r-in"><span><span class="co"># the risk of illness? The calibrated intervention gives the treated the</span></span></span>
+<span class="r-in"><span><span class="co"># risk of illness they would have had under placebo (reference_a = 0):</span></span></span>
 <span class="r-in"><span><span class="va">contrasts</span> <span class="op">&lt;-</span> <span class="fu">calibrated_contrasts</span><span class="op">(</span></span></span>
 <span class="r-in"><span>  treatment_fit <span class="op">=</span> <span class="fu"><a href="tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, a <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  placebo_fit <span class="op">=</span> <span class="fu"><a href="tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span><span class="va">fit</span>, <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>, a <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  calibrated_fit <span class="op">=</span> <span class="fu"><a href="tmle_estimate.html">tmle_estimate</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    <span class="va">fit</span>,</span></span>
 <span class="r-in"><span>    <span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">death</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>    <span class="fu"><a href="interventions.html">calibrate</a></span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">z</span><span class="op">)</span>, <span class="fu"><a href="interventions.html">relative_change</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, reference_a <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>    <span class="fu"><a href="interventions.html">calibrate</a></span><span class="op">(</span><span class="fu"><a href="target-parameters.html">risk</a></span><span class="op">(</span><span class="va">illness</span><span class="op">)</span>, <span class="fu"><a href="interventions.html">relative_change</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span>, reference_a <span class="op">=</span> <span class="fl">0</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>    a <span class="op">=</span> <span class="fl">1</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">contrasts</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Decomposition of the effect of a on death into mediated and calibrated contrasts</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    target   contrast   estimate         se       lower      upper</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;char&gt;      &lt;num&gt;      &lt;num&gt;       &lt;num&gt;      &lt;num&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death      total -0.1405813 0.07724416 -0.29197704 0.01081449</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  death   mediated -0.0234265 0.01632300 -0.05541899 0.00856599</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3:  death calibrated -0.1171548 0.08141345 -0.27672220 0.04241266</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    target   contrast    estimate         se      lower         upper</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>    &lt;char&gt;     &lt;char&gt;       &lt;num&gt;      &lt;num&gt;      &lt;num&gt;         &lt;num&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:  death      total -0.18273318 0.06913193 -0.3182293 -0.0472370913</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:  death   mediated -0.06387838 0.03275458 -0.1280762  0.0003194037</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3:  death calibrated -0.11885480 0.08063644 -0.2768993  0.0391897229</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># The total effect is the sum of the mediated and calibrated contrasts:</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/sum.html" class="external-link">sum</a></span><span class="op">(</span><span class="va">contrasts</span><span class="op">$</span><span class="va">estimate</span><span class="op">$</span><span class="va">estimate</span><span class="op">[</span><span class="fl">2</span><span class="op">:</span><span class="fl">3</span><span class="op">]</span><span class="op">)</span> <span class="op">-</span> <span class="va">contrasts</span><span class="op">$</span><span class="va">estimate</span><span class="op">$</span><span class="va">estimate</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span></span></span>

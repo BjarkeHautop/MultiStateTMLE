@@ -41,8 +41,8 @@ fit_initial(
 - models:
 
   A list with the hazard model of each event process: a formula such as
-  `death ~ L0 + z`, naming the process on the left and its covariates on
-  the right, or a
+  `death ~ biomarker + illness`, naming the process on the left and its
+  covariates on the right, or a
   [`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md)
   to also restrict when individuals are at risk of it. Other processes
   can be used as covariates by name, giving their number of events so
@@ -61,7 +61,8 @@ fit_initial(
 - treatment_model:
 
   Optional logistic regression model for the baseline treatment, a
-  two-sided formula such as `A0 ~ L0`. Required when `arms` is given.
+  two-sided formula such as `treatment ~ biomarker`. Required when
+  `arms` is given.
 
 - arms:
 
@@ -82,11 +83,12 @@ fit_initial(
 
   Experimental, and may change. Named list of one-sided formulas in
   `time`, making hazards depend on the time of a jump. Each is named by
-  a state variable: a process `z` that jumps once, or `z.k` for the
-  `k`th jump of a recurrent process `z`. It adds the covariate
-  `T.<name>`, `0` before that jump and the formula evaluated at the time
-  of the jump after it, which can be used (as a factor) in `models`. For
-  example, `list(z = ~ time > 0.5)` distinguishes early from late jumps.
+  a state variable: a process `illness` that jumps once, or `illness.k`
+  for the `k`th jump of a recurrent process `illness`. It adds the
+  covariate `T.<name>`, `0` before that jump and the formula evaluated
+  at the time of the jump after it, which can be used (as a factor) in
+  `models`. For example, `list(illness = ~ time > 0.5)` distinguishes
+  early from late jumps.
 
 - control:
 
@@ -157,72 +159,70 @@ adds, are ignored: the counts are recomputed from `event`.
 ## Examples
 
 ``` r
-# Illness-death data: z is an illness that can occur once, death ends
+# Illness-death data: illness is an illness that can occur once, death ends
 # follow-up, and so does censoring. One row per event:
 head(illness_death)
-#>   id      time event         L0
-#> 1  1 1.0836890 death  0.2724785
-#> 2  2 0.6539194 death  0.3572619
-#> 3  3 0.1212156 death -0.8616620
-#> 4  4 1.1416233     z  0.8083350
-#> 5  4 3.6778032 death  0.8083350
-#> 6  5 1.0962284     z  0.6127352
+#>   id      time     event  biomarker treatment
+#> 1  1 2.8926838 censoring  0.2724785         1
+#> 2  2 0.1282264   illness  0.3572619         0
+#> 3  2 1.2558891     death  0.3572619         0
+#> 4  3 0.6567113     death -0.8616620         0
+#> 5  4 0.1752960   illness  0.8083350         1
+#> 6  4 0.2409278     death  0.8083350         1
 
 # One hazard model per process. The death hazard depends on whether the
 # individual has fallen ill, and the illness can occur at most once:
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1
 )
 fit
-#> Initial fit of 150 individuals up to tau = 1
+#> Initial fit of 200 individuals up to tau = 1
 #> 
-#>         name     type          model at_risk
-#>       <char>   <char>         <char>  <lgcl>
-#> 1:         z one_jump         z ~ L0    TRUE
-#> 2:     death terminal death ~ L0 + z   FALSE
-#> 3: censoring terminal censoring ~ L0   FALSE
+#>         name     type                                   model at_risk
+#>       <char>   <char>                                  <char>  <lgcl>
+#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE
+#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE
+#> 3: censoring terminal                   censoring ~ biomarker   FALSE
 
 # The process types are inferred from the data, and the hazard models are
 # kept for reference:
 fit$processes
-#>         name     type          model at_risk
-#>       <char>   <char>         <char>  <lgcl>
-#> 1:         z one_jump         z ~ L0    TRUE
-#> 2:     death terminal death ~ L0 + z   FALSE
-#> 3: censoring terminal censoring ~ L0   FALSE
+#>         name     type                                   model at_risk
+#>       <char>   <char>                                  <char>  <lgcl>
+#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE
+#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE
+#> 3: censoring terminal                   censoring ~ biomarker   FALSE
 fit$models$death
-#> Hazard model: death ~ L0 + z
+#> Hazard model: death ~ biomarker + treatment + illness
 
-# With a baseline treatment A0, a treatment model prepares estimates under
+# With a baseline treatment, a treatment model prepares estimates under
 # both arms, for `a` in tmle_estimate():
-treated <- illness_death
-treated$A0 <- rbinom(max(treated$id), 1, 0.5)[treated$id]
 fit_treated <- fit_initial(
-  treated,
+  illness_death,
   models = list(
-    hazard_model(z ~ L0 + A0, limit = 1),
-    death ~ L0 + A0 + z,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1,
-  treatment_model = A0 ~ L0
+  treatment_model = treatment ~ biomarker
 )
 fit_treated
-#> Initial fit of 150 individuals up to tau = 1
+#> Initial fit of 200 individuals up to tau = 1
 #> 
-#>         name     type               model at_risk
-#>       <char>   <char>              <char>  <lgcl>
-#> 1:         z one_jump         z ~ L0 + A0    TRUE
-#> 2:     death terminal death ~ L0 + A0 + z   FALSE
-#> 3: censoring terminal      censoring ~ L0   FALSE
+#>         name     type                                   model at_risk
+#>       <char>   <char>                                  <char>  <lgcl>
+#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE
+#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE
+#> 3: censoring terminal                   censoring ~ biomarker   FALSE
 #> 
-#> Treatment model: A0 ~ L0, prepared for arms a = 0, 1
+#> Treatment model: treatment ~ biomarker, prepared for arms a = 0, 1
 
 # \donttest{
 # Data simulated with simevent can be passed as is. Here relapse is
@@ -230,12 +230,12 @@ fit_treated
 # tracked up to max_count:
 if (requireNamespace("simevent", quietly = TRUE)) {
   model <- simevent::sim_model(
-    L0 = simevent::sim_covariate(function(N) rnorm(N)),
+    biomarker = simevent::sim_covariate(function(N) rnorm(N)),
     relapse = simevent::sim_process("transient", eta = 0.6, nu = 1),
     death = simevent::sim_process("terminal", eta = 0.2, nu = 1),
     censoring = simevent::sim_process("censoring", eta = 0.2, nu = 1),
     effects = list(
-      simevent::sim_effect(relapse ~ L0, coef = 0.5),
+      simevent::sim_effect(relapse ~ biomarker, coef = 0.5),
       simevent::sim_effect(death ~ relapse, coef = 0.4)
     )
   )
@@ -243,17 +243,21 @@ if (requireNamespace("simevent", quietly = TRUE)) {
 
   fit_initial(
     relapses,
-    models = list(relapse ~ L0, death ~ L0 + relapse, censoring ~ L0),
+    models = list(
+      relapse ~ biomarker,
+      death ~ biomarker + relapse,
+      censoring ~ biomarker
+    ),
     tau = 2,
     max_count = 3
   )
 }
 #> Initial fit of 200 individuals up to tau = 2
 #> 
-#>         name      type                model at_risk
-#>       <char>    <char>               <char>  <lgcl>
-#> 1:   relapse recurrent         relapse ~ L0   FALSE
-#> 2:     death  terminal death ~ L0 + relapse   FALSE
-#> 3: censoring  terminal       censoring ~ L0   FALSE
+#>         name      type                       model at_risk
+#>       <char>    <char>                      <char>  <lgcl>
+#> 1:   relapse recurrent         relapse ~ biomarker   FALSE
+#> 2:     death  terminal death ~ biomarker + relapse   FALSE
+#> 3: censoring  terminal       censoring ~ biomarker   FALSE
 # }
 ```

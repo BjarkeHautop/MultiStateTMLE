@@ -57,6 +57,7 @@ intervention_curve(
   Optional baseline treatment value (`0` or `1`) to intervene on. Must
   be one of the `arms` prepared by
   [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
+  Without it, each individual keeps their observed treatment.
 
 - control:
 
@@ -126,40 +127,41 @@ An object of class `intervention_curve`, a list with elements:
 fit <- fit_initial(
   illness_death,
   models = list(
-    hazard_model(z ~ L0, limit = 1),
-    death ~ L0 + z,
-    censoring ~ L0
+    hazard_model(illness ~ biomarker + treatment, limit = 1),
+    death ~ biomarker + treatment + illness,
+    censoring ~ biomarker
   ),
   tau = 1
 )
 
 # \donttest{
-# How the risk of death responds to the risk of z, as the intensity of z
-# is scaled from 0 (no illness) to 2 (twice the observed intensity):
+# How the risk of death responds to the risk of illness, as the intensity
+# of illness is scaled from 0 (no illness) to 2 (twice the observed
+# intensity):
 curve <- intervention_curve(
   fit,
   risk(death),
-  exposure = risk(z),
+  exposure = risk(illness),
   alpha = c(0, 0.5, 1, 2)
 )
 curve
-#> Intervention curve of risk(death) against risk(z)
-#> over 4 scalings of the intensity of z
+#> Intervention curve of risk(death) against risk(illness)
+#> over 4 scalings of the intensity of illness
 #> 
 #>    alpha target exposure_estimate exposure_se  estimate         se     lower
 #>    <num> <char>             <num>       <num>     <num>      <num>     <num>
-#> 1:   0.0  death        0.00000000  0.00000000 0.2820265 0.03975707 0.2041041
-#> 2:   0.5  death        0.08486244  0.01787691 0.3040549 0.03899060 0.2276348
-#> 3:   1.0  death        0.15891283  0.03132140 0.3250469 0.03915660 0.2483014
-#> 4:   2.0  death        0.29250854  0.04980121 0.3584115 0.04287637 0.2743753
+#> 1:   0.0  death         0.0000000  0.00000000 0.2336750 0.03966975 0.1559237
+#> 2:   0.5  death         0.2169103  0.02428345 0.2906665 0.03374676 0.2245241
+#> 3:   1.0  death         0.3687958  0.03488168 0.3326759 0.03427321 0.2655017
+#> 4:   2.0  death         0.5616300  0.04251611 0.3893948 0.04055059 0.3099171
 #>        upper
 #>        <num>
-#> 1: 0.3599489
-#> 2: 0.3804751
-#> 3: 0.4017924
-#> 4: 0.4424476
+#> 1: 0.3114263
+#> 2: 0.3568089
+#> 3: 0.3998502
+#> 4: 0.4688724
 
-# Plot the risk of death against the risk of z, with 95% confidence
+# Plot the risk of death against the risk of illness, with 95% confidence
 # intervals:
 est <- curve$estimate
 plot(
@@ -167,7 +169,7 @@ plot(
   est$estimate,
   type = "b",
   ylim = range(est$lower, est$upper),
-  xlab = "Risk of z by time 1",
+  xlab = "Risk of illness by time 1",
   ylab = "Risk of death by time 1"
 )
 arrows(
