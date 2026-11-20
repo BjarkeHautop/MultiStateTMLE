@@ -385,6 +385,13 @@
       if (length(state_processes) > 0L) {
         # Tn x M: successor state indices for the state of each row
         succ_idx_mat <- gamma_jump_idx_mat[s_vec_row_index, , drop = FALSE]
+        # A jump of a recurrent target adds 1, but only in the states where
+        # it counts.
+        counts_in_state <- if (is_target_only_in_state) {
+          target_only_in_state[s_vec]
+        } else {
+          rep(1, Tn)
+        }
 
         if (m > 0) {
           # extract Q_mat[tt+1, succ_idx_mat[tt, j]] for all tt, j
@@ -398,12 +405,7 @@
           # add recurrence offsets if present
           if (any(is_recurrent_state_processes != 0L)) {
             clever1_stateful <- clever1_stateful +
-              matrix(
-                rep(is_recurrent_state_processes, each = m),
-                nrow = m,
-                ncol = length(is_recurrent_state_processes),
-                byrow = FALSE
-              )
+              outer(counts_in_state[1:m], is_recurrent_state_processes)
           }
           clever1[1:m, state_processes] <- clever1_stateful
         }
@@ -412,7 +414,7 @@
           Tn,
           as.integer(succ_idx_mat[Tn, ])
         ] +
-          (is_recurrent_state_processes * 1)
+          counts_in_state[Tn] * is_recurrent_state_processes
       }
 
       list(clever1 = clever1, clever0 = clever0)

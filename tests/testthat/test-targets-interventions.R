@@ -21,8 +21,8 @@ test_that("targets and interventions print as their call", {
     "years_lost(death, when = ~illness == 0, only_first = TRUE)"
   )
   expect_output(
-    print(scale_intensity(illness = 0.5, w = ~ time / 2, only_first = TRUE)),
-    "scale_intensity\\(illness = 0.5, w = ~time/2, only_first = TRUE\\)"
+    print(scale_intensity(illness = 0.5, w = ~ time / 2)),
+    "scale_intensity\\(illness = 0.5, w = ~time/2\\)"
   )
   expect_equal(
     format(calibrate(risk(illness), level(0.2))),
@@ -43,5 +43,4 @@ test_that("scale_intensity() validates its factors", {
   expect_error(scale_intensity(illness = -1), "illness")
   expect_error(scale_intensity(illness = "a"), "illness")
   expect_error(scale_intensity(illness = y ~ time), "one-sided")
-  expect_error(scale_intensity(illness = 1, only_first = "yes"), "only_first")
 })

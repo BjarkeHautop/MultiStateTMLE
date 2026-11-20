@@ -209,8 +209,6 @@ tmle_estimate <- function(
   verbose
 ) {
   alpha <- if (is.null(intervention)) list() else intervention$alpha
-  intervention_only_first <- !is.null(intervention) &&
-    intervention$only_first
 
   one_step <- control$one_step
   block_size <- control$block_size
@@ -242,7 +240,10 @@ tmle_estimate <- function(
   state.names <- names(states)
   setkeyv(states, c("state", state.names[state.names %in% process.names]))
 
-  # A terminal or one-jump target has at most one event already.
+  # Only the first event of a recurrent target counts: as a one-jump target,
+  # its Q is 1 in every state after its first event, so the rows there add
+  # nothing to the clever covariates. They are kept, since the Q recursion
+  # of each individual runs over all their rows up to tau.
   if (target$only_first && process.types[[target.name]] == "recurrent") {
     if (!target.name %in% names(tmp.long)) {
       stop(
@@ -253,7 +254,6 @@ tmle_estimate <- function(
       )
     }
     process.types[[target.name]] <- "one_jump"
-    tmp.long <- tmp.long[tmp.long[[target.name]] <= 1]
   }
 
   tmp.long[, at.risk := (time <= final.time)]
@@ -263,16 +263,6 @@ tmle_estimate <- function(
       tmp.long[, at.risk := at.risk * (at.risks[[target.name]](tmp.long))]
     }
     states[, at.risk := at.risks[[target.name]](depend.matrix)]
-  }
-
-  if (intervention_only_first) {
-    if (!"at.risk" %in% names(states)) {
-      states[, at.risk := TRUE]
-    }
-    for (name.kk in names(alpha)) {
-      tmp.long[, at.risk := at.risk * (tmp.long[[name.kk]] <= 1)]
-      states[, at.risk := at.risk & (states[[name.kk]] <= 1)]
-    }
   }
 
   if (!is.null(target$when)) {
@@ -304,10 +294,24 @@ tmle_estimate <- function(
         call. = FALSE
       )
     }
+  }
+
+  # The factor at the observed counts, for the weights and scores, with the
+  # counts capped as in the state space so that it matches the factor of
+  # the observed state below.
+  count.names <- intersect(process.names, names(depend.matrix))
+  data.observed <- as.list(tmp.long)
+  for (count.name in count.names) {
+    data.observed[[count.name]] <- pmin(
+      data.observed[[count.name]],
+      max(depend.matrix[[count.name]])
+    )
+  }
+  for (name.kk in names(alpha)) {
     tmp.long[,
       (paste0("alpha.", name.kk)) := .alpha_values(
         alpha[[name.kk]],
-        tmp.long,
+        data.observed,
         name.kk
       )
     ]
@@ -372,15 +376,28 @@ tmle_estimate <- function(
   #--------------------------------
   #-- counterfactual hazards of the intervened processes:
 
+  # The hazard of state s is scaled by the factor evaluated at the counts of
+  # state s, not at the observed ones, since the Q recursion moves through
+  # all states.
   for (name.kk in names(alpha)) {
-    for (varname in grep(
-      paste0(P.prefix, name.kk),
-      names(tmp.long),
-      value = TRUE
-    )) {
-      if (varname != paste0(P.prefix, name.kk)) {
-        tmp.long[, (varname) := get(paste0("alpha.", name.kk)) * get(varname)]
+    for (state.kk in depend.matrix[, unique(state)]) {
+      varname <- paste0(P.prefix, name.kk, ".", state.kk)
+      if (!varname %in% names(tmp.long)) {
+        next
       }
+      counts <- depend.matrix[state == state.kk][1]
+      data.kk <- as.list(tmp.long)
+      for (count.name in count.names) {
+        data.kk[[count.name]] <- rep(counts[[count.name]], nrow(tmp.long))
+      }
+      tmp.long[,
+        (varname) := .alpha_values(
+          alpha[[name.kk]],
+          data.kk,
+          name.kk
+        ) *
+          get(varname)
+      ]
     }
   }
 
@@ -592,8 +609,7 @@ tmle_estimate <- function(
 }
 
 # Combine single-process .tmle_fixed() fits under the same intervention into
-# one. The weight diagnostics are those of the first process; they only
-# differ between processes with only_first, which drops rows by process.
+# one. The weight diagnostics are those of the first process.
 .combine_targets <- function(fits) {
   out <- fits[[1]]
   out$estimate <- rbindlist(lapply(fits, function(fit) fit$estimate))
@@ -610,14 +626,15 @@ tmle_estimate <- function(
 }
 
 # The factor `alpha` of scale_intensity() on process `name`, one value per
-# row of `tmp.long`: a number, or a one-sided formula evaluated in the
-# columns of `tmp.long`.
-.alpha_values <- function(alpha, tmp.long, name) {
+# row of `data` (a data.table or a list of equal-length columns): a number,
+# or a one-sided formula evaluated in the columns of `data`.
+.alpha_values <- function(alpha, data, name) {
+  n.rows <- length(data[["time"]])
   if (!inherits(alpha, "formula")) {
-    return(rep(alpha, nrow(tmp.long)))
+    return(rep(alpha, n.rows))
   }
   values <- tryCatch(
-    eval(alpha[[2]], tmp.long, environment(alpha)),
+    eval(alpha[[2]], data, environment(alpha)),
     error = function(e) {
       stop(
         "Could not evaluate the factor of ",
@@ -631,11 +648,11 @@ tmle_estimate <- function(
     }
   )
   if (length(values) == 1) {
-    values <- rep(values, nrow(tmp.long))
+    values <- rep(values, n.rows)
   }
   if (
     !is.numeric(values) ||
-      length(values) != nrow(tmp.long) ||
+      length(values) != n.rows ||
       anyNA(values) ||
       any(values < 0)
   ) {
@@ -650,29 +667,30 @@ tmle_estimate <- function(
 }
 
 # Clever weight of the intervention on the processes `names`, each with its
-# factor in the column alpha.<name>: the product over them of
-# alpha^N(t-) * exp(-(alpha - 1) * Lambda(t-)). A terminal process without
-# a count column has N(t-) = 0 while follow-up continues.
+# factor in the column alpha.<name>: the likelihood ratio of the intervened
+# to the observed process up to t-, the product over them and over earlier
+# rows of alpha^dN * exp(-(alpha - 1) * dLambda). dN is read off the count
+# column of the process; a terminal process without one has no event while
+# follow-up continues.
 .update_alpha_weights <- function(tmp.long, names) {
   tmp.long[, clever.weight.alpha := 1]
   for (name.kk in names) {
-    cum.col <- paste0("cum.hazard.", name.kk)
+    alpha.kk <- tmp.long[[paste0("alpha.", name.kk)]]
+    d.lambda <- tmp.long[[paste0("at.risk.", name.kk)]] *
+      tmp.long[[paste0("P.", name.kk)]]
+    if (name.kk %in% names(tmp.long)) {
+      tmp.long[, .d.n := c(diff(get(name.kk)), 0), by = "id"]
+      d.n <- tmp.long[[".d.n"]]
+      tmp.long[, .d.n := NULL]
+    } else {
+      d.n <- 0
+    }
+    tmp.long[, .ratio := alpha.kk^d.n * exp(-(alpha.kk - 1) * d.lambda)]
     tmp.long[,
-      (cum.col) := cumsum(
-        get(paste0("at.risk.", name.kk)) * get(paste0("P.", name.kk))
-      ),
+      clever.weight.alpha := clever.weight.alpha * c(1, cumprod(.ratio)[-.N]),
       by = "id"
     ]
-    tmp.long[, (paste0(cum.col, ".1")) := c(0, get(cum.col)[-.N]), by = "id"]
-    tmp.long[,
-      clever.weight.alpha := clever.weight.alpha *
-        get(paste0("alpha.", name.kk))^(if (name.kk %in% names(tmp.long)) {
-          get(name.kk)
-        } else {
-          0
-        }) *
-        exp(-(get(paste0("alpha.", name.kk)) - 1) * get(paste0(cum.col, ".1")))
-    ]
+    tmp.long[, .ratio := NULL]
   }
   invisible(tmp.long)
 }
