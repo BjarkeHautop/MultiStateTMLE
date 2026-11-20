@@ -29,7 +29,7 @@ Imports:
     utils
 Suggests:
     quarto,
-    simevent,
+    simevent (>= 0.1.1.9001),
     testthat (>= 3.0.0),
     withr
 VignetteBuilder: quarto

@@ -17,6 +17,7 @@ reference:
   contents:
   - fit_initial
   - hazard_model
+  - as_sim_model
 
 - title: Targeted estimation
   desc: >

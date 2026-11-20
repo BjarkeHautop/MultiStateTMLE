@@ -79,8 +79,6 @@
   hal,
   at.risks,
   depend.matrix,
-  recurrent,
-  max_count,
   varnames,
   cores,
   verbose
@@ -157,11 +155,6 @@
         in.state <- rep(TRUE, nrow(tmp.state))
         for (varname in state.vars) {
           tmp.state[[varname]] <- row[[varname]]
-          if (is.null(hal) && varname %in% recurrent) {
-            for (k in seq_len(max_count)) {
-              tmp.state[[paste0(varname, ".", k)]] <- row[[varname]] >= k
-            }
-          }
           in.state <- in.state & (tmp.long[[varname]] >= row[[varname]])
         }
         if (!is.null(hal)) {

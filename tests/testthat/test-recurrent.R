@@ -306,3 +306,45 @@ test_that("tmle_estimate() recovers recurrent targets", {
     )
   }
 })
+
+test_that("a recurrent process gets its count indicators wherever it is in a model", {
+  data <- simulate.recurrent(80, 1)
+  fit <- function(death_model) {
+    fit_initial(
+      data,
+      models = list(relapse ~ biomarker, death_model, censoring ~ biomarker),
+      tau = 1,
+      max_count = 2
+    )
+  }
+  indicators <- c("I(relapse >= 1)TRUE", "I(relapse >= 2)TRUE")
+
+  last <- fit(death ~ biomarker + relapse)
+  first <- fit(death ~ relapse + biomarker)
+  expect_equal(
+    coef(first$cox_fits$death)[indicators],
+    coef(last$cox_fits$death)[indicators]
+  )
+  expect_equal(
+    tmle_estimate(first, risk(death), scale_intensity(relapse = 1))$estimate,
+    tmle_estimate(last, risk(death), scale_intensity(relapse = 1))$estimate
+  )
+
+  interaction <- fit(death ~ relapse * biomarker)
+  expect_named(
+    coef(interaction$cox_fits$death),
+    c(indicators, "biomarker", paste0(indicators, ":biomarker"))
+  )
+})
+
+test_that(".cox_formula() only replaces process terms, not variables in calls", {
+  expect_equal(
+    .cox_formula(
+      "Surv(tstart,tstop,delta==1)~I(relapse>0)+relapse",
+      list(),
+      "relapse",
+      2
+    ),
+    "Surv(tstart, tstop, delta == 1) ~ I(relapse > 0) + (I(relapse >= 1) + I(relapse >= 2))"
+  )
+})

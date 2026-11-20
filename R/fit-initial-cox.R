@@ -42,22 +42,47 @@
   stats::setNames(fits, names(fit_types))
 }
 
-# The model string of a process with the jump time variables `T.<name>` as
-# factors and each recurrent process `z` replaced by its indicators
-# `z.1 + ... + z.<max_count>`.
+# The model string of a process with each term that is a jump time variable
+# `T.<name>` made a factor, and each term that is a recurrent process `z`
+# (its number of jumps so far) replaced by the indicators
+# `I(z >= 1) + ... + I(z >= max_count)`, so each count up to max_count has
+# its own effect. Only terms are replaced (also within interactions such as
+# `z:L0`), not variables inside a call such as `I(z > 0)`.
 .cox_formula <- function(model, depend_time, recurrent, max_count) {
+  replacements <- list()
   for (T.var in sprintf("T.%s", names(depend_time))) {
-    model <- gsub(T.var, paste0("as.factor(", T.var, ")"), model, fixed = TRUE)
+    replacements[[T.var]] <- call("as.factor", as.name(T.var))
   }
   for (process in recurrent) {
-    model <- gsub(
-      paste0("+", process),
-      paste0("+", process, ".", seq_len(max_count), collapse = ""),
-      model,
-      fixed = TRUE
+    indicators <- lapply(
+      seq_len(max_count),
+      function(k) call("I", call(">=", as.name(process), as.numeric(k)))
+    )
+    replacements[[process]] <- call(
+      "(",
+      Reduce(function(x, y) call("+", x, y), indicators)
     )
   }
-  model
+  formula <- str2lang(model)
+  formula[[3]] <- .replace_terms(formula[[3]], replacements)
+  .deparse_one_line(formula)
+}
+
+# `expr`, a formula's right-hand side, with each term that is a name in
+# `replacements` replaced by its value, looking into the formula operators
+# that combine terms but not into other calls.
+.replace_terms <- function(expr, replacements) {
+  if (is.name(expr)) {
+    replacement <- replacements[[as.character(expr)]]
+    return(if (is.null(replacement)) expr else replacement)
+  }
+  operators <- c("+", "-", ":", "*", "/", "^", "%in%", "(")
+  if (is.call(expr) && as.character(expr[[1]])[1] %in% operators) {
+    for (i in seq_along(expr)[-1]) {
+      expr[[i]] <- .replace_terms(expr[[i]], replacements)
+    }
+  }
+  expr
 }
 
 # The hazard increments of the Cox fit `fit` on `newdata`: the baseline

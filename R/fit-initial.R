@@ -78,12 +78,9 @@
 #'     from the data), `model` and `at_risk` (whether the process has a
 #'     `limit` or `at_risk` condition).
 #'   * `cox_fits`: the fitted [survival::coxph()] model of each process,
-#'     named by process. These can be passed to
-#'     [simevent::sim_model_from_fits()] to simulate data resembling `data`,
-#'     as long as no hazard uses a recurrent process or a `depend_time`
-#'     covariate. These are fitted here as indicators `<process>.k` and
-#'     factors of `T.<name>`, whose coefficients
-#'     [simevent::sim_model_from_fits()] does not recognize.
+#'     named by process. A recurrent process `z` in a model is fitted as the
+#'     indicators `I(z >= 1) + ... + I(z >= max_count)`. [as_sim_model()]
+#'     builds a simulation model from them.
 #'
 #'   It also contains the internal elements used by [tmle_estimate()], among
 #'   them `tmp_long` (the expanded data with fitted hazards and clever
@@ -391,13 +388,7 @@ fit_initial <- function(
   }
   dt[, tstart := c(0, time[-.N]), by = "id"]
   dt[, tstop := time]
-  dt <- .add_count_columns(
-    dt,
-    state.processes,
-    state.deltas,
-    recurrent,
-    max_count
-  )
+  dt <- .add_count_columns(dt, state.processes, state.deltas)
   dt <- .add_jump_time_columns(dt, depend_time)
   varnames <- c(varnames, T.names)
   state.names <- c(state.processes, T.names)
@@ -431,13 +422,7 @@ fit_initial <- function(
     varnames,
     unique.times
   )
-  tmp.long <- .add_count_columns(
-    tmp.long,
-    state.processes,
-    state.deltas,
-    recurrent,
-    max_count
-  )
+  tmp.long <- .add_count_columns(tmp.long, state.processes, state.deltas)
   tmp.long[, tstart := c(0, time[-.N]), by = "id"]
   tmp.long <- .add_jump_time_columns(tmp.long, depend_time, grid = TRUE)
   if (length(arms) > 0) {
@@ -549,8 +534,6 @@ fit_initial <- function(
       hal,
       at.risks,
       depend.matrix,
-      recurrent,
-      max_count,
       varnames,
       cores,
       verbose

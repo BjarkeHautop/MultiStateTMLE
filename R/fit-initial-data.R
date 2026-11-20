@@ -66,18 +66,12 @@
 }
 
 # Add to `x` (sorted by id and time, with `delta`) the number of jumps of
-# each process in `processes` before each row, and for recurrent processes
-# the indicators `<process>.<k>` of at least k jumps, for k up to max_count.
-.add_count_columns <- function(x, processes, deltas, recurrent, max_count) {
+# each process in `processes` before each row.
+.add_count_columns <- function(x, processes, deltas) {
   for (j in seq_along(processes)) {
     process <- processes[j]
     d <- deltas[j]
     x[, (process) := c(0L, cumsum(delta == d)[-.N]), by = "id"]
-  }
-  for (process in recurrent) {
-    for (k in seq_len(max_count)) {
-      x[, (paste0(process, ".", k)) := x[[process]] >= k]
-    }
   }
   x
 }

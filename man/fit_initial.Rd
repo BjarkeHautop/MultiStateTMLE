@@ -90,12 +90,9 @@ process.
 from the data), \code{model} and \code{at_risk} (whether the process has a
 \code{limit} or \code{at_risk} condition).
 \item \code{cox_fits}: the fitted \code{\link[survival:coxph]{survival::coxph()}} model of each process,
-named by process. These can be passed to
-\code{\link[simevent:sim_model_from_fits]{simevent::sim_model_from_fits()}} to simulate data resembling \code{data},
-as long as no hazard uses a recurrent process or a \code{depend_time}
-covariate. These are fitted here as indicators \verb{<process>.k} and
-factors of \verb{T.<name>}, whose coefficients
-\code{\link[simevent:sim_model_from_fits]{simevent::sim_model_from_fits()}} does not recognize.
+named by process. A recurrent process \code{z} in a model is fitted as the
+indicators \code{I(z >= 1) + ... + I(z >= max_count)}. \code{\link[=as_sim_model]{as_sim_model()}}
+builds a simulation model from them.
 }
 
 It also contains the internal elements used by \code{\link[=tmle_estimate]{tmle_estimate()}}, among
