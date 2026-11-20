@@ -37,6 +37,7 @@ utils::globalVariables(c(
   "hazard",
   "id",
   "idN",
+  "i.state.row.index",
   "pi.A0.1",
   "Q",
   "risk.time",
