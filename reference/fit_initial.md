@@ -134,6 +134,14 @@ An object of class `initial_fit`, a list with elements:
   from the data), `model` and `at_risk` (whether the process has a
   `limit` or `at_risk` condition).
 
+- `cox_fits`: the fitted
+  [`survival::coxph()`](https://rdrr.io/pkg/survival/man/coxph.html)
+  model of each process, named by process. A recurrent process `z` in a
+  model is fitted as the indicators
+  `I(z >= 1) + ... + I(z >= max_count)`.
+  [`as_sim_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/as_sim_model.md)
+  builds a simulation model from them.
+
 It also contains the internal elements used by
 [`tmle_estimate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_estimate.md),
 among them `tmp_long` (the expanded data with fitted hazards and clever

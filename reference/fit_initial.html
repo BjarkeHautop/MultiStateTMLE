@@ -164,6 +164,10 @@ process.</p></li>
 <code>name</code>, <code>type</code> (<code>"terminal"</code>, <code>"recurrent"</code> or <code>"one_jump"</code>, inferred
 from the data), <code>model</code> and <code>at_risk</code> (whether the process has a
 <code>limit</code> or <code>at_risk</code> condition).</p></li>
+<li><p><code>cox_fits</code>: the fitted <code><a href="https://rdrr.io/pkg/survival/man/coxph.html" class="external-link">survival::coxph()</a></code> model of each process,
+named by process. A recurrent process <code>z</code> in a model is fitted as the
+indicators <code>I(z &gt;= 1) + ... + I(z &gt;= max_count)</code>. <code><a href="as_sim_model.html">as_sim_model()</a></code>
+builds a simulation model from them.</p></li>
 </ul><p>It also contains the internal elements used by <code><a href="tmle_estimate.html">tmle_estimate()</a></code>, among
 them <code>tmp_long</code> (the expanded data with fitted hazards and clever
 weights) and <code>depend_matrix</code> (the product state space).</p>
