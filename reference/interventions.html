@@ -42,7 +42,7 @@ under.</p>
 
     <div class="section level2">
     <h2 id="ref-usage">Usage<a class="anchor" aria-label="anchor" href="#ref-usage"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">scale_intensity</span><span class="op">(</span><span class="va">...</span>, only_first <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span><span class="fu">scale_intensity</span><span class="op">(</span><span class="va">...</span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">calibrate</span><span class="op">(</span><span class="va">exposure</span>, <span class="va">toward</span>, reference_a <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span>
 <span></span>
@@ -62,13 +62,8 @@ under.</p>
 <code>illness = 0.5</code>. Each is a non-negative number, or a one-sided formula
 giving a time-varying factor, such as
 <code>illness = ~ ifelse(time &lt; 0.5, 0.5, 1)</code>, that may use <code>time</code>, baseline
-covariates and the processes (their number of events so far).</p></dd>
-
-
-<dt id="arg-only-first">only_first<a class="anchor" aria-label="anchor" href="#arg-only-first"></a></dt>
-<dd><p>Logical. If <code>TRUE</code>, follow-up ends at the second event
-of an intervened process, so that only its first event is intervened
-on.</p></dd>
+covariates and the processes (their number of events so far, where
+counts above the <code>max_count</code> of <code><a href="fit_initial.html">fit_initial()</a></code> count as <code>max_count</code>).</p></dd>
 
 
 <dt id="arg-exposure">exposure<a class="anchor" aria-label="anchor" href="#arg-exposure"></a></dt>
@@ -144,6 +139,11 @@ intervention.</p></li>
 <span class="r-in"><span><span class="co"># individuals with biomarker &gt; 0.</span></span></span>
 <span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>illness <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">biomarker</span> <span class="op">&gt;</span> <span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(illness = ~ifelse(biomarker &gt; 0, 0.5, 1))</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># A scaling that depends on the number of events so far: halve the</span></span></span>
+<span class="r-in"><span><span class="co"># intensity of a recurrent process until its first event only.</span></span></span>
+<span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>relapse <span class="op">=</span> <span class="op">~</span> <span class="fu"><a href="https://rdrr.io/r/base/ifelse.html" class="external-link">ifelse</a></span><span class="op">(</span><span class="va">relapse</span> <span class="op">==</span> <span class="fl">0</span>, <span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Intervention: scale_intensity(relapse = ~ifelse(relapse == 0, 0.5, 1))</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Several processes at once:</span></span></span>
 <span class="r-in"><span><span class="fu">scale_intensity</span><span class="op">(</span>illness <span class="op">=</span> <span class="fl">0.5</span>, death <span class="op">=</span> <span class="fl">0.8</span><span class="op">)</span></span></span>

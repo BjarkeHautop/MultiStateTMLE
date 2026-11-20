@@ -7,7 +7,7 @@ estimates the target under.
 ## Usage
 
 ``` r
-scale_intensity(..., only_first = FALSE)
+scale_intensity(...)
 
 calibrate(exposure, toward, reference_a = NULL)
 
@@ -26,12 +26,10 @@ relative_change(rho)
   `illness = 0.5`. Each is a non-negative number, or a one-sided formula
   giving a time-varying factor, such as
   `illness = ~ ifelse(time < 0.5, 0.5, 1)`, that may use `time`,
-  baseline covariates and the processes (their number of events so far).
-
-- only_first:
-
-  Logical. If `TRUE`, follow-up ends at the second event of an
-  intervened process, so that only its first event is intervened on.
+  baseline covariates and the processes (their number of events so far,
+  where counts above the `max_count` of
+  [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
+  count as `max_count`).
 
 - exposure:
 
@@ -115,6 +113,11 @@ scale_intensity(illness = ~ ifelse(time < 0.5, 0.5, 1))
 # individuals with biomarker > 0.
 scale_intensity(illness = ~ ifelse(biomarker > 0, 0.5, 1))
 #> Intervention: scale_intensity(illness = ~ifelse(biomarker > 0, 0.5, 1))
+
+# A scaling that depends on the number of events so far: halve the
+# intensity of a recurrent process until its first event only.
+scale_intensity(relapse = ~ ifelse(relapse == 0, 0.5, 1))
+#> Intervention: scale_intensity(relapse = ~ifelse(relapse == 0, 0.5, 1))
 
 # Several processes at once:
 scale_intensity(illness = 0.5, death = 0.8)
