@@ -77,6 +77,13 @@
 #'     `name`, `type` (`"terminal"`, `"recurrent"` or `"one_jump"`, inferred
 #'     from the data), `model` and `at_risk` (whether the process has a
 #'     `limit` or `at_risk` condition).
+#'   * `cox_fits`: the fitted [survival::coxph()] model of each process,
+#'     named by process. These can be passed to
+#'     [simevent::sim_model_from_fits()] to simulate data resembling `data`,
+#'     as long as no hazard uses a recurrent process or a `depend_time`
+#'     covariate. These are fitted here as indicators `<process>.k` and
+#'     factors of `T.<name>`, whose coefficients
+#'     [simevent::sim_model_from_fits()] does not recognize.
 #'
 #'   It also contains the internal elements used by [tmle_estimate()], among
 #'   them `tmp_long` (the expanded data with fitted hazards and clever
@@ -615,7 +622,8 @@ fit_initial <- function(
       process_deltas = process.deltas,
       process_types = process.types,
       cens_process_id = cens.process.id,
-      at_risks = at.risks
+      at_risks = at.risks,
+      cox_fits = lapply(cox, function(x) .detach_cox_env(x$fit))
     ),
     class = "initial_fit"
   )

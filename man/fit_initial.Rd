@@ -89,6 +89,13 @@ process.
 \code{name}, \code{type} (\code{"terminal"}, \code{"recurrent"} or \code{"one_jump"}, inferred
 from the data), \code{model} and \code{at_risk} (whether the process has a
 \code{limit} or \code{at_risk} condition).
+\item \code{cox_fits}: the fitted \code{\link[survival:coxph]{survival::coxph()}} model of each process,
+named by process. These can be passed to
+\code{\link[simevent:sim_model_from_fits]{simevent::sim_model_from_fits()}} to simulate data resembling \code{data},
+as long as no hazard uses a recurrent process or a \code{depend_time}
+covariate. These are fitted here as indicators \verb{<process>.k} and
+factors of \verb{T.<name>}, whose coefficients
+\code{\link[simevent:sim_model_from_fits]{simevent::sim_model_from_fits()}} does not recognize.
 }
 
 It also contains the internal elements used by \code{\link[=tmle_estimate]{tmle_estimate()}}, among

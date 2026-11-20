@@ -65,3 +65,15 @@
 .cox_increment <- function(fit, newdata, dhazard) {
   as.numeric(dhazard * exp(predict(fit, newdata = newdata, type = "lp")))
 }
+
+# A Cox fit without the environment its formula was built in, which holds
+# all of the fitting data and would be saved along with the fit. It keeps its
+# model frame instead (only the rows and variables used), which is what
+# survfit() and basehaz() need, e.g. in simevent::sim_model_from_fits().
+.detach_cox_env <- function(fit) {
+  fit$model <- stats::model.frame(fit)
+  attr(attr(fit$model, "terms"), ".Environment") <- topenv()
+  environment(fit$formula) <- topenv()
+  attr(fit$terms, ".Environment") <- topenv()
+  fit
+}
