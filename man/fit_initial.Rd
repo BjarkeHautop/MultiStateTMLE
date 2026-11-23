@@ -12,7 +12,6 @@ fit_initial(
   treatment_model = NULL,
   arms = NULL,
   max_count = 1,
-  depend_time = list(),
   control = list(),
   hal_control = list(),
   cores = 1,
@@ -29,8 +28,11 @@ the process that jumped), plus any baseline covariates used in
 formula such as \code{death ~ biomarker + illness}, naming the process on the
 left and its covariates on the right, or a \code{\link[=hazard_model]{hazard_model()}} to also restrict
 when individuals are at risk of it. Other processes can be used as
-covariates by name, giving their number of events so far. Every event
-in \code{data} needs a model, including the censoring process.}
+covariates by name, giving their number of events so far, and the
+time of an event through an indicator such as
+\code{I(event_time(illness, 1) > 0.5)} (see \code{\link[=hazard_model]{hazard_model()}}), also in the
+censoring model. Every event in \code{data} needs a model, including the
+censoring process.}
 
 \item{tau}{Positive number. Follow-up horizon; the target parameters are
 evaluated at \code{tau}.}
@@ -49,16 +51,6 @@ then be passed as \code{a} to \code{\link[=tmle_estimate]{tmle_estimate()}} and
 
 \item{max_count}{Positive integer. Maximum number of jumps tracked per
 recurrent process in the state space.}
-
-\item{depend_time}{Experimental, and may change. Named list of one-sided
-formulas in \code{time}, making hazards depend on the time of a jump. Each is
-named by a state variable: a process \code{illness} that jumps once, or
-\code{illness.k} for the \code{k}th jump of a recurrent process \code{illness}. It adds
-the covariate \verb{T.<name>}, \code{0} before that jump and the formula evaluated
-at the time of the jump after it, which can be used (as a factor) in
-\code{models}. For
-example, \code{list(illness = ~ time > 0.5)} distinguishes early from late
-jumps.}
 
 \item{control}{A named list of tuning settings:
 \itemize{

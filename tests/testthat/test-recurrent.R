@@ -348,3 +348,30 @@ test_that(".cox_formula() only replaces process terms, not variables in calls", 
     "Surv(tstart, tstop, delta == 1) ~ I(relapse > 0) + (I(relapse >= 1) + I(relapse >= 2))"
   )
 })
+
+test_that("event_time() of a later event works when its term is 1 before it", {
+  skip_if_not_installed("simevent")
+  data <- simulate.recurrent(150, seed = 1)
+  fit <- function(term) {
+    fit_initial(
+      data,
+      models = list(
+        relapse ~ biomarker,
+        stats::as.formula(paste("death ~ biomarker + relapse +", term)),
+        censoring ~ biomarker
+      ),
+      tau = 1.5,
+      max_count = 2
+    )
+  }
+  early <- fit("I(event_time(relapse, 2) < 0.5)")
+  late <- fit("I(event_time(relapse, 2) > 0 & event_time(relapse, 2) >= 0.5)")
+
+  # Every row of the data is in a state of the state space.
+  expect_true(all(early$tmp_long$state > 0))
+  expect_equal(early$tmp_long$P.death, late$tmp_long$P.death)
+  expect_equal(
+    tmle_estimate(early, risk(death), scale_intensity(relapse = 0.5))$estimate,
+    tmle_estimate(late, risk(death), scale_intensity(relapse = 0.5))$estimate
+  )
+})

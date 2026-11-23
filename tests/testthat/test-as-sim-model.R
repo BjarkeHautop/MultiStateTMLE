@@ -61,11 +61,14 @@ test_that("as_sim_model() rejects what simevent can't simulate", {
     data,
     models = list(
       hazard_model(illness ~ biomarker, limit = 1),
-      death ~ biomarker + illness + T.illness,
+      death ~ biomarker + illness + I(event_time(illness) > 0.5),
       censoring ~ biomarker
     ),
-    tau = 1,
-    depend_time = list(illness = ~ 1 * (time > 0.5))
+    tau = 1
   )
-  expect_error(as_sim_model(timed, data), "depend_time.*T.illness")
+  expect_error(
+    as_sim_model(timed, data),
+    "event_time() covariates",
+    fixed = TRUE
+  )
 })

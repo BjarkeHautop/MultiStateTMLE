@@ -77,21 +77,29 @@
 }
 
 # Add to `x` the jump time column `T.<name>` of each state variable in
-# `depend_time`: 0 before the jump and the depend_time function at the time
-# of the jump after it. With `grid = TRUE`, also add `time.<name>`, the
-# function at the time of each row.
-.add_jump_time_columns <- function(x, depend_time, grid = FALSE) {
+# `depend_time` (`<process>` or `<process>.<k>`, the kth jump): the
+# depend_time function at 0 before the jump, as event_time() is 0 then, and
+# at the time of the jump after it. Whether the jump has happened is known
+# from the count of the process, so the value before it can be any.
+# `deltas` are the delta codes of the processes, named by process. With
+# `grid = TRUE`, also add `time.<name>`, the function at the time of each
+# row.
+.add_jump_time_columns <- function(x, depend_time, deltas, grid = FALSE) {
   for (time.var in names(depend_time)) {
     time.fun <- depend_time[[time.var]]
     T.var <- paste0("T.", time.var)
-    suppressWarnings(
-      x[,
-        (T.var) := min(time[c(get(time.var)[-1], get(time.var)[.N]) == 1]),
-        by = "id"
-      ]
-    )
-    x[tstart < get(T.var), (T.var) := 0]
-    x[tstart >= get(T.var), (T.var) := as.numeric(time.fun(get(T.var)))]
+    d <- deltas[[strsplit(time.var, ".", fixed = TRUE)[[1]][1]]]
+    k <- .jump_number(time.var, 2)
+    x[,
+      (T.var) := {
+        jumps <- time[delta == d]
+        if (length(jumps) >= k) jumps[k] else Inf
+      },
+      by = "id"
+    ]
+    before <- x[["tstart"]] < x[[T.var]]
+    x[(before), (T.var) := as.numeric(time.fun(0))]
+    x[(!before), (T.var) := as.numeric(time.fun(get(T.var)))]
     if (grid) {
       x[, (paste0("time.", time.var)) := as.numeric(time.fun(time))]
     }

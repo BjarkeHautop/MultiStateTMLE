@@ -73,20 +73,6 @@ test_that("fit_initial() accepts plain formulas, named lists and any order", {
   )
 })
 
-test_that("fit_initial() takes depend_time as formulas", {
-  timed <- fit_initial(
-    fixture.data(40),
-    models = list(
-      hazard_model(illness ~ biomarker, limit = 1),
-      death ~ biomarker + illness + T.illness,
-      censoring ~ biomarker
-    ),
-    tau = 1,
-    depend_time = list(illness = ~ 1 * (time > 0.5))
-  )
-  expect_true(all(timed$tmp_long$T.illness %in% c(0, 1)))
-})
-
 test_that("fit_initial() accepts transformed covariates in models", {
   transformed <- illness.death.models
   transformed[[2]] <- death ~ log(exp(biomarker)) + illness
@@ -367,5 +353,111 @@ test_that("fit_initial() validates its control settings", {
       control = list(prune_states = FALSE, use_exponential = FALSE)
     ),
     fixture.fit(30)
+  )
+})
+
+test_that("fit_initial() takes event_time() terms in models", {
+  data <- fixture.data(40)
+  timed <- fit_initial(
+    data,
+    models = list(
+      hazard_model(illness ~ biomarker, limit = 1),
+      death ~ biomarker + illness + I(event_time(illness, 1) > 0.5),
+      censoring ~ biomarker + I(event_time(illness) > 0.5)
+    ),
+    tau = 1
+  )
+  expect_equal(
+    timed$processes$model[2],
+    "death ~ biomarker + illness + I(event_time(illness, 1) > 0.5)"
+  )
+
+  # The term is 1 from a first illness after time 0.5 on, and 0 otherwise.
+  data.table::setDT(data)
+  first <- data[event == "illness", list(first = min(time)), by = "id"]
+  rows <- merge(timed$tmp_long, first, by = "id", all.x = TRUE)
+  expected <- !is.na(rows$first) & rows$first > 0.5 & rows$tstart >= rows$first
+  expect_equal(rows$T.illness, as.numeric(expected))
+
+  # Categories of the time, with one effect each.
+  categories <- fit_initial(
+    data,
+    models = list(
+      hazard_model(illness ~ biomarker, limit = 1),
+      death ~ biomarker +
+        illness +
+        I((event_time(illness) > 0) + (event_time(illness) > 0.5)),
+      censoring ~ biomarker
+    ),
+    tau = 1
+  )
+  expect_setequal(unique(categories$tmp_long$T.illness), 0:2)
+  expect_length(coef(categories$cox_fits$death), 4)
+
+  # The process of the event time is a state variable even when its count
+  # is not in any model.
+  no_count <- fit_initial(
+    data,
+    models = list(
+      hazard_model(illness ~ biomarker, limit = 1),
+      death ~ biomarker + I(event_time(illness) > 0.5),
+      censoring ~ biomarker
+    ),
+    tau = 1
+  )
+  expect_true("illness" %in% names(no_count$depend_matrix))
+})
+
+test_that("fit_initial() takes event_time() terms that are 1 before the event", {
+  fit <- function(term) {
+    fit_initial(
+      fixture.data(40),
+      models = list(
+        hazard_model(illness ~ biomarker, limit = 1),
+        stats::as.formula(paste("death ~ biomarker + illness +", term)),
+        censoring ~ biomarker
+      ),
+      tau = 1
+    )
+  }
+  # Complementary terms: the same model, with the sign of the effect flipped.
+  early <- fit("I(event_time(illness) < 0.5)")
+  late <- fit("I(event_time(illness) > 0 & event_time(illness) >= 0.5)")
+
+  expect_equal(
+    coef(early$cox_fits$death)[["as.factor(T.illness)1"]],
+    -coef(late$cox_fits$death)[["as.factor(T.illness)1"]]
+  )
+  expect_equal(early$tmp_long$P.death, late$tmp_long$P.death)
+  # Before the illness, the term is 1.
+  expect_true(all(early$depend_matrix[illness == 0]$T.illness == 1))
+  expect_equal(
+    tmle_estimate(early, risk(death), scale_intensity(illness = 0.5))$estimate,
+    tmle_estimate(late, risk(death), scale_intensity(illness = 0.5))$estimate
+  )
+})
+
+test_that("fit_initial() requires event_time() terms to be categories", {
+  models <- function(term) {
+    list(
+      hazard_model(illness ~ biomarker, limit = 1),
+      stats::as.formula(paste("death ~ biomarker +", term)),
+      censoring ~ biomarker
+    )
+  }
+  fit <- function(term) {
+    fit_initial(fixture.data(40), models = models(term), tau = 1)
+  }
+  expect_error(fit("event_time(illness)"), "is the event time itself")
+  expect_error(
+    fit("I(exp(-event_time(illness)))"),
+    "values other than whole numbers"
+  )
+  expect_error(fit("I(event_time(illness, 2) > 0.5)"), "max_count")
+  expect_error(fit("I(event_time(foo) > 0.5)"), "not a process")
+  expect_error(fit("I(event_time(illness) > biomarker)"), "only use constants")
+  expect_error(
+    fit("I(event_time(illness) > 0.5) + I(event_time(illness) > 0.7)"),
+    "several functions"
   )
 })

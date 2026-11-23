@@ -15,8 +15,11 @@
 #'   formula such as `death ~ biomarker + illness`, naming the process on the
 #'   left and its covariates on the right, or a [hazard_model()] to also restrict
 #'   when individuals are at risk of it. Other processes can be used as
-#'   covariates by name, giving their number of events so far. Every event
-#'   in `data` needs a model, including the censoring process.
+#'   covariates by name, giving their number of events so far, and the
+#'   time of an event through an indicator such as
+#'   `I(event_time(illness, 1) > 0.5)` (see [hazard_model()]), also in the
+#'   censoring model. Every event in `data` needs a model, including the
+#'   censoring process.
 #' @param tau Positive number. Follow-up horizon; the target parameters are
 #'   evaluated at `tau`.
 #' @param censoring String. Name of the censoring process in `models`.
@@ -30,15 +33,6 @@
 #'   `treatment_model` is given.
 #' @param max_count Positive integer. Maximum number of jumps tracked per
 #'   recurrent process in the state space.
-#' @param depend_time Experimental, and may change. Named list of one-sided
-#'   formulas in `time`, making hazards depend on the time of a jump. Each is
-#'   named by a state variable: a process `illness` that jumps once, or
-#'   `illness.k` for the `k`th jump of a recurrent process `illness`. It adds
-#'   the covariate `T.<name>`, `0` before that jump and the formula evaluated
-#'   at the time of the jump after it, which can be used (as a factor) in
-#'   `models`. For
-#'   example, `list(illness = ~ time > 0.5)` distinguishes early from late
-#'   jumps.
 #' @param control A named list of tuning settings:
 #'   * `prune_states` (`FALSE`): if `TRUE`, prune states not admissible
 #'     under the at-risk conditions of `models`.
@@ -161,7 +155,6 @@ fit_initial <- function(
   treatment_model = NULL,
   arms = NULL,
   max_count = 1,
-  depend_time = list(),
   control = list(),
   hal_control = list(),
   cores = 1,
@@ -181,7 +174,6 @@ fit_initial <- function(
       "\"; give it one, or name the censoring process in `censoring`."
     )
   }
-  checkmate::assert_list(depend_time, types = "formula", names = "unique")
 
   events <- as.character(data[["event"]])
   if (anyNA(events)) {
@@ -209,17 +201,23 @@ fit_initial <- function(
   data[["delta"]] <- unname(codes[events])
   data[["event"]] <- NULL
 
-  depend_time <- Map(
-    function(formula, name) {
-      .assert_one_sided(formula, paste0("depend_time$", name))
-      .time_function(formula)
-    },
-    depend_time,
-    names(depend_time)
+  # event_time() terms become the jump time variables T.<name> of
+  # .fit_initial_impl()'s `depend_time`.
+  checkmate::assert_count(max_count, positive = TRUE)
+  event_times <- .event_time_covariates(
+    models,
+    times = data[["time"]],
+    columns = names(data),
+    max_count = max_count
   )
+  fit_models <- models
+  for (name in names(fit_models)) {
+    fit_models[[name]]$formula <- event_times$formulas[[name]]
+  }
+
   fit_types <- Map(
     .hazard_model_to_fit_type,
-    models,
+    fit_models,
     codes,
     MoreArgs = list(state_vars = names(models))
   )
@@ -231,7 +229,7 @@ fit_initial <- function(
     treatment_model = treatment_model,
     arms = arms,
     max_count = max_count,
-    depend_time = depend_time,
+    depend_time = event_times$depend_time,
     control = control,
     hal_control = hal_control,
     cores = cores,
@@ -368,7 +366,26 @@ fit_initial <- function(
   #-- the covariates, and the processes whose counts are covariates (state
   #-- variables); the jump times T.<name> of depend_time are added below.
   T.names <- sprintf("T.%s", names(depend_time))
-  varnames <- setdiff(.model_variables(fit_types, at.risks), T.names)
+  # The process of each jump time is a state variable, so the state space
+  # knows whether the jump has happened.
+  T.processes <- vapply(
+    strsplit(as.character(names(depend_time)), ".", fixed = TRUE),
+    `[`,
+    character(1),
+    1
+  )
+  if (!all(T.processes %in% targets)) {
+    stop(
+      "depend_time names jumps of ",
+      paste(setdiff(T.processes, targets), collapse = ", "),
+      ", which must be processes other than censoring.",
+      call. = FALSE
+    )
+  }
+  varnames <- union(
+    setdiff(.model_variables(fit_types, at.risks), T.names),
+    T.processes
+  )
   state.processes <- intersect(process.names, varnames)
   state.deltas <- process.deltas[match(state.processes, process.names)]
   recurrent <- state.processes[
@@ -389,7 +406,8 @@ fit_initial <- function(
   dt[, tstart := c(0, time[-.N]), by = "id"]
   dt[, tstop := time]
   dt <- .add_count_columns(dt, state.processes, state.deltas)
-  dt <- .add_jump_time_columns(dt, depend_time)
+  process.codes <- stats::setNames(as.list(process.deltas), process.names)
+  dt <- .add_jump_time_columns(dt, depend_time, process.codes)
   varnames <- c(varnames, T.names)
   state.names <- c(state.processes, T.names)
 
@@ -424,7 +442,12 @@ fit_initial <- function(
   )
   tmp.long <- .add_count_columns(tmp.long, state.processes, state.deltas)
   tmp.long[, tstart := c(0, time[-.N]), by = "id"]
-  tmp.long <- .add_jump_time_columns(tmp.long, depend_time, grid = TRUE)
+  tmp.long <- .add_jump_time_columns(
+    tmp.long,
+    depend_time,
+    process.codes,
+    grid = TRUE
+  )
   if (length(arms) > 0) {
     tmp.long[["pi.A0.1"]] <- predict(
       fit.A0,

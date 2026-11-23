@@ -172,25 +172,3 @@
 .is_calibrated <- function(fit) {
   !is.null(fit$intervention) && fit$intervention$type == "calibrate"
 }
-
-# Error unless `formula` is one-sided; `name` describes it.
-.assert_one_sided <- function(formula, name) {
-  if (length(formula) != 2) {
-    stop(name, " must be a one-sided formula.", call. = FALSE)
-  }
-  invisible(formula)
-}
-
-# A function of a numeric vector `time` evaluating the one-sided `formula`
-# in it, one value per time.
-.time_function <- function(formula) {
-  expr <- formula[[2]]
-  env <- environment(formula)
-  function(time) {
-    values <- eval(expr, list(time = time), env)
-    if (length(values) == 1) {
-      values <- rep(values, length(time))
-    }
-    values
-  }
-}

@@ -3,9 +3,15 @@
 # each state to the state after a jump.
 
 # All combinations of the values of the state variables, with process counts
-# truncated at max_count.
+# truncated at max_count. A jump time variable T.<name> takes the values it
+# has in the data and, from `time.<name>`, the values it would get from a
+# jump at any time of the grid.
 .state_grid <- function(tmp.long, state.names, process.names, max_count) {
   grid.list <- lapply(state.names, function(varname) {
+    time.col <- sub("^T\\.", "time.", varname)
+    if (startsWith(varname, "T.") && time.col %in% names(tmp.long)) {
+      return(sort(unique(c(tmp.long[[varname]], tmp.long[[time.col]]))))
+    }
     0:min(
       if (varname %in% process.names) max_count else Inf,
       max(tmp.long[[varname]])
@@ -16,16 +22,18 @@
   depend.matrix
 }
 
-# Drop the states in which the time of the kth jump of a process is set
-# before it has made k jumps.
+# Drop the states in which the jump time variable of the kth jump of a
+# process differs from its value before the jump, the depend_time function
+# at 0, while the process has made fewer than k jumps.
 .drop_impossible_jump_times <- function(depend.matrix, depend_time) {
   for (time.var in names(depend_time)) {
     count.value <- .jump_number(time.var, 2)
     process <- strsplit(time.var, ".", fixed = TRUE)[[1]][1]
     T.var <- paste0("T.", time.var)
+    before <- as.numeric(depend_time[[time.var]](0))
     depend.matrix <- depend.matrix[
       !(depend.matrix[[process]] <= count.value - 1 &
-        depend.matrix[[T.var]] >= 1)
+        depend.matrix[[T.var]] != before)
     ]
   }
   depend.matrix
@@ -210,7 +218,7 @@
     depend.matrix[, (time.col) := Inf]
     depend.matrix[before.jump, (time.col) := time.values[1]]
     if (length(time.values) > 1) {
-      base <- depend.matrix[before.jump & depend.matrix[[time.col]] == 0]
+      base <- depend.matrix[before.jump]
       new.rows <- base[rep(
         seq_len(nrow(base)),
         times = length(time.values) - 1

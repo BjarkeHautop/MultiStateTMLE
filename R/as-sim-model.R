@@ -12,9 +12,8 @@
 #' number of jumps so far. A process that jumps at most once in the data
 #' (type `"one_jump"`) can jump at most once in the simulation too.
 #'
-#' Fits with an `at_risk` condition in a [hazard_model()] or with
-#' `depend_time` covariates are not supported, as `simevent` has no
-#' counterpart for them.
+#' Fits with an `at_risk` condition in a [hazard_model()], or with
+#' `event_time()` covariates, are not supported.
 #'
 #' @param fit An initial fit, as returned by [fit_initial()].
 #' @param data The `data` that `fit` was fitted to, to resample covariates
@@ -61,7 +60,7 @@ as_sim_model <- function(fit, data) {
     )
   }
   # Variables of the fits that are neither data columns nor processes are
-  # the jump time variables T.<name> of depend_time.
+  # the jump time variables T.<name> of event_time().
   fit_vars <- unique(unlist(lapply(
     fit$cox_fits,
     function(cox) all.vars(stats::delete.response(stats::terms(cox)))
@@ -69,7 +68,7 @@ as_sim_model <- function(fit, data) {
   unknown <- setdiff(fit_vars, c(names(data), processes$name))
   if (length(unknown) > 0) {
     stop(
-      "as_sim_model() can't simulate a fit with depend_time covariates (",
+      "as_sim_model() can't simulate a fit with event_time() covariates (",
       paste(unknown, collapse = ", "),
       "), which simevent has no counterpart for."
     )

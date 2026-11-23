@@ -11,7 +11,8 @@ hazard_model(formula, limit = NULL, at_risk = NULL, fit = c("cox", "hal"))
 matching its name in the \code{event} column of the data, and the right-hand
 side gives the covariates of its hazard, as in a \code{\link[survival:coxph]{survival::coxph()}}
 formula. Other processes can be used as covariates by name, giving their
-number of events so far.}
+number of events so far, and their event times with \code{event_time()}
+(see below).}
 
 \item{limit}{Optional positive integer. Maximum number of events of the
 process per individual: individuals are only at risk while they have
@@ -36,6 +37,16 @@ for \code{hazard_model(death ~ biomarker + illness)}; use \code{hazard_model()} 
 also restrict when an individual is at risk of the process, or to change
 how it is fitted.
 }
+\section{Event times}{
+
+\code{event_time(z, k)} is the time of the \code{k}th (default first) event of
+process \code{z}, and 0 before it, as in simevent. It must enter through a
+category term, such as \code{I(event_time(illness) > 0.5)}, that takes whole
+numbers 0, 1, 2, ..., as each value is a separate state in the
+estimation. Each event can be used through one such
+term.
+}
+
 \examples{
 # A plain formula in fit_initial()'s `models` is short for
 # hazard_model(formula):
@@ -51,6 +62,9 @@ hazard_model(relapse ~ biomarker, limit = 2, at_risk = ~ w == 0)
 # Death depending on having had two or more relapses. As in any R model
 # formula, wrap arithmetic and comparisons in I():
 hazard_model(death ~ biomarker + I(relapse >= 2))
+
+# Death depending on whether the illness came after time 0.5:
+hazard_model(death ~ biomarker + illness + I(event_time(illness, 1) > 0.5))
 
 # Use them in fit_initial(), mixed with plain formulas:
 fit <- fit_initial(

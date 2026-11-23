@@ -29,9 +29,8 @@ the indicators of at least 1, ..., \code{max_count} jumps, and any other as its
 number of jumps so far. A process that jumps at most once in the data
 (type \code{"one_jump"}) can jump at most once in the simulation too.
 
-Fits with an \code{at_risk} condition in a \code{\link[=hazard_model]{hazard_model()}} or with
-\code{depend_time} covariates are not supported, as \code{simevent} has no
-counterpart for them.
+Fits with an \code{at_risk} condition in a \code{\link[=hazard_model]{hazard_model()}}, or with
+\code{event_time()} covariates, are not supported.
 }
 \examples{
 \donttest{
