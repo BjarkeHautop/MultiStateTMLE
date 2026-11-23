@@ -23,7 +23,8 @@ hazard_model(formula, limit = NULL, at_risk = NULL, fit = c("cox", "hal"))
   gives the covariates of its hazard, as in a
   [`survival::coxph()`](https://rdrr.io/pkg/survival/man/coxph.html)
   formula. Other processes can be used as covariates by name, giving
-  their number of events so far.
+  their number of events so far, and their event times with
+  `event_time()` (see below).
 
 - limit:
 
@@ -49,6 +50,14 @@ hazard_model(formula, limit = NULL, at_risk = NULL, fit = c("cox", "hal"))
 
 An object of class `hazard_model`.
 
+## Event times
+
+`event_time(z, k)` is the time of the `k`th (default first) event of
+process `z`, and 0 before it, as in simevent. It must enter through a
+category term, such as `I(event_time(illness) > 0.5)`, that takes whole
+numbers 0, 1, 2, ..., as each value is a separate state in the
+estimation. Each event can be used through one such term.
+
 ## Examples
 
 ``` r
@@ -73,6 +82,10 @@ hazard_model(relapse ~ biomarker, limit = 2, at_risk = ~ w == 0)
 # formula, wrap arithmetic and comparisons in I():
 hazard_model(death ~ biomarker + I(relapse >= 2))
 #> Hazard model: death ~ biomarker + I(relapse >= 2)
+
+# Death depending on whether the illness came after time 0.5:
+hazard_model(death ~ biomarker + illness + I(event_time(illness, 1) > 0.5))
+#> Hazard model: death ~ biomarker + illness + I(event_time(illness, 1) > 0.5)
 
 # Use them in fit_initial(), mixed with plain formulas:
 fit <- fit_initial(

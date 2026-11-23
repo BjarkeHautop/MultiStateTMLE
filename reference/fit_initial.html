@@ -62,7 +62,6 @@ processes' hazards depend on. The result is the input to
 <span>  treatment_model <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  arms <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  max_count <span class="op">=</span> <span class="fl">1</span>,</span>
-<span>  depend_time <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  hal_control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  cores <span class="op">=</span> <span class="fl">1</span>,</span>
@@ -86,8 +85,11 @@ the process that jumped), plus any baseline covariates used in
 formula such as <code>death ~ biomarker + illness</code>, naming the process on the
 left and its covariates on the right, or a <code><a href="hazard_model.html">hazard_model()</a></code> to also restrict
 when individuals are at risk of it. Other processes can be used as
-covariates by name, giving their number of events so far. Every event
-in <code>data</code> needs a model, including the censoring process.</p></dd>
+covariates by name, giving their number of events so far, and the
+time of an event through an indicator such as
+<code>I(event_time(illness, 1) &gt; 0.5)</code> (see <code><a href="hazard_model.html">hazard_model()</a></code>), also in the
+censoring model. Every event in <code>data</code> needs a model, including the
+censoring process.</p></dd>
 
 
 <dt id="arg-tau">tau<a class="anchor" aria-label="anchor" href="#arg-tau"></a></dt>
@@ -116,18 +118,6 @@ then be passed as <code>a</code> to <code><a href="tmle_estimate.html">tmle_esti
 <dt id="arg-max-count">max_count<a class="anchor" aria-label="anchor" href="#arg-max-count"></a></dt>
 <dd><p>Positive integer. Maximum number of jumps tracked per
 recurrent process in the state space.</p></dd>
-
-
-<dt id="arg-depend-time">depend_time<a class="anchor" aria-label="anchor" href="#arg-depend-time"></a></dt>
-<dd><p>Experimental, and may change. Named list of one-sided
-formulas in <code>time</code>, making hazards depend on the time of a jump. Each is
-named by a state variable: a process <code>illness</code> that jumps once, or
-<code>illness.k</code> for the <code>k</code>th jump of a recurrent process <code>illness</code>. It adds
-the covariate <code>T.&lt;name&gt;</code>, <code>0</code> before that jump and the formula evaluated
-at the time of the jump after it, which can be used (as a factor) in
-<code>models</code>. For
-example, <code>list(illness = ~ time &gt; 0.5)</code> distinguishes early from late
-jumps.</p></dd>
 
 
 <dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>

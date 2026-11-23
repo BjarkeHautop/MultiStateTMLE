@@ -42,9 +42,8 @@ its number of jumps so far. A process that jumps at most once in the
 data (type `"one_jump"`) can jump at most once in the simulation too.
 
 Fits with an `at_risk` condition in a
-[`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md)
-or with `depend_time` covariates are not supported, as `simevent` has no
-counterpart for them.
+[`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md),
+or with `event_time()` covariates, are not supported.
 
 ## Examples
 

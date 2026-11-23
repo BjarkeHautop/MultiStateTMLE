@@ -20,7 +20,6 @@ fit_initial(
   treatment_model = NULL,
   arms = NULL,
   max_count = 1,
-  depend_time = list(),
   control = list(),
   hal_control = list(),
   cores = 1,
@@ -46,8 +45,11 @@ fit_initial(
   [`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md)
   to also restrict when individuals are at risk of it. Other processes
   can be used as covariates by name, giving their number of events so
-  far. Every event in `data` needs a model, including the censoring
-  process.
+  far, and the time of an event through an indicator such as
+  `I(event_time(illness, 1) > 0.5)` (see
+  [`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md)),
+  also in the censoring model. Every event in `data` needs a model,
+  including the censoring process.
 
 - tau:
 
@@ -78,17 +80,6 @@ fit_initial(
 
   Positive integer. Maximum number of jumps tracked per recurrent
   process in the state space.
-
-- depend_time:
-
-  Experimental, and may change. Named list of one-sided formulas in
-  `time`, making hazards depend on the time of a jump. Each is named by
-  a state variable: a process `illness` that jumps once, or `illness.k`
-  for the `k`th jump of a recurrent process `illness`. It adds the
-  covariate `T.<name>`, `0` before that jump and the formula evaluated
-  at the time of the jump after it, which can be used (as a factor) in
-  `models`. For example, `list(illness = ~ time > 0.5)` distinguishes
-  early from late jumps.
 
 - control:
 

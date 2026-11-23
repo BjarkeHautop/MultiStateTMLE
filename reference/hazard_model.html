@@ -63,7 +63,8 @@ how it is fitted.</p>
 matching its name in the <code>event</code> column of the data, and the right-hand
 side gives the covariates of its hazard, as in a <code><a href="https://rdrr.io/pkg/survival/man/coxph.html" class="external-link">survival::coxph()</a></code>
 formula. Other processes can be used as covariates by name, giving their
-number of events so far.</p></dd>
+number of events so far, and their event times with <code>event_time()</code>
+(see below).</p></dd>
 
 
 <dt id="arg-limit">limit<a class="anchor" aria-label="anchor" href="#arg-limit"></a></dt>
@@ -89,6 +90,17 @@ with <code>limit</code> if both are given.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An object of class <code>hazard_model</code>.</p>
     </div>
+    <div class="section level2">
+    <h2 id="event-times">Event times<a class="anchor" aria-label="anchor" href="#event-times"></a></h2>
+
+
+<p><code>event_time(z, k)</code> is the time of the <code>k</code>th (default first) event of
+process <code>z</code>, and 0 before it, as in simevent. It must enter through a
+category term, such as <code>I(event_time(illness) &gt; 0.5)</code>, that takes whole
+numbers 0, 1, 2, ..., as each value is a separate state in the
+estimation. Each event can be used through one such
+term.</p>
+    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
@@ -113,6 +125,10 @@ with <code>limit</code> if both are given.</p></dd>
 <span class="r-in"><span><span class="co"># formula, wrap arithmetic and comparisons in I():</span></span></span>
 <span class="r-in"><span><span class="fu">hazard_model</span><span class="op">(</span><span class="va">death</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="va">relapse</span> <span class="op">&gt;=</span> <span class="fl">2</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Hazard model: death ~ biomarker + I(relapse &gt;= 2)</span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Death depending on whether the illness came after time 0.5:</span></span></span>
+<span class="r-in"><span><span class="fu">hazard_model</span><span class="op">(</span><span class="va">death</span> <span class="op">~</span> <span class="va">biomarker</span> <span class="op">+</span> <span class="va">illness</span> <span class="op">+</span> <span class="fu"><a href="https://rdrr.io/r/base/AsIs.html" class="external-link">I</a></span><span class="op">(</span><span class="fu">event_time</span><span class="op">(</span><span class="va">illness</span>, <span class="fl">1</span><span class="op">)</span> <span class="op">&gt;</span> <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Hazard model: death ~ biomarker + illness + I(event_time(illness, 1) &gt; 0.5)</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Use them in fit_initial(), mixed with plain formulas:</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="fit_initial.html">fit_initial</a></span><span class="op">(</span></span></span>
