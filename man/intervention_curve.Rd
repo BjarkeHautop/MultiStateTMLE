@@ -11,7 +11,6 @@ intervention_curve(
   alpha = seq(0, 5, length.out = 10),
   a = NULL,
   control = list(),
-  cores = 1,
   verbose = FALSE
 )
 }
@@ -51,9 +50,6 @@ convergence.
 \item \code{truncate_weights} (\code{Inf}): positive number at which the clever
 weights of the intervention are truncated. \code{Inf} is no truncation.
 }}
-
-\item{cores}{Positive integer. Number of cores used by
-\code{\link[parallel:mclapply]{parallel::mclapply()}} for the per-individual computations.}
 
 \item{verbose}{Logical. If \code{TRUE}, print progress.}
 }

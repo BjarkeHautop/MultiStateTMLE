@@ -5,7 +5,7 @@
 #' @import data.table
 #' @importFrom Matrix Matrix
 #' @importFrom nleqslv nleqslv
-#' @importFrom parallel detectCores mclapply
+#' @importFrom parallel detectCores
 #' @importFrom stats as.formula binomial coef confint formula glm lm median
 #'   model.matrix predict quantile sd setNames
 #' @importFrom survival basehaz coxph coxph.control

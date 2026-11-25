@@ -10,7 +10,6 @@ tmle_estimate(
   intervention = NULL,
   a = NULL,
   control = list(),
-  cores = 1,
   verbose = FALSE
 )
 }
@@ -48,9 +47,6 @@ convergence.
 \item \code{truncate_weights} (\code{Inf}): positive number at which the clever
 weights of the intervention are truncated. \code{Inf} is no truncation.
 }}
-
-\item{cores}{Positive integer. Number of cores used by
-\code{\link[parallel:mclapply]{parallel::mclapply()}} for the per-individual computations.}
 
 \item{verbose}{Logical. If \code{TRUE}, print progress.}
 }
@@ -118,6 +114,13 @@ is chosen to bring an exposure to a given value. Under a calibrated
 intervention the target is a composite parameter, and its standard error
 accounts for the scaling being estimated.
 }
+\section{Parallel computation}{
+
+The per-individual computations run in parallel on the
+\code{\link[mirai:daemons]{mirai::daemons()}} set in the session, if any, such as
+\code{mirai::daemons(4)} for 4 local processes.
+}
+
 \examples{
 fit <- fit_initial(
   illness_death,

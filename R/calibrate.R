@@ -8,7 +8,6 @@
   intervention,
   a,
   control,
-  cores,
   verbose
 ) {
   exposure <- intervention$exposure
@@ -32,7 +31,6 @@
       .scale_one(z_name, alpha),
       a,
       control,
-      cores,
       verbose
     )
   }

@@ -83,7 +83,6 @@ intervention_curve <- function(
   alpha = seq(0, 5, length.out = 10),
   a = NULL,
   control = list(),
-  cores = 1,
   verbose = FALSE
 ) {
   .assert_initial_fit(initial_fit)
@@ -101,7 +100,6 @@ intervention_curve <- function(
   )
   .assert_a(a, initial_fit)
   control <- .tmle_control(control)
-  checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
   n <- initial_fit$n
@@ -116,7 +114,6 @@ intervention_curve <- function(
       .scale_one(z_name, alpha),
       a,
       control,
-      cores,
       verbose
     )
   }

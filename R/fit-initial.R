@@ -46,9 +46,12 @@
 #'     only done if some increments exceed 1.
 #' @param hal_control A named list of settings for processes fitted with
 #'   `fit = "hal"`, see Details.
-#' @param cores Positive integer. Number of cores used by
-#'   [parallel::mclapply()] when predicting hazards across states.
 #' @param verbose Logical. If `TRUE`, print model fits and progress.
+#'
+#' @section Parallel computation:
+#' The hazards in each state are predicted in parallel on the
+#' [mirai::daemons()] set in the session, if any, such as
+#' `mirai::daemons(4)` for 4 local processes.
 #'
 #' @details
 #' HAL fits are experimental and require a `fit.hal()` function to be
@@ -162,7 +165,6 @@ fit_initial <- function(
   max_count = 1,
   control = list(),
   hal_control = list(),
-  cores = 1,
   verbose = FALSE
 ) {
   checkmate::assert_data_frame(data, min.rows = 1)
@@ -258,7 +260,6 @@ fit_initial <- function(
     jump_processes = event_times$jump_processes,
     control = control,
     hal_control = hal_control,
-    cores = cores,
     verbose = verbose
   )
   fit$models <- models
@@ -289,7 +290,6 @@ fit_initial <- function(
   jump_processes = list(),
   control = list(),
   hal_control = list(),
-  cores = 1,
   verbose = FALSE
 ) {
   checkmate::assert_data_frame(data, min.rows = 1)
@@ -327,7 +327,6 @@ fit_initial <- function(
   use_exponential <- control$use_exponential
   checkmate::assert_list(hal_control, names = "unique")
   checkmate::assert_subset(names(hal_control), names(.hal_control_defaults))
-  checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
   if (!is.null(treatment_model) && length(treatment_model) != 3) {
@@ -506,7 +505,7 @@ fit_initial <- function(
       n,
       tau,
       max_count,
-      cores,
+      .n_workers(),
       verbose
     )
     tmp.long <- hal$tmp.long
@@ -593,7 +592,6 @@ fit_initial <- function(
       at.risks,
       depend.matrix,
       varnames,
-      cores,
       verbose
     )
   }

@@ -39,9 +39,12 @@
 #'     convergence.
 #'   * `truncate_weights` (`Inf`): positive number at which the clever
 #'     weights of the intervention are truncated. `Inf` is no truncation.
-#' @param cores Positive integer. Number of cores used by
-#'   [parallel::mclapply()] for the per-individual computations.
 #' @param verbose Logical. If `TRUE`, print progress.
+#'
+#' @section Parallel computation:
+#' The per-individual computations run in parallel on the
+#' [mirai::daemons()] set in the session, if any, such as
+#' `mirai::daemons(4)` for 4 local processes.
 #'
 #' @return An object of class `tmle_estimate`, a list with elements:
 #'   * `estimate`: a `data.table` with one row per target process and
@@ -141,7 +144,6 @@ tmle_estimate <- function(
   intervention = NULL,
   a = NULL,
   control = list(),
-  cores = 1,
   verbose = FALSE
 ) {
   .assert_initial_fit(initial_fit)
@@ -149,7 +151,6 @@ tmle_estimate <- function(
   .assert_intervention(intervention, initial_fit)
   .assert_a(a, initial_fit)
   control <- .tmle_control(control)
-  checkmate::assert_count(cores, positive = TRUE)
   checkmate::assert_flag(verbose)
 
   if (!is.null(intervention) && intervention$type == "calibrate") {
@@ -159,7 +160,6 @@ tmle_estimate <- function(
       intervention,
       a,
       control,
-      cores,
       verbose
     ))
   }
@@ -172,7 +172,6 @@ tmle_estimate <- function(
       intervention,
       a,
       control,
-      cores,
       verbose
     )
   })
@@ -205,7 +204,6 @@ tmle_estimate <- function(
   intervention,
   a,
   control,
-  cores,
   verbose
 ) {
   alpha <- if (is.null(intervention)) list() else intervention$alpha
@@ -460,7 +458,7 @@ tmle_estimate <- function(
       keep.by = TRUE
     )
 
-    dt_list <- parallel::mclapply(
+    dt_list <- .parallel_lapply(
       dt_list,
       .compute_q_clever,
       states = states,
@@ -470,8 +468,7 @@ tmle_estimate <- function(
       get_years_lost = years_lost,
       years_lost_block_size = block_size,
       years_lost_tau = initial_fit$tau,
-      clever_by_state = target_by_state,
-      mc.cores = .n_cores(cores)
+      clever_by_state = target_by_state
     )
 
     tmp.long <- rbindlist(dt_list)

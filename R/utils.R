@@ -126,13 +126,43 @@
   spec
 }
 
-# Number of cores to hand to parallel::mclapply(), which does not support
-# more than one on Windows.
-.n_cores <- function(cores) {
-  if (.Platform$OS.type == "windows") {
+# The number of mirai daemons the user has set with mirai::daemons(), or 1 if
+# none, in which case the computations run sequentially.
+.n_workers <- function() {
+  if (!mirai::daemons_set()) {
     return(1L)
   }
-  as.integer(max(1L, min(cores, parallel::detectCores(), na.rm = TRUE)))
+  max(1L, mirai::status()$connections)
+}
+
+# lapply(X, FUN, ...) on the user's mirai daemons, in one chunk of X per
+# daemon, or sequentially if none are set. The daemons run the installed
+# MultiStateTMLE.
+.parallel_lapply <- function(X, FUN, ...) {
+  n <- .n_workers()
+  if (n <= 1 || length(X) <= 1) {
+    return(lapply(X, FUN, ...))
+  }
+  out <- mirai::collect_mirai(
+    mirai::mirai_map(
+      .chunks(X, n),
+      .lapply_chunk,
+      .args = list(FUN = FUN, ...)
+    ),
+    options = ".stop"
+  )
+  unlist(out, recursive = FALSE)
+}
+
+# `x` split into at most `n` runs of consecutive elements of about equal
+# length, as an unnamed list.
+.chunks <- function(x, n) {
+  n <- max(1L, min(n, length(x)))
+  unname(split(x, ceiling(seq_along(x) * n / length(x))))
+}
+
+.lapply_chunk <- function(chunk, FUN, ...) {
+  lapply(chunk, FUN, ...)
 }
 
 # A language object, such as a formula, as a single string.

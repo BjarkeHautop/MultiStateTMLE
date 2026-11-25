@@ -82,15 +82,6 @@ test_that("calibrate() validates against the initial fit", {
       fit,
       risk(death),
       calibrate(risk(illness), level(0.2)),
-      cores = 0
-    ),
-    "cores"
-  )
-  expect_error(
-    tmle_estimate(
-      fit,
-      risk(death),
-      calibrate(risk(illness), level(0.2)),
       control = list(max_iter = 0)
     ),
     "control\\$max_iter"

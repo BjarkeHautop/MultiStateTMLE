@@ -14,7 +14,6 @@ fit_initial(
   max_count = 1,
   control = list(),
   hal_control = list(),
-  cores = 1,
   verbose = FALSE
 )
 }
@@ -69,9 +68,6 @@ only done if some increments exceed 1.
 \item{hal_control}{A named list of settings for processes fitted with
 \code{fit = "hal"}, see Details.}
 
-\item{cores}{Positive integer. Number of cores used by
-\code{\link[parallel:mclapply]{parallel::mclapply()}} when predicting hazards across states.}
-
 \item{verbose}{Logical. If \code{TRUE}, print model fits and progress.}
 }
 \value{
@@ -120,6 +116,13 @@ Columns of \code{data} named after a process, such as the event counts that
 \code{\link[simevent:simulate_events]{simevent::simulate_events()}} adds, are ignored: the counts are
 recomputed from \code{event}.
 }
+\section{Parallel computation}{
+
+The hazards in each state are predicted in parallel on the
+\code{\link[mirai:daemons]{mirai::daemons()}} set in the session, if any, such as
+\code{mirai::daemons(4)} for 4 local processes.
+}
+
 \examples{
 # Illness-death data: illness is an illness that can occur once, death ends
 # follow-up, and so does censoring. One row per event:

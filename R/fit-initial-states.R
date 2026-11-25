@@ -86,7 +86,6 @@
   at.risks,
   depend.matrix,
   varnames,
-  cores,
   verbose
 ) {
   if (intervene.A0) {
@@ -143,53 +142,24 @@
   )
   state.vars <- setdiff(names(depend.matrix), "state")
   states <- unique(depend.matrix[["state"]])
-  report <- .states_to_report(states)
-  n.states <- max(depend.matrix[["state"]])
-  n.cores <- .n_cores(cores)
-  chunk.size <- ceiling(length(states) / n.cores)
-  chunks <- split(states, ceiling(seq_along(states) / chunk.size))
+  # One task per worker, each with a run of consecutive states.
+  chunks <- .chunks(states, .n_workers())
 
-  outs <- mclapply(
+  outs <- .parallel_lapply(
     chunks,
-    function(chunk) {
-      out <- data.table(row_id = tmp.state[["row_id"]], state = 0)
-      for (state.jj in chunk) {
-        if (verbose && state.jj %in% report) {
-          message("State ", state.jj, "/", n.states)
-        }
-        row <- depend.matrix[state == state.jj]
-        in.state <- rep(TRUE, nrow(tmp.state))
-        for (varname in state.vars) {
-          tmp.state[[varname]] <- row[[varname]]
-          in.state <- in.state & (tmp.long[[varname]] >= row[[varname]])
-        }
-        if (!is.null(hal)) {
-          hal.state <- .hal_design_set_state(hal, tmp.state)
-        }
-
-        for (name in targets) {
-          colname <- paste0(prefix, name, ".", state.jj)
-          if (!is.null(hal) && hal$which.hal[[name]]) {
-            P <- as.numeric(
-              .hal_predict(hal.state, name, tmp.state[["risk.time"]])
-            )
-          } else {
-            P <- .cox_increment(
-              cox[[name]][["fit"]],
-              tmp.state,
-              dhazards[[name]]
-            )
-          }
-          if (name %in% names(at.risks)) {
-            P <- P * at.risks[[name]](row)
-          }
-          out[[colname]] <- P
-        }
-        out[["state"]][in.state] <- state.jj
-      }
-      out
-    },
-    mc.cores = n.cores
+    .predict_state_chunk,
+    tmp.state = tmp.state,
+    observed = tmp.long[, state.vars, with = FALSE],
+    depend.matrix = depend.matrix,
+    state.vars = state.vars,
+    targets = targets,
+    prefix = prefix,
+    cox = cox,
+    hal = hal,
+    at.risks = at.risks,
+    dhazards = dhazards,
+    report = if (verbose) .states_to_report(states) else integer(),
+    n.states = max(depend.matrix[["state"]])
   )
 
   for (out in outs) {
@@ -198,6 +168,64 @@
     tmp.long[, state := pmax(state, out[["state"]])]
   }
   tmp.long
+}
+
+# The hazard increments of .predict_states() in the states `chunk`, for each
+# row of `tmp.state` with its state variables set to those of the state, as
+# columns `<prefix><process>.<state>`, and `state`, the last of the states
+# each row is in by its `observed` state variables. Progress is reported for
+# the states in `report` (only shown when not run on a worker).
+.predict_state_chunk <- function(
+  chunk,
+  tmp.state,
+  observed,
+  depend.matrix,
+  state.vars,
+  targets,
+  prefix,
+  cox,
+  hal,
+  at.risks,
+  dhazards,
+  report,
+  n.states
+) {
+  out <- data.table(row_id = tmp.state[["row_id"]], state = 0)
+  for (state.jj in chunk) {
+    if (state.jj %in% report) {
+      message("State ", state.jj, "/", n.states)
+    }
+    row <- depend.matrix[state == state.jj]
+    in.state <- rep(TRUE, nrow(tmp.state))
+    for (varname in state.vars) {
+      tmp.state[[varname]] <- row[[varname]]
+      in.state <- in.state & (observed[[varname]] >= row[[varname]])
+    }
+    if (!is.null(hal)) {
+      hal.state <- .hal_design_set_state(hal, tmp.state)
+    }
+
+    for (name in targets) {
+      colname <- paste0(prefix, name, ".", state.jj)
+      if (!is.null(hal) && hal$which.hal[[name]]) {
+        P <- as.numeric(
+          .hal_predict(hal.state, name, tmp.state[["risk.time"]])
+        )
+      } else {
+        P <- .cox_increment(
+          cox[[name]][["fit"]],
+          tmp.state,
+          dhazards[[name]]
+        )
+      }
+      if (name %in% names(at.risks)) {
+        P <- P * at.risks[[name]](row)
+      }
+      out[[colname]] <- P
+    }
+    out[["state"]][in.state] <- state.jj
+  }
+  out
 }
 
 # Add to the state space one row per value of the time of each jump of
