@@ -22,17 +22,15 @@
   depend.matrix
 }
 
-# Drop the states in which the jump time variable of the kth jump of a
-# process differs from its value before the jump, the depend_time function
-# at 0, while the process has made fewer than k jumps.
-.drop_impossible_jump_times <- function(depend.matrix, depend_time) {
-  for (time.var in names(depend_time)) {
-    count.value <- .jump_number(time.var, 2)
-    process <- strsplit(time.var, ".", fixed = TRUE)[[1]][1]
-    T.var <- paste0("T.", time.var)
-    before <- as.numeric(depend_time[[time.var]](0))
+# Drop the states in which the jump time variable of the kth jump of its
+# processes (`specs`, see .jump_specs()) differs from its value before the
+# jump, its function at 0, while the processes have made fewer than k jumps.
+.drop_impossible_jump_times <- function(depend.matrix, specs) {
+  for (T.var in names(specs)) {
+    spec <- specs[[T.var]]
+    before <- as.numeric(spec$fun(0))
     depend.matrix <- depend.matrix[
-      !(depend.matrix[[process]] <= count.value - 1 &
+      !(.jump_count(depend.matrix, spec) <= spec$k - 1 &
         depend.matrix[[T.var]] != before)
     ]
   }
@@ -202,19 +200,17 @@
   tmp.long
 }
 
-# Add to the state space one row per value of the time of each jump in
-# `T.vars` (as columns `time.<name>`, Inf when the jump has not happened
-# yet), for the states just before that jump.
-.add_jump_time_rows <- function(depend.matrix, tmp.long, T.vars, zero) {
-  for (T.var in T.vars) {
-    process <- .jump_owner(T.var)
-    count.value <- .jump_number(T.var, 3)
-    time.col <- sub("^T\\.", "time.", T.var)
+# Add to the state space one row per value of the time of each jump of
+# `specs` (see .jump_specs(); as columns `time.<name>`, Inf when the jump
+# has not happened yet), for the states just before that jump.
+.add_jump_time_rows <- function(depend.matrix, tmp.long, specs, zero) {
+  for (spec in specs) {
+    time.col <- spec$time.col
     time.values <- unique(tmp.long[[time.col]])
     if (zero) {
       time.values <- unique(c(0, time.values))
     }
-    before.jump <- depend.matrix[[process]] == count.value - 1
+    before.jump <- .jump_count(depend.matrix, spec) == spec$k - 1
     depend.matrix[, (time.col) := Inf]
     depend.matrix[before.jump, (time.col) := time.values[1]]
     if (length(time.values) > 1) {
@@ -233,13 +229,15 @@
 
 # Link each state to the state after a jump of each process in
 # `process.depend` (columns `s.<process>` of the state space), and each row
-# of tmp.long to its row of the state space (`state.row.index`).
+# of tmp.long to its row of the state space (`state.row.index`). A jump that
+# is the kth event of the processes of a jump time variable in `specs` (see
+# .jump_specs()) sets the variable to its value at the time of the jump.
 .link_states <- function(
   depend.matrix,
   tmp.long,
   var.depend,
   process.depend,
-  T.vars
+  specs
 ) {
   depend.matrix[, state.row.index := seq_len(.N)]
   time.cols <- grep("^time\\.", names(depend.matrix), value = TRUE)
@@ -248,7 +246,6 @@
     stats::setNames(nm = process.depend),
     function(process) max(depend.matrix[[process]])
   )
-  T.owners <- .jump_owner(T.vars)
 
   for (state.jj in unique(depend.matrix[["state"]])) {
     rows.jj <- depend.matrix[state == state.jj]
@@ -256,9 +253,14 @@
       count <- rows.jj[[process]]
       after.jump <- rows.jj[, c("state.row.index", var.depend), with = FALSE]
       after.jump[[process]] <- pmin(count + 1L, max.values[[process]])
-      for (T.var in T.vars[T.owners == process]) {
-        if (all(count == .jump_number(T.var, 3) - 1)) {
-          after.jump[[T.var]] <- rows.jj[[sub("^T\\.", "time.", T.var)]]
+      for (T.var in names(specs)) {
+        spec <- specs[[T.var]]
+        if (
+          process %in%
+            spec$processes &&
+            all(.jump_count(rows.jj, spec) == spec$k - 1)
+        ) {
+          after.jump[[T.var]] <- rows.jj[[spec$time.col]]
         }
       }
       next.state <- unique(merge(after.jump, lookup, by = var.depend))[

@@ -76,35 +76,87 @@
   x
 }
 
-# Add to `x` the jump time column `T.<name>` of each state variable in
-# `depend_time` (`<process>` or `<process>.<k>`, the kth jump): the
-# depend_time function at 0 before the jump, as event_time() is 0 then, and
-# at the time of the jump after it. Whether the jump has happened is known
-# from the count of the process, so the value before it can be any.
-# `deltas` are the delta codes of the processes, named by process. With
-# `grid = TRUE`, also add `time.<name>`, the function at the time of each
-# row.
-.add_jump_time_columns <- function(x, depend_time, deltas, grid = FALSE) {
-  for (time.var in names(depend_time)) {
-    time.fun <- depend_time[[time.var]]
-    T.var <- paste0("T.", time.var)
-    d <- deltas[[strsplit(time.var, ".", fixed = TRUE)[[1]][1]]]
-    k <- .jump_number(time.var, 2)
+# The jump time variables, as a list named by variable `T.<name>` of
+# list(processes, k, fun, time.col): the kth event of any of `processes`,
+# the function `fun` of its time that the variable takes from that event on,
+# and the column `time.<name>` of that function at each time of the grid.
+# From .fit_initial_impl()'s `depend_time`, functions named by `<name>`,
+# and `jump_processes`, the processes named by `<name>`. A name without
+# processes is `<process>` or `<process>.<k>`.
+.jump_specs <- function(depend_time, jump_processes = list()) {
+  specs <- lapply(names(depend_time), function(name) {
+    processes <- jump_processes[[name]]
+    if (is.null(processes)) {
+      processes <- strsplit(name, ".", fixed = TRUE)[[1]][1]
+    }
+    list(
+      processes = processes,
+      k = .jump_number(name, 2),
+      fun = depend_time[[name]],
+      time.col = paste0("time.", name)
+    )
+  })
+  stats::setNames(specs, sprintf("T.%s", names(depend_time)))
+}
+
+# The jump time variables of HAL fits, named "T.<process>.<k>", as
+# .jump_specs() (without `fun`).
+.jump_specs_from_names <- function(T.vars) {
+  specs <- lapply(T.vars, function(T.var) {
+    list(
+      processes = .jump_owner(T.var),
+      k = .jump_number(T.var, 3),
+      time.col = sub("^T\\.", "time.", T.var)
+    )
+  })
+  stats::setNames(specs, T.vars)
+}
+
+# The number of events of the processes of jump time spec `spec` in each
+# row of `x`, from their count columns.
+.jump_count <- function(x, spec) {
+  Reduce(`+`, lapply(spec$processes, function(process) x[[process]]))
+}
+
+# Add to `x` the column of each jump time variable of `specs` (see
+# .jump_specs()): the function at 0 before the jump, as event_time() is 0
+# then, and at the time of the jump after it. Whether the jump has happened
+# is known from the counts of the processes, so the value before it can be
+# any. `deltas` are the delta codes of the processes, named by process. With
+# `grid = TRUE`, also add the `time.<name>` column, the function at the time
+# of each row.
+.add_jump_time_columns <- function(x, specs, deltas, grid = FALSE) {
+  for (T.var in names(specs)) {
+    spec <- specs[[T.var]]
+    d <- unlist(deltas[spec$processes], use.names = FALSE)
+    k <- spec$k
     x[,
       (T.var) := {
-        jumps <- time[delta == d]
+        jumps <- time[delta %in% d]
         if (length(jumps) >= k) jumps[k] else Inf
       },
       by = "id"
     ]
     before <- x[["tstart"]] < x[[T.var]]
-    x[(before), (T.var) := as.numeric(time.fun(0))]
-    x[(!before), (T.var) := as.numeric(time.fun(get(T.var)))]
+    x[(before), (T.var) := as.numeric(spec$fun(0))]
+    x[(!before), (T.var) := as.numeric(spec$fun(get(T.var)))]
     if (grid) {
-      x[, (paste0("time.", time.var)) := as.numeric(time.fun(time))]
+      x[, (spec$time.col) := as.numeric(spec$fun(time))]
     }
   }
   x
+}
+
+# `x` carried forward over its missing values: each missing value is
+# replaced by the last value before it. For any type, also factors, unlike
+# nafill().
+.locf <- function(x) {
+  if (is.numeric(x) && !is.factor(x)) {
+    return(nafill(x, type = "locf"))
+  }
+  last <- cummax(seq_along(x) * !is.na(x))
+  last[last == 0] <- NA
+  x[last]
 }
 
 # Expand the data `dt` to one row per individual and time in `unique.times`,
@@ -124,7 +176,7 @@
   setorder(tmp.long, id, time.obs, na.last = TRUE)
 
   for (varname in varnames) {
-    tmp.long[, (varname) := nafill(get(varname), type = "locf"), by = "id"]
+    tmp.long[, (varname) := .locf(get(varname)), by = "id"]
     if (anyNA(tmp.long[[varname]])) {
       stop(
         "Unexpected leading NA in '",

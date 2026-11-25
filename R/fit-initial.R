@@ -230,6 +230,7 @@ fit_initial <- function(
     arms = arms,
     max_count = max_count,
     depend_time = event_times$depend_time,
+    jump_processes = event_times$jump_processes,
     control = control,
     hal_control = hal_control,
     cores = cores,
@@ -260,6 +261,7 @@ fit_initial <- function(
   arms = NULL,
   max_count = 1,
   depend_time = list(),
+  jump_processes = list(),
   control = list(),
   hal_control = list(),
   cores = 1,
@@ -270,6 +272,8 @@ fit_initial <- function(
     names(data),
     must.include = c("id", "time", "delta")
   )
+  checkmate::assert_list(jump_processes, types = "character")
+  checkmate::assert_subset(names(jump_processes), names(depend_time))
   checkmate::assert_list(fit_types, names = "unique", min.len = 1)
   checkmate::assert_number(tau, lower = .Machine$double.eps, finite = TRUE)
   checkmate::assert_formula(treatment_model, null.ok = TRUE)
@@ -365,15 +369,21 @@ fit_initial <- function(
 
   #-- the covariates, and the processes whose counts are covariates (state
   #-- variables); the jump times T.<name> of depend_time are added below.
-  T.names <- sprintf("T.%s", names(depend_time))
-  # The process of each jump time is a state variable, so the state space
+  jump.specs <- .jump_specs(depend_time, jump_processes)
+  T.names <- names(jump.specs)
+  # The processes of each jump time are state variables, so the state space
   # knows whether the jump has happened.
-  T.processes <- vapply(
-    strsplit(as.character(names(depend_time)), ".", fixed = TRUE),
-    `[`,
-    character(1),
-    1
-  )
+  T.processes <- unique(unlist(
+    lapply(jump.specs, `[[`, "processes"),
+    use.names = FALSE
+  ))
+  if (any.hal && any(lengths(lapply(jump.specs, `[[`, "processes")) > 1)) {
+    stop(
+      "event_time() of several processes is not supported with ",
+      "fit = \"hal\".",
+      call. = FALSE
+    )
+  }
   if (!all(T.processes %in% targets)) {
     stop(
       "depend_time names jumps of ",
@@ -407,7 +417,7 @@ fit_initial <- function(
   dt[, tstop := time]
   dt <- .add_count_columns(dt, state.processes, state.deltas)
   process.codes <- stats::setNames(as.list(process.deltas), process.names)
-  dt <- .add_jump_time_columns(dt, depend_time, process.codes)
+  dt <- .add_jump_time_columns(dt, jump.specs, process.codes)
   varnames <- c(varnames, T.names)
   state.names <- c(state.processes, T.names)
 
@@ -444,7 +454,7 @@ fit_initial <- function(
   tmp.long[, tstart := c(0, time[-.N]), by = "id"]
   tmp.long <- .add_jump_time_columns(
     tmp.long,
-    depend_time,
+    jump.specs,
     process.codes,
     grid = TRUE
   )
@@ -525,7 +535,7 @@ fit_initial <- function(
         depend.matrix <- hal.states$depend.matrix
       }
     } else {
-      depend.matrix <- .drop_impossible_jump_times(depend.matrix, depend_time)
+      depend.matrix <- .drop_impossible_jump_times(depend.matrix, jump.specs)
     }
     depend.matrix[, state := seq_len(.N)]
   }
@@ -580,18 +590,23 @@ fit_initial <- function(
   var.depend <- setdiff(names(depend.matrix), "state")
   process.depend <- intersect(var.depend, process.names)
   if (any.hal) {
-    T.vars <- .hal_time_vars(hal)
+    link.specs <- .jump_specs_from_names(.hal_time_vars(hal))
   } else {
-    T.owners <- .jump_owner(T.names)
-    T.vars <- as.character(unlist(lapply(
-      process.depend,
-      function(p) T.names[T.owners == p]
-    )))
+    # The jump times of the processes in the state space, ordered by their
+    # first process.
+    first <- vapply(jump.specs, function(spec) spec$processes[1], character(1))
+    in.states <- vapply(
+      jump.specs,
+      function(spec) all(spec$processes %in% process.depend),
+      logical(1)
+    )
+    order.specs <- order(match(first, process.depend))
+    link.specs <- jump.specs[order.specs[in.states[order.specs]]]
   }
   depend.matrix <- .add_jump_time_rows(
     depend.matrix,
     tmp.long,
-    T.vars,
+    link.specs,
     zero = any.hal
   )
   linked <- .link_states(
@@ -599,7 +614,7 @@ fit_initial <- function(
     tmp.long,
     var.depend,
     process.depend,
-    T.vars
+    link.specs
   )
 
   processes <- data.table(

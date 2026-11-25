@@ -6,16 +6,22 @@
 # Each value of the term is a separate state, so it must take whole numbers
 # 0, 1, 2, ... (categories of the time, such as an indicator). Before the
 # event, event_time() is 0, so the term is its value at 0.
+#
+# event_time(c(a, b), k) is the time of the kth event of any of the
+# processes a and b, with jump time variable T.a_b (T.a_b.<k> for k > 1).
 
 # The models' right-hand sides with each event_time() term replaced by its
 # jump time variable, and the functions of the time defining those
-# variables (.fit_initial_impl()'s `depend_time`).
+# variables (.fit_initial_impl()'s `depend_time`), with the processes whose
+# events each counts (`jump_processes`). Both are named by the variable
+# without its "T." prefix.
 # `times` are the event times in the data, to check the terms at, and
-# `columns` the data columns. Returns list(formulas,
-# depend_time), `formulas` named by process.
+# `columns` the data columns. Returns list(formulas, depend_time,
+# jump_processes), `formulas` named by process.
 .event_time_covariates <- function(models, times, columns, max_count) {
   found <- new.env()
   found$depend_time <- list()
+  found$jump_processes <- list()
   found$exprs <- list()
   found$terms <- list()
   check_times <- sort(unique(c(0, times)))
@@ -33,7 +39,11 @@
     )
     formula
   })
-  list(formulas = formulas, depend_time = found$depend_time)
+  list(
+    formulas = formulas,
+    depend_time = found$depend_time,
+    jump_processes = found$jump_processes
+  )
 }
 
 # `expr`, a formula's right-hand side, with each term containing
@@ -86,7 +96,7 @@
       " uses event ",
       jump$k,
       " of ",
-      jump$process,
+      jump$label,
       ", but only max_count = ",
       max_count,
       " events are tracked; increase max_count.",
@@ -96,7 +106,7 @@
   indicator_hint <- paste0(
     "; it must take whole numbers 0, 1, 2, ... (categories of the time), ",
     "such as I(event_time(",
-    jump$process,
+    jump$arg,
     ", ",
     jump$k,
     ") > 0.5), as each value is a separate state in the estimation."
@@ -144,14 +154,15 @@
     )
   }
 
-  key <- if (jump$k == 1) jump$process else paste0(jump$process, ".", jump$k)
+  base <- paste(jump$processes, collapse = "_")
+  key <- if (jump$k == 1) base else paste0(base, ".", jump$k)
   g_string <- .deparse_one_line(g_expr)
   if (key %in% names(found$exprs) && found$exprs[[key]] != g_string) {
     stop(
       "The models use several functions of event ",
       jump$k,
       " of ",
-      jump$process,
+      jump$label,
       " (",
       found$terms[[key]],
       " and ",
@@ -163,6 +174,7 @@
   found$exprs[[key]] <- g_string
   found$terms[[key]] <- term
   found$depend_time[[key]] <- g
+  found$jump_processes[[key]] <- jump$processes
   as.name(paste0("T.", key))
 }
 
@@ -180,19 +192,46 @@
   )
 }
 
-# The process and event number of an event_time(proc, k) call. `k`
-# defaults to 1.
+# The processes and event number of an event_time(proc, k) call, where
+# `proc` is a process or c() of processes, and `k` defaults to 1. Returns
+# list(processes, k, arg, label): the processes in the order of
+# `process_names`, `proc` as written, and a description of the processes.
 .parse_event_time <- function(call, process_names, env, what) {
   call <- match.call(function(proc, k = 1) NULL, call)
-  if (!is.name(call$proc) || !as.character(call$proc) %in% process_names) {
+  proc <- call$proc
+  arg <- .deparse_one_line(proc)
+  names <- if (is.name(proc)) {
+    as.character(proc)
+  } else if (
+    is.call(proc) &&
+      identical(proc[[1]], as.name("c")) &&
+      length(proc) > 1 &&
+      all(vapply(as.list(proc)[-1], is.name, logical(1)))
+  ) {
+    vapply(as.list(proc)[-1], as.character, character(1))
+  } else {
+    NULL
+  }
+  if (is.null(names)) {
     stop(
       what,
       " uses event_time() of ",
-      .deparse_one_line(call$proc),
+      arg,
+      "; give a process, or several as c(<process>, <process>).",
+      call. = FALSE
+    )
+  }
+  unknown <- setdiff(names, process_names)
+  if (length(unknown) > 0) {
+    stop(
+      what,
+      " uses event_time() of ",
+      paste(unknown, collapse = ", "),
       ", which is not a process in `models`.",
       call. = FALSE
     )
   }
+  processes <- intersect(process_names, names)
   k <- if (is.null(call$k)) 1 else eval(call$k, env)
   if (!checkmate::test_count(k, positive = TRUE)) {
     stop(
@@ -203,7 +242,12 @@
       call. = FALSE
     )
   }
-  list(process = as.character(call$proc), k = as.integer(k))
+  label <- if (length(processes) == 1) {
+    processes
+  } else {
+    paste("any of", paste(processes, collapse = ", "))
+  }
+  list(processes = processes, k = as.integer(k), arg = arg, label = label)
 }
 
 # `expr` with each subexpression identical to `target` replaced by

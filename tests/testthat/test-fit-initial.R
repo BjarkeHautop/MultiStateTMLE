@@ -455,9 +455,128 @@ test_that("fit_initial() requires event_time() terms to be categories", {
   )
   expect_error(fit("I(event_time(illness, 2) > 0.5)"), "max_count")
   expect_error(fit("I(event_time(foo) > 0.5)"), "not a process")
+  expect_error(fit("I(event_time(c(illness, foo)) > 0.5)"), "foo, which is not")
+  expect_error(fit("I(event_time('illness') > 0.5)"), "give a process")
   expect_error(fit("I(event_time(illness) > biomarker)"), "only use constants")
   expect_error(
     fit("I(event_time(illness) > 0.5) + I(event_time(illness) > 0.7)"),
     "several functions"
   )
+})
+
+# Two processes, a and b, that each happen at most once, b only after a,
+# and death, whose hazard is lower when a happened late.
+simulate.two.jumps <- function(n, seed) {
+  model <- simevent::sim_model(
+    biomarker = simevent::sim_covariate(function(N) rnorm(N)),
+    a = simevent::sim_process("transient", limit = 1, eta = 0.6, nu = 1),
+    b = simevent::sim_process("transient", limit = 1, eta = 0.8, nu = 1),
+    death = simevent::sim_process("terminal", eta = 0.3, nu = 1),
+    censoring = simevent::sim_process("censoring", eta = 0.2, nu = 1),
+    effects = list(
+      simevent::sim_effect(b ~ (a == 0), coef = -50),
+      simevent::sim_effect(death ~ biomarker + a, coef = c(0.5, 0.7))
+    )
+  )
+  simevent::simulate_events(model, n = n, max_cens = 2, seed = seed)
+}
+
+two.jumps.models <- function(term) {
+  list(
+    hazard_model(a ~ biomarker, limit = 1),
+    hazard_model(b ~ biomarker, limit = 1, at_risk = ~ a == 1),
+    stats::as.formula(paste("death ~ biomarker + a +", term)),
+    censoring ~ biomarker
+  )
+}
+
+test_that("event_time() takes several processes", {
+  skip_if_not_installed("simevent")
+  data <- data.table::as.data.table(simulate.two.jumps(150, seed = 1))
+  data[event == "max_cens", event := "censoring"]
+  fit <- function(term) {
+    # max_count = 2 to track the second event of a or b.
+    fit_initial(data, models = two.jumps.models(term), tau = 1.5, max_count = 2)
+  }
+
+  # The term is 1 from a first event of a or b after time 0.5 on.
+  either <- fit("I(event_time(c(b, a)) > 0.5)")
+  first <- data[event %in% c("a", "b"), list(first = min(time)), by = "id"]
+  rows <- merge(either$tmp_long, first, by = "id", all.x = TRUE)
+  expected <- !is.na(rows$first) & rows$first > 0.5 & rows$tstart >= rows$first
+  expect_equal(rows$T.a_b, as.numeric(expected))
+  expect_true(all(either$tmp_long$state > 0))
+
+  # As b only happens after a, the second event of a or b is the first b,
+  # and the first event of a or b is the first a: the same fits.
+  second <- fit("I(event_time(c(a, b), 2) > 0.5)")
+  only_b <- fit("I(event_time(b) > 0.5)")
+  only_a <- fit("I(event_time(a) > 0.5)")
+  expect_equal(
+    unname(coef(second$cox_fits$death)),
+    unname(coef(only_b$cox_fits$death))
+  )
+  expect_equal(
+    unname(coef(either$cox_fits$death)),
+    unname(coef(only_a$cox_fits$death))
+  )
+  estimate <- function(fit) {
+    tmle_estimate(fit, risk(death), scale_intensity(a = 0.5))$estimate
+  }
+  expect_equal(estimate(second), estimate(only_b))
+  expect_equal(estimate(either), estimate(only_a))
+})
+
+test_that("event_time() of several processes interacts with counts", {
+  skip_if_not_installed("simevent")
+  data <- data.table::as.data.table(simulate.two.jumps(150, seed = 2))
+  data[event == "max_cens", event := "censoring"]
+  fit <- fit_initial(
+    data,
+    models = two.jumps.models("I(event_time(c(a, b), 1) > 0.5) * I(b == 0)"),
+    tau = 1.5
+  )
+  expect_named(
+    coef(fit$cox_fits$death),
+    c(
+      "biomarker",
+      "a",
+      "as.factor(T.a_b)1",
+      "I(b == 0)TRUE",
+      "as.factor(T.a_b)1:I(b == 0)TRUE"
+    )
+  )
+  estimate <- tmle_estimate(fit, risk(death))$estimate$estimate
+  expect_true(estimate > 0 && estimate < 1)
+})
+
+test_that("fit_initial() takes factor and character covariates", {
+  data <- fixture.data(40)
+  numeric <- fit_initial(
+    data,
+    models = list(
+      hazard_model(illness ~ biomarker + treatment, limit = 1),
+      death ~ biomarker + treatment + illness,
+      censoring ~ biomarker
+    ),
+    tau = 1
+  )
+  for (as_type in list(as.factor, as.character)) {
+    typed <- data
+    typed$treatment <- as_type(ifelse(data$treatment == 1, "yes", "no"))
+    fit <- fit_initial(
+      typed,
+      models = list(
+        hazard_model(illness ~ biomarker + treatment, limit = 1),
+        death ~ biomarker + treatment + illness,
+        censoring ~ biomarker
+      ),
+      tau = 1
+    )
+    expect_equal(
+      unname(coef(fit$cox_fits$death)),
+      unname(coef(numeric$cox_fits$death))
+    )
+    expect_equal(fit$tmp_long$P.death, numeric$tmp_long$P.death)
+  }
 })

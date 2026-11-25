@@ -40,11 +40,11 @@ how it is fitted.
 \section{Event times}{
 
 \code{event_time(z, k)} is the time of the \code{k}th (default first) event of
-process \code{z}, and 0 before it, as in simevent. It must enter through a
-category term, such as \code{I(event_time(illness) > 0.5)}, that takes whole
-numbers 0, 1, 2, ..., as each value is a separate state in the
-estimation. Each event can be used through one such
-term.
+process \code{z}, or of any of several with \code{event_time(c(z, w), k)}, and 0
+before it, as in \code{\link[simevent:event_time]{simevent::event_time()}}. Use it through a term taking
+whole numbers 0, 1, 2, ..., such as \code{I(event_time(illness) > 0.5)}, as
+each value is a separate state. Each event can enter through one such
+term, and \code{k} can be at most \code{max_count} of \code{\link[=fit_initial]{fit_initial()}}.
 }
 
 \examples{
@@ -65,6 +65,10 @@ hazard_model(death ~ biomarker + I(relapse >= 2))
 
 # Death depending on whether the illness came after time 0.5:
 hazard_model(death ~ biomarker + illness + I(event_time(illness, 1) > 0.5))
+
+# Death depending on whether the first relapse or illness, whichever came
+# first, came after time 0.5:
+hazard_model(death ~ biomarker + I(event_time(c(relapse, illness)) > 0.5))
 
 # Use them in fit_initial(), mixed with plain formulas:
 fit <- fit_initial(
