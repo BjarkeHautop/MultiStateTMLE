@@ -49,8 +49,13 @@ then be passed as \code{a} to \code{\link[=tmle_estimate]{tmle_estimate()}} and
 \code{\link[=intervention_curve]{intervention_curve()}}. Defaults to both values, \code{0:1}, when
 \code{treatment_model} is given.}
 
-\item{max_count}{Positive integer. Maximum number of jumps tracked per
-recurrent process in the state space.}
+\item{max_count}{Positive integer. Maximum number of events tracked per
+recurrent process. Counts are capped at \code{max_count} in the state space,
+so hazards are assumed not to change after \code{max_count} events, and a
+recurrent process \code{z} in a model is fitted as the indicators
+\code{I(z >= 1) + ... + I(z >= max_count)}. It also bounds \code{k} in
+\code{event_time(z, k)}. A larger value is more flexible, but the state space,
+and with it the computation time, grows quickly with it.}
 
 \item{control}{A named list of tuning settings:
 \itemize{

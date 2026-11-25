@@ -31,8 +31,13 @@
 #'   then be passed as `a` to [tmle_estimate()] and
 #'   [intervention_curve()]. Defaults to both values, `0:1`, when
 #'   `treatment_model` is given.
-#' @param max_count Positive integer. Maximum number of jumps tracked per
-#'   recurrent process in the state space.
+#' @param max_count Positive integer. Maximum number of events tracked per
+#'   recurrent process. Counts are capped at `max_count` in the state space,
+#'   so hazards are assumed not to change after `max_count` events, and a
+#'   recurrent process `z` in a model is fitted as the indicators
+#'   `I(z >= 1) + ... + I(z >= max_count)`. It also bounds `k` in
+#'   `event_time(z, k)`. A larger value is more flexible, but the state space,
+#'   and with it the computation time, grows quickly with it.
 #' @param control A named list of tuning settings:
 #'   * `prune_states` (`FALSE`): if `TRUE`, prune states not admissible
 #'     under the at-risk conditions of `models`.
