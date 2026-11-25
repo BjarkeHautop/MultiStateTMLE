@@ -78,8 +78,13 @@ fit_initial(
 
 - max_count:
 
-  Positive integer. Maximum number of jumps tracked per recurrent
-  process in the state space.
+  Positive integer. Maximum number of events tracked per recurrent
+  process. Counts are capped at `max_count` in the state space, so
+  hazards are assumed not to change after `max_count` events, and a
+  recurrent process `z` in a model is fitted as the indicators
+  `I(z >= 1) + ... + I(z >= max_count)`. It also bounds `k` in
+  `event_time(z, k)`. A larger value is more flexible, but the state
+  space, and with it the computation time, grows quickly with it.
 
 - control:
 

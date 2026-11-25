@@ -116,8 +116,13 @@ then be passed as <code>a</code> to <code><a href="tmle_estimate.html">tmle_esti
 
 
 <dt id="arg-max-count">max_count<a class="anchor" aria-label="anchor" href="#arg-max-count"></a></dt>
-<dd><p>Positive integer. Maximum number of jumps tracked per
-recurrent process in the state space.</p></dd>
+<dd><p>Positive integer. Maximum number of events tracked per
+recurrent process. Counts are capped at <code>max_count</code> in the state space,
+so hazards are assumed not to change after <code>max_count</code> events, and a
+recurrent process <code>z</code> in a model is fitted as the indicators
+<code>I(z &gt;= 1) + ... + I(z &gt;= max_count)</code>. It also bounds <code>k</code> in
+<code>event_time(z, k)</code>. A larger value is more flexible, but the state space,
+and with it the computation time, grows quickly with it.</p></dd>
 
 
 <dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
