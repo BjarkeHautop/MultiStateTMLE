@@ -550,6 +550,33 @@ test_that("event_time() of several processes interacts with counts", {
   expect_true(estimate > 0 && estimate < 1)
 })
 
+test_that("fit_initial() refuses missing values in the columns models use", {
+  models <- list(
+    hazard_model(illness ~ biomarker, limit = 1),
+    death ~ biomarker + illness,
+    censoring ~ 1
+  )
+  data <- fixture.data(40)
+  data$unused <- NA
+  expect_no_error(fit_initial(data, models, tau = 1))
+
+  # Missing in a later row of an individual, not only at the start.
+  later <- data
+  rows <- which(duplicated(data$id))
+  later$biomarker[rows[1]] <- NA
+  expect_error(
+    fit_initial(later, models, tau = 1),
+    "missing values in biomarker"
+  )
+
+  untreated <- data
+  untreated$treatment[1] <- NA
+  expect_error(
+    fit_initial(untreated, models, tau = 1, treatment_model = treatment ~ 1),
+    "missing values in treatment"
+  )
+})
+
 test_that("fit_initial() takes factor and character covariates", {
   data <- fixture.data(40)
   numeric <- fit_initial(

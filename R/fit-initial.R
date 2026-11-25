@@ -201,6 +201,26 @@ fit_initial <- function(
   data[["delta"]] <- unname(codes[events])
   data[["event"]] <- NULL
 
+  # Missing values would be dropped by the Cox fits but carried forward in
+  # the expanded data, so refuse them in the columns the models use.
+  used <- unique(c(
+    "id",
+    "time",
+    unlist(lapply(models, function(model) all.vars(model$formula[[3]]))),
+    if (!is.null(treatment_model)) all.vars(treatment_model)
+  ))
+  missing <- Filter(
+    function(name) anyNA(data[[name]]),
+    intersect(used, names(data))
+  )
+  if (length(missing) > 0) {
+    stop(
+      "data has missing values in ",
+      paste(missing, collapse = ", "),
+      ", which the models use; remove or impute them first."
+    )
+  }
+
   # event_time() terms become the jump time variables T.<name> of
   # .fit_initial_impl()'s `depend_time`.
   checkmate::assert_count(max_count, positive = TRUE)
