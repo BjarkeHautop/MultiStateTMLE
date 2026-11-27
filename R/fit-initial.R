@@ -18,8 +18,8 @@
 #'   covariates by name, giving their number of events so far, and the
 #'   time of an event through an indicator such as
 #'   `I(event_time(illness, 1) > 0.5)` (see [hazard_model()]), also in the
-#'   censoring model. Every event in `data` needs a model, including the
-#'   censoring process.
+#'   censoring model. The `state_variables` can also be used by name. Every
+#'   event in `data` needs a model, including the censoring process.
 #' @param tau Positive number. Follow-up horizon; the target parameters are
 #'   evaluated at `tau`.
 #' @param censoring String. Name of the censoring process in `models`.
@@ -38,6 +38,15 @@
 #'   `I(z >= 1) + ... + I(z >= max_count)`. It also bounds `k` in
 #'   `event_time(z, k)`. A larger value is more flexible, but the state space,
 #'   and with it the computation time, grows quickly with it.
+#' @param state_variables A named list of [state_variable()]s: variables
+#'   tracked over the event history, such as whether treatment is stopped,
+#'   updated by the events of the processes they have rules for. They can be
+#'   used by name in `models`, in their `at_risk` conditions and in the
+#'   `when` condition of a target in [tmle_estimate()]. Each is a variable
+#'   of the state space, with the values it takes in the data up to `tau`,
+#'   and the processes it has rules for are in the state space too. Unlike
+#'   the counts of the processes, a state variable is not capped at
+#'   `max_count`. Not supported with `fit = "hal"`.
 #' @param control A named list of tuning settings:
 #'   * `prune_states` (`FALSE`): if `TRUE`, prune states not admissible
 #'     under the at-risk conditions of `models`.
@@ -163,6 +172,7 @@ fit_initial <- function(
   treatment_model = NULL,
   arms = NULL,
   max_count = 1,
+  state_variables = list(),
   control = list(),
   hal_control = list(),
   verbose = FALSE
@@ -207,6 +217,12 @@ fit_initial <- function(
   data <- data[, setdiff(names(data), c(names(models), "delta")), drop = FALSE]
   data[["delta"]] <- unname(codes[events])
   data[["event"]] <- NULL
+  .check_state_variables(
+    state_variables,
+    processes = names(models),
+    censoring = censoring,
+    columns = names(data)
+  )
 
   # Missing values would be dropped by the Cox fits but carried forward in
   # the expanded data, so refuse them in the columns the models use.
@@ -234,7 +250,7 @@ fit_initial <- function(
   event_times <- .event_time_covariates(
     models,
     times = data[["time"]],
-    columns = names(data),
+    columns = c(names(data), names(state_variables)),
     max_count = max_count
   )
   fit_models <- models
@@ -246,7 +262,7 @@ fit_initial <- function(
     .hazard_model_to_fit_type,
     fit_models,
     codes,
-    MoreArgs = list(state_vars = names(models))
+    MoreArgs = list(state_vars = c(names(models), names(state_variables)))
   )
 
   fit <- .fit_initial_impl(
@@ -258,11 +274,13 @@ fit_initial <- function(
     max_count = max_count,
     depend_time = event_times$depend_time,
     jump_processes = event_times$jump_processes,
+    state_variables = state_variables,
     control = control,
     hal_control = hal_control,
     verbose = verbose
   )
   fit$models <- models
+  fit$state_variables <- state_variables
   fit$processes <- data.table(
     name = fit$processes$name,
     type = fit$processes$type,
@@ -279,6 +297,7 @@ fit_initial <- function(
 
 # fit_initial() with the processes given as `fit_types`, a named list of
 # list(delta, model, fit, at_risk) for data with an integer `delta` column.
+# The `state_variables` are checked by fit_initial().
 .fit_initial_impl <- function(
   data,
   fit_types,
@@ -288,6 +307,7 @@ fit_initial <- function(
   max_count = 1,
   depend_time = list(),
   jump_processes = list(),
+  state_variables = list(),
   control = list(),
   hal_control = list(),
   verbose = FALSE
@@ -297,6 +317,7 @@ fit_initial <- function(
     names(data),
     must.include = c("id", "time", "delta")
   )
+  checkmate::assert_list(state_variables, types = "state_variable")
   checkmate::assert_list(jump_processes, types = "character")
   checkmate::assert_subset(names(jump_processes), names(depend_time))
   checkmate::assert_list(fit_types, names = "unique", min.len = 1)
@@ -416,9 +437,22 @@ fit_initial <- function(
       call. = FALSE
     )
   }
+  if (any.hal && length(state_variables) > 0) {
+    stop(
+      "State variables are not supported with fit = \"hal\".",
+      call. = FALSE
+    )
+  }
+  # The processes that state variables have rules for are state variables
+  # too, so the state space knows the state after their jumps.
+  state.var.names <- names(state_variables)
+  rule.processes <- unique(unlist(
+    lapply(state_variables, function(variable) names(variable$rules)),
+    use.names = FALSE
+  ))
   varnames <- union(
     setdiff(.model_variables(fit_types, at.risks), T.names),
-    T.processes
+    c(T.processes, rule.processes, state.var.names)
   )
   state.processes <- intersect(process.names, varnames)
   state.deltas <- process.deltas[match(state.processes, process.names)]
@@ -442,8 +476,14 @@ fit_initial <- function(
   dt <- .add_count_columns(dt, state.processes, state.deltas)
   process.codes <- stats::setNames(as.list(process.deltas), process.names)
   dt <- .add_jump_time_columns(dt, jump.specs, process.codes)
+  state.values <- .add_state_variable_columns(
+    dt,
+    state_variables,
+    process.codes,
+    tau
+  )
   varnames <- c(varnames, T.names)
-  state.names <- c(state.processes, T.names)
+  state.names <- c(state.processes, state.var.names, T.names)
 
   #-- the initial fits
   dt[, idN := seq_len(.N), by = "id"]
@@ -475,6 +515,7 @@ fit_initial <- function(
     unique.times
   )
   tmp.long <- .add_count_columns(tmp.long, state.processes, state.deltas)
+  .add_state_variable_columns(tmp.long, state_variables, process.codes, tau)
   tmp.long[, tstart := c(0, time[-.N]), by = "id"]
   tmp.long <- .add_jump_time_columns(
     tmp.long,
@@ -550,7 +591,8 @@ fit_initial <- function(
       tmp.long,
       state.names,
       process.names,
-      max_count
+      max_count,
+      state.values
     )
     if (any.hal) {
       hal.states <- .hal_state_space(hal, tmp.long)
@@ -564,7 +606,7 @@ fit_initial <- function(
     depend.matrix[, state := seq_len(.N)]
   }
   if (prune_states) {
-    depend.matrix <- .prune_states(depend.matrix, at.risks)
+    depend.matrix <- .prune_states(depend.matrix, at.risks, state.var.names)
   }
 
   #-- clever weights, and the hazards in each state under each arm
@@ -637,7 +679,9 @@ fit_initial <- function(
     tmp.long,
     var.depend,
     process.depend,
-    link.specs
+    link.specs,
+    state_variables,
+    at.risks
   )
 
   processes <- data.table(

@@ -17,6 +17,7 @@ reference:
   contents:
   - fit_initial
   - hazard_model
+  - state_variable
   - as_sim_model
 
 - title: Targeted estimation

@@ -54,6 +54,16 @@ print.initial_fit <- function(x, ...) {
     sep = ""
   )
   print(x$processes)
+  for (name in names(x$state_variables)) {
+    cat(
+      "
+",
+      name,
+      ": ",
+      sep = ""
+    )
+    print(x$state_variables[[name]])
+  }
   if (!is.null(x$treatment_model)) {
     cat(
       "\nTreatment model: ",

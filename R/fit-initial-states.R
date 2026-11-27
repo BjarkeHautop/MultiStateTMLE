@@ -5,9 +5,19 @@
 # All combinations of the values of the state variables, with process counts
 # truncated at max_count. A jump time variable T.<name> takes the values it
 # has in the data and, from `time.<name>`, the values it would get from a
-# jump at any time of the grid.
-.state_grid <- function(tmp.long, state.names, process.names, max_count) {
+# jump at any time of the grid. A variable of fit_initial()'s
+# `state_variables` takes its values in `values`.
+.state_grid <- function(
+  tmp.long,
+  state.names,
+  process.names,
+  max_count,
+  values = list()
+) {
   grid.list <- lapply(state.names, function(varname) {
+    if (varname %in% names(values)) {
+      return(values[[varname]])
+    }
     time.col <- sub("^T\\.", "time.", varname)
     if (startsWith(varname, "T.") && time.col %in% names(tmp.long)) {
       return(sort(unique(c(tmp.long[[varname]], tmp.long[[time.col]]))))
@@ -39,9 +49,15 @@
 
 # Drop the states in which no process with an at-risk condition is at risk,
 # or would be after a jump, ignoring conditions that hold in every state.
-.prune_states <- function(depend.matrix, at.risks) {
+# A jump is checked from the state with all variables one less, except those
+# in `unshifted` (the state variables, which a jump sets by their rules).
+.prune_states <- function(depend.matrix, at.risks, unshifted = character()) {
+  before <- depend.matrix - 1
+  for (name in unshifted) {
+    before[[name]] <- depend.matrix[[name]]
+  }
   at.risk <- lapply(at.risks, function(at_risk) {
-    at_risk(depend.matrix) | at_risk(depend.matrix - 1)
+    at_risk(depend.matrix) | at_risk(before)
   })
   at.risk <- Filter(function(x) !all(x), at.risk)
   if (length(at.risk) > 0) {
@@ -259,13 +275,18 @@
 # `process.depend` (columns `s.<process>` of the state space), and each row
 # of tmp.long to its row of the state space (`state.row.index`). A jump that
 # is the kth event of the processes of a jump time variable in `specs` (see
-# .jump_specs()) sets the variable to its value at the time of the jump.
+# .jump_specs()) sets the variable to its value at the time of the jump. A
+# jump sets each of the `state_variables` with a rule for its process by the
+# rule, which must give a value of the state space where the process is at
+# risk (by `at.risks`).
 .link_states <- function(
   depend.matrix,
   tmp.long,
   var.depend,
   process.depend,
-  specs
+  specs,
+  state_variables = list(),
+  at.risks = list()
 ) {
   depend.matrix[, state.row.index := seq_len(.N)]
   time.cols <- grep("^time\\.", names(depend.matrix), value = TRUE)
@@ -273,6 +294,10 @@
   max.values <- lapply(
     stats::setNames(nm = process.depend),
     function(process) max(depend.matrix[[process]])
+  )
+  state.values <- lapply(
+    stats::setNames(nm = names(state_variables)),
+    function(name) unique(depend.matrix[[name]])
   )
 
   for (state.jj in unique(depend.matrix[["state"]])) {
@@ -290,6 +315,38 @@
         ) {
           after.jump[[T.var]] <- rows.jj[[spec$time.col]]
         }
+      }
+      for (name in names(state_variables)) {
+        variable <- state_variables[[name]]
+        if (!process %in% names(variable$rules)) {
+          next
+        }
+        before <- rows.jj[[name]]
+        after <- .apply_rule(variable, name, process, before)
+        outside <- !after %in% state.values[[name]]
+        if (
+          any(outside) &&
+            (!process %in% names(at.risks) ||
+              any(at.risks[[process]](rows.jj)[outside]))
+        ) {
+          stop(
+            "The rule for ",
+            process,
+            " of the state variable ",
+            name,
+            " takes it from ",
+            format(before[outside][1]),
+            " to ",
+            format(after[outside][1]),
+            ", which it does not take in the data up to tau, in a state ",
+            "where ",
+            process,
+            " is at risk. Restrict the rule to the values in the data, ",
+            "e.g. with pmin(), or the process with an at_risk condition.",
+            call. = FALSE
+          )
+        }
+        after.jump[[name]] <- after
       }
       next.state <- unique(merge(after.jump, lookup, by = var.depend))[
         order(state.row.index)

@@ -12,6 +12,7 @@ fit_initial(
   treatment_model = NULL,
   arms = NULL,
   max_count = 1,
+  state_variables = list(),
   control = list(),
   hal_control = list(),
   verbose = FALSE
@@ -30,8 +31,8 @@ when individuals are at risk of it. Other processes can be used as
 covariates by name, giving their number of events so far, and the
 time of an event through an indicator such as
 \code{I(event_time(illness, 1) > 0.5)} (see \code{\link[=hazard_model]{hazard_model()}}), also in the
-censoring model. Every event in \code{data} needs a model, including the
-censoring process.}
+censoring model. The \code{state_variables} can also be used by name. Every
+event in \code{data} needs a model, including the censoring process.}
 
 \item{tau}{Positive number. Follow-up horizon; the target parameters are
 evaluated at \code{tau}.}
@@ -55,6 +56,16 @@ recurrent process \code{z} in a model is fitted as the indicators
 \code{I(z >= 1) + ... + I(z >= max_count)}. It also bounds \code{k} in
 \code{event_time(z, k)}. A larger value is more flexible, but the state space,
 and with it the computation time, grows quickly with it.}
+
+\item{state_variables}{A named list of \code{\link[=state_variable]{state_variable()}}s: variables
+tracked over the event history, such as whether treatment is stopped,
+updated by the events of the processes they have rules for. They can be
+used by name in \code{models}, in their \code{at_risk} conditions and in the
+\code{when} condition of a target in \code{\link[=tmle_estimate]{tmle_estimate()}}. Each is a variable
+of the state space, with the values it takes in the data up to \code{tau},
+and the processes it has rules for are in the state space too. Unlike
+the counts of the processes, a state variable is not capped at
+\code{max_count}. Not supported with \code{fit = "hal"}.}
 
 \item{control}{A named list of tuning settings:
 \itemize{
