@@ -27,13 +27,6 @@ variable, which can then be used by name in the \code{models} formulas and
 their \code{at_risk} conditions, and in the \code{when} condition of a target in
 \code{\link[=tmle_estimate]{tmle_estimate()}}.
 }
-\details{
-A state variable is a state of its own, tracked exactly. Use one for a
-quantity of several processes, such as whether treatment is stopped
-(stops minus restarts): in a model it would keep changing with the
-counts, which the state space of \code{\link[=fit_initial]{fit_initial()}} only tracks up to the
-count from which on the models stop changing (see its Counts section).
-}
 \examples{
 # Whether treatment is stopped: stop events (stop) set it to 1, and
 # restart events (restart) set it back to 0:
@@ -62,9 +55,7 @@ if (requireNamespace("simevent", quietly = TRUE)) {
   )
   treatment <- simevent::simulate_events(model, n = 200, seed = 1)
 
-  # Some individuals stop several times. Off treatment as I(stop - restart)
-  # keeps changing with the counts, which the state space can't track,
-  # while the state variable off is exact:
+  # Whether an individual is off treatment is the state variable off:
   fit <- fit_initial(
     treatment,
     models = list(

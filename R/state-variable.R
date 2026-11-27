@@ -8,12 +8,6 @@
 #' their `at_risk` conditions, and in the `when` condition of a target in
 #' [tmle_estimate()].
 #'
-#' A state variable is a state of its own, tracked exactly. Use one for a
-#' quantity of several processes, such as whether treatment is stopped
-#' (stops minus restarts): in a model it would keep changing with the
-#' counts, which the state space of [fit_initial()] only tracks up to the
-#' count from which on the models stop changing (see its Counts section).
-#'
 #' @param start Number. The value of the variable before any event.
 #' @param ... The rules of the variable, named by the process whose events
 #'   they apply to: a number, the value after an event of the process, or a
@@ -51,9 +45,7 @@
 #'   )
 #'   treatment <- simevent::simulate_events(model, n = 200, seed = 1)
 #'
-#'   # Some individuals stop several times. Off treatment as I(stop - restart)
-#'   # keeps changing with the counts, which the state space can't track,
-#'   # while the state variable off is exact:
+#'   # Whether an individual is off treatment is the state variable off:
 #'   fit <- fit_initial(
 #'     treatment,
 #'     models = list(

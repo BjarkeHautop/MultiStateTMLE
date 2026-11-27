@@ -48,14 +48,11 @@ then be passed as \code{a} to \code{\link[=tmle_estimate]{tmle_estimate()}} and
 \code{\link[=intervention_curve]{intervention_curve()}}. Defaults to both values, \code{0:1}, when
 \code{treatment_model} is given.}
 
-\item{state_variables}{A named list of \code{\link[=state_variable]{state_variable()}}s: variables
-tracked over the event history, such as whether treatment is stopped,
-updated by the events of the processes they have rules for. They can be
-used by name in \code{models}, in their \code{at_risk} conditions and in the
-\code{when} condition of a target in \code{\link[=tmle_estimate]{tmle_estimate()}}. Each is a variable
-of the state space, with the values it takes in the data up to \code{tau},
-and the processes it has rules for are in the state space too. Not
-supported with \code{fit = "hal"}.}
+\item{state_variables}{A named list of \code{\link[=state_variable]{state_variable()}}s, variables
+tracked over the event history such as whether treatment is stopped.
+They can be used by name in \code{models}, in their \code{at_risk} conditions and
+in the \code{when} condition of a target in \code{\link[=tmle_estimate]{tmle_estimate()}}. Not supported
+with \code{fit = "hal"}.}
 
 \item{control}{A named list of tuning settings:
 \itemize{
@@ -125,19 +122,18 @@ The hazards in each state are predicted in parallel on the
 
 \section{Counts}{
 
-A process used in a model or an \code{at_risk} condition is its number of
-events so far, and the term is used as written, as in any R model
-formula. The hazards are computed in a finite state space, so each
-count is tracked up to the smallest count from which on nothing that
-uses it changes: 1 for \code{I(relapse >= 1)}, 3 for \code{pmin(relapse, 3)} or
-\code{factor(pmin(relapse, 3))} (an effect for each count up to 3), and \code{k}
-for \code{event_time(relapse, k)}. A process that can happen at most once, by
-its \code{limit} or in the data, is tracked up to 1. A term that keeps
-changing, such as a plain \code{relapse} of a recurrent process, a difference
-of counts such as \code{I(stop - restart)}, or an \code{at_risk} condition such as
-\code{~ stop == restart}, is an error: use a term that stops changing, or a
-\code{\link[=state_variable]{state_variable()}} for a quantity of several processes. The column
-\code{tracked} of \code{processes} gives the count tracked for each process.
+A process used in a model or an \code{at_risk} condition enters as its number
+of events so far. The hazards are computed in a finite state space, so
+each count is tracked only up to the value beyond which no term using it
+changes: 1 for \code{I(relapse >= 1)}, 3 for \code{pmin(relapse, 3)} or
+\code{factor(pmin(relapse, 3))}, and \code{k} for \code{event_time(relapse, k)}. A
+process that can happen at most once, by its \code{limit} or in the data, is
+tracked up to 1. Terms that never stop changing, such as a plain
+\code{relapse} of a recurrent process, a difference of counts such as
+\code{I(stop - restart)}, or an \code{at_risk} condition such as
+\code{~ stop == restart}, give an error. Use a capped term instead, or a
+\code{\link[=state_variable]{state_variable()}} for a quantity that depends on several processes. The
+\code{tracked} column of \code{processes} gives the count tracked for each process.
 
 The state space holds the states that can be reached from the start
 under the \code{at_risk} conditions, and those in the data.
