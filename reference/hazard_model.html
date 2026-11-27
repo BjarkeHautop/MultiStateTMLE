@@ -63,7 +63,9 @@ how it is fitted.</p>
 matching its name in the <code>event</code> column of the data, and the right-hand
 side gives the covariates of its hazard, as in a <code><a href="https://rdrr.io/pkg/survival/man/coxph.html" class="external-link">survival::coxph()</a></code>
 formula. Other processes can be used as covariates by name, giving their
-number of events so far, and their event times with <code>event_time()</code>
+number of events so far, through a term that stops changing after some
+count, such as <code>I(relapse &gt;= 2)</code> or <code>pmin(relapse, 3)</code> (see the Counts
+section of <code><a href="fit_initial.html">fit_initial()</a></code>), and their event times with <code>event_time()</code>
 (see below).</p></dd>
 
 
@@ -76,7 +78,8 @@ at most once, as <code>sim_process(limit = 1)</code> in simevent.</p></dd>
 
 <dt id="arg-at-risk">at_risk<a class="anchor" aria-label="anchor" href="#arg-at-risk"></a></dt>
 <dd><p>Optional one-sided formula, such as <code>~ illness == 0</code>, of a
-condition on the processes (their number of events so far).
+condition on the processes (their number of events so far) and the
+<code>state_variables</code> of <code><a href="fit_initial.html">fit_initial()</a></code>.
 Individuals are only at risk of the process while it holds. Combined
 with <code>limit</code> if both are given.</p></dd>
 
@@ -99,7 +102,7 @@ process <code>z</code>, or of any of several with <code>event_time(c(z, w), k)</
 before it, as in <code><a href="https://rdrr.io/pkg/simevent/man/event_time.html" class="external-link">simevent::event_time()</a></code>. Use it through a term taking
 whole numbers 0, 1, 2, ..., such as <code>I(event_time(illness) &gt; 0.5)</code>, as
 each value is a separate state. Each event can enter through one such
-term, and <code>k</code> can be at most <code>max_count</code> of <code><a href="fit_initial.html">fit_initial()</a></code>.</p>
+term, and the first <code>k</code> events of <code>z</code> are then tracked.</p>
     </div>
 
     <div class="section level2">
@@ -146,11 +149,11 @@ term, and <code>k</code> can be at most <code>max_count</code> of <code><a href=
 <span class="r-in"><span>  tau <span class="op">=</span> <span class="fl">1</span></span></span>
 <span class="r-in"><span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">fit</span><span class="op">$</span><span class="va">processes</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>         name     type                                   model at_risk</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt;   &lt;char&gt;                                  &lt;char&gt;  &lt;lgcl&gt;</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     death terminal death ~ biomarker + treatment + illness   FALSE</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 3: censoring terminal                   censoring ~ biomarker   FALSE</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>         name     type                                   model at_risk tracked</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>       &lt;char&gt;   &lt;char&gt;                                  &lt;char&gt;  &lt;lgcl&gt;   &lt;int&gt;</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE       1</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 2:     death terminal death ~ biomarker + treatment + illness   FALSE      NA</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 3: censoring terminal                   censoring ~ biomarker   FALSE      NA</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

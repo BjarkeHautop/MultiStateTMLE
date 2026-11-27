@@ -72,11 +72,11 @@ fit <- fit_initial(illness_death, models = models, tau = 1)
 fit
 #> Initial fit of 200 individuals up to tau = 1
 #> 
-#>         name     type                                   model at_risk
-#>       <char>   <char>                                  <char>  <lgcl>
-#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE
-#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE
-#> 3: censoring terminal                   censoring ~ biomarker   FALSE
+#>         name     type                                   model at_risk tracked
+#>       <char>   <char>                                  <char>  <lgcl>   <int>
+#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE       1
+#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE      NA
+#> 3: censoring terminal                   censoring ~ biomarker   FALSE      NA
 ```
 
 By default each hazard is a Cox model, so the death hazard is

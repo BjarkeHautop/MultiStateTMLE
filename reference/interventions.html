@@ -62,8 +62,10 @@ under.</p>
 <code>illness = 0.5</code>. Each is a non-negative number, or a one-sided formula
 giving a time-varying factor, such as
 <code>illness = ~ ifelse(time &lt; 0.5, 0.5, 1)</code>, that may use <code>time</code>, baseline
-covariates and the processes (their number of events so far, where
-counts above the <code>max_count</code> of <code><a href="fit_initial.html">fit_initial()</a></code> count as <code>max_count</code>).</p></dd>
+covariates, the processes (their number of events so far) and the
+<code>state_variables</code> of <code><a href="fit_initial.html">fit_initial()</a></code>. It must not change with counts
+beyond those tracked in the state space (the <code>tracked</code> column of the
+fit's <code>processes</code>).</p></dd>
 
 
 <dt id="arg-exposure">exposure<a class="anchor" aria-label="anchor" href="#arg-exposure"></a></dt>

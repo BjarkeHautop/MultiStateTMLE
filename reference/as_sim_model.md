@@ -36,14 +36,14 @@ A
 ## Details
 
 Covariates are resampled from `data`, one row per individual. A process
-that a hazard depends on enters it as in the fit: a recurrent process as
-the indicators of at least 1, ..., `max_count` jumps, and any other as
+that a hazard depends on enters it as in the fit, through the terms of
 its number of jumps so far. A process that jumps at most once in the
 data (type `"one_jump"`) can jump at most once in the simulation too.
 
 Fits with an `at_risk` condition in a
 [`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md),
-or with `event_time()` covariates, are not supported.
+with `event_time()` covariates, or with `state_variables`, are not
+supported.
 
 ## Examples
 

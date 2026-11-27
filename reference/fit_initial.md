@@ -19,7 +19,7 @@ fit_initial(
   censoring = "censoring",
   treatment_model = NULL,
   arms = NULL,
-  max_count = 1,
+  state_variables = list(),
   control = list(),
   hal_control = list(),
   verbose = FALSE
@@ -44,11 +44,12 @@ fit_initial(
   [`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md)
   to also restrict when individuals are at risk of it. Other processes
   can be used as covariates by name, giving their number of events so
-  far, and the time of an event through an indicator such as
-  `I(event_time(illness, 1) > 0.5)` (see
+  far (see Counts), and the time of an event through an indicator such
+  as `I(event_time(illness, 1) > 0.5)` (see
   [`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md)),
-  also in the censoring model. Every event in `data` needs a model,
-  including the censoring process.
+  also in the censoring model. The `state_variables` can also be used by
+  name. Every event in `data` needs a model, including the censoring
+  process.
 
 - tau:
 
@@ -75,22 +76,22 @@ fit_initial(
   [`intervention_curve()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/intervention_curve.md).
   Defaults to both values, `0:1`, when `treatment_model` is given.
 
-- max_count:
+- state_variables:
 
-  Positive integer. Maximum number of events tracked per recurrent
-  process. Counts are capped at `max_count` in the state space, so
-  hazards are assumed not to change after `max_count` events, and a
-  recurrent process `z` in a model is fitted as the indicators
-  `I(z >= 1) + ... + I(z >= max_count)`. It also bounds `k` in
-  `event_time(z, k)`. A larger value is more flexible, but the state
-  space, and with it the computation time, grows quickly with it.
+  A named list of
+  [`state_variable()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/state_variable.md)s:
+  variables tracked over the event history, such as whether treatment is
+  stopped, updated by the events of the processes they have rules for.
+  They can be used by name in `models`, in their `at_risk` conditions
+  and in the `when` condition of a target in
+  [`tmle_estimate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_estimate.md).
+  Each is a variable of the state space, with the values it takes in the
+  data up to `tau`, and the processes it has rules for are in the state
+  space too. Not supported with `fit = "hal"`.
 
 - control:
 
   A named list of tuning settings:
-
-  - `prune_states` (`FALSE`): if `TRUE`, prune states not admissible
-    under the at-risk conditions of `models`.
 
   - `use_exponential` (`FALSE`): if `TRUE`, always transform the hazard
     increments `dH` to probabilities `1 - exp(-dH)`. Otherwise this is
@@ -120,14 +121,14 @@ An object of class `initial_fit`, a list with elements:
 
 - `processes`: a `data.table` with one row per process and columns
   `name`, `type` (`"terminal"`, `"recurrent"` or `"one_jump"`, inferred
-  from the data), `model` and `at_risk` (whether the process has a
-  `limit` or `at_risk` condition).
+  from the data), `model`, `at_risk` (whether the process has a `limit`
+  or `at_risk` condition) and `tracked` (the number of its events
+  tracked in the state space, see Counts; `NA` if no hazard depends on
+  it).
 
 - `cox_fits`: the fitted
   [`survival::coxph()`](https://rdrr.io/pkg/survival/man/coxph.html)
-  model of each process, named by process. A recurrent process `z` in a
-  model is fitted as the indicators
-  `I(z >= 1) + ... + I(z >= max_count)`.
+  model of each process, named by process.
   [`as_sim_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/as_sim_model.md)
   builds a simulation model from them.
 
@@ -160,6 +161,26 @@ The hazards in each state are predicted in parallel on the
 in the session, if any, such as `mirai::daemons(4)` for 4 local
 processes.
 
+## Counts
+
+A process used in a model or an `at_risk` condition is its number of
+events so far, and the term is used as written, as in any R model
+formula. The hazards are computed in a finite state space, so each count
+is tracked up to the smallest count from which on nothing that uses it
+changes: 1 for `I(relapse >= 1)`, 3 for `pmin(relapse, 3)` or
+`factor(pmin(relapse, 3))` (an effect for each count up to 3), and `k`
+for `event_time(relapse, k)`. A process that can happen at most once, by
+its `limit` or in the data, is tracked up to 1. A term that keeps
+changing, such as a plain `relapse` of a recurrent process, a difference
+of counts such as `I(stop - restart)`, or an `at_risk` condition such as
+`~ stop == restart`, is an error: use a term that stops changing, or a
+[`state_variable()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/state_variable.md)
+for a quantity of several processes. The column `tracked` of `processes`
+gives the count tracked for each process.
+
+The state space holds the states that can be reached from the start
+under the `at_risk` conditions, and those in the data.
+
 ## Examples
 
 ``` r
@@ -188,20 +209,20 @@ fit <- fit_initial(
 fit
 #> Initial fit of 200 individuals up to tau = 1
 #> 
-#>         name     type                                   model at_risk
-#>       <char>   <char>                                  <char>  <lgcl>
-#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE
-#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE
-#> 3: censoring terminal                   censoring ~ biomarker   FALSE
+#>         name     type                                   model at_risk tracked
+#>       <char>   <char>                                  <char>  <lgcl>   <int>
+#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE       1
+#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE      NA
+#> 3: censoring terminal                   censoring ~ biomarker   FALSE      NA
 
 # The process types are inferred from the data, and the hazard models are
 # kept for reference:
 fit$processes
-#>         name     type                                   model at_risk
-#>       <char>   <char>                                  <char>  <lgcl>
-#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE
-#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE
-#> 3: censoring terminal                   censoring ~ biomarker   FALSE
+#>         name     type                                   model at_risk tracked
+#>       <char>   <char>                                  <char>  <lgcl>   <int>
+#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE       1
+#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE      NA
+#> 3: censoring terminal                   censoring ~ biomarker   FALSE      NA
 fit$models$death
 #> Hazard model: death ~ biomarker + treatment + illness
 
@@ -220,18 +241,19 @@ fit_treated <- fit_initial(
 fit_treated
 #> Initial fit of 200 individuals up to tau = 1
 #> 
-#>         name     type                                   model at_risk
-#>       <char>   <char>                                  <char>  <lgcl>
-#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE
-#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE
-#> 3: censoring terminal                   censoring ~ biomarker   FALSE
+#>         name     type                                   model at_risk tracked
+#>       <char>   <char>                                  <char>  <lgcl>   <int>
+#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE       1
+#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE      NA
+#> 3: censoring terminal                   censoring ~ biomarker   FALSE      NA
 #> 
 #> Treatment model: treatment ~ biomarker, prepared for arms a = 0, 1
 
 # \donttest{
 # Data simulated with simevent can be passed as is. Here relapse is
-# recurrent, and the death hazard grows with the number of relapses so far,
-# tracked up to max_count:
+# recurrent, and the death hazard grows with the number of relapses so far.
+# factor(pmin(relapse, 3)) gives an effect of each count up to 3, so 3
+# relapses are tracked:
 if (requireNamespace("simevent", quietly = TRUE)) {
   model <- simevent::sim_model(
     biomarker = simevent::sim_covariate(function(N) rnorm(N)),
@@ -249,19 +271,23 @@ if (requireNamespace("simevent", quietly = TRUE)) {
     relapses,
     models = list(
       relapse ~ biomarker,
-      death ~ biomarker + relapse,
+      death ~ biomarker + factor(pmin(relapse, 3)),
       censoring ~ biomarker
     ),
-    tau = 2,
-    max_count = 3
+    tau = 2
   )
 }
 #> Initial fit of 200 individuals up to tau = 2
 #> 
-#>         name      type                       model at_risk
-#>       <char>    <char>                      <char>  <lgcl>
-#> 1:   relapse recurrent         relapse ~ biomarker   FALSE
-#> 2:     death  terminal death ~ biomarker + relapse   FALSE
-#> 3: censoring  terminal       censoring ~ biomarker   FALSE
+#>         name      type                                        model at_risk
+#>       <char>    <char>                                       <char>  <lgcl>
+#> 1:   relapse recurrent                          relapse ~ biomarker   FALSE
+#> 2:     death  terminal death ~ biomarker + factor(pmin(relapse, 3))   FALSE
+#> 3: censoring  terminal                        censoring ~ biomarker   FALSE
+#>    tracked
+#>      <int>
+#> 1:       3
+#> 2:      NA
+#> 3:      NA
 # }
 ```

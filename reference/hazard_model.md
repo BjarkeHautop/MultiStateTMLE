@@ -23,8 +23,11 @@ hazard_model(formula, limit = NULL, at_risk = NULL, fit = c("cox", "hal"))
   gives the covariates of its hazard, as in a
   [`survival::coxph()`](https://rdrr.io/pkg/survival/man/coxph.html)
   formula. Other processes can be used as covariates by name, giving
-  their number of events so far, and their event times with
-  `event_time()` (see below).
+  their number of events so far, through a term that stops changing
+  after some count, such as `I(relapse >= 2)` or `pmin(relapse, 3)` (see
+  the Counts section of
+  [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)),
+  and their event times with `event_time()` (see below).
 
 - limit:
 
@@ -36,9 +39,11 @@ hazard_model(formula, limit = NULL, at_risk = NULL, fit = c("cox", "hal"))
 - at_risk:
 
   Optional one-sided formula, such as `~ illness == 0`, of a condition
-  on the processes (their number of events so far). Individuals are only
-  at risk of the process while it holds. Combined with `limit` if both
-  are given.
+  on the processes (their number of events so far) and the
+  `state_variables` of
+  [`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
+  Individuals are only at risk of the process while it holds. Combined
+  with `limit` if both are given.
 
 - fit:
 
@@ -58,9 +63,8 @@ before it, as in
 [`simevent::event_time()`](https://rdrr.io/pkg/simevent/man/event_time.html).
 Use it through a term taking whole numbers 0, 1, 2, ..., such as
 `I(event_time(illness) > 0.5)`, as each value is a separate state. Each
-event can enter through one such term, and `k` can be at most
-`max_count` of
-[`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md).
+event can enter through one such term, and the first `k` events of `z`
+are then tracked.
 
 ## Examples
 
@@ -107,9 +111,9 @@ fit <- fit_initial(
   tau = 1
 )
 fit$processes
-#>         name     type                                   model at_risk
-#>       <char>   <char>                                  <char>  <lgcl>
-#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE
-#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE
-#> 3: censoring terminal                   censoring ~ biomarker   FALSE
+#>         name     type                                   model at_risk tracked
+#>       <char>   <char>                                  <char>  <lgcl>   <int>
+#> 1:   illness one_jump         illness ~ biomarker + treatment    TRUE       1
+#> 2:     death terminal death ~ biomarker + treatment + illness   FALSE      NA
+#> 3: censoring terminal                   censoring ~ biomarker   FALSE      NA
 ```

@@ -113,11 +113,11 @@
 <span><span class="va">fit</span></span>
 <span><span class="co">#&gt; Initial fit of 200 individuals up to tau = 1</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;         name     type                                   model at_risk</span></span>
-<span><span class="co">#&gt;       &lt;char&gt;   &lt;char&gt;                                  &lt;char&gt;  &lt;lgcl&gt;</span></span>
-<span><span class="co">#&gt; 1:   illness one_jump         illness ~ biomarker + treatment    TRUE</span></span>
-<span><span class="co">#&gt; 2:     death terminal death ~ biomarker + treatment + illness   FALSE</span></span>
-<span><span class="co">#&gt; 3: censoring terminal                   censoring ~ biomarker   FALSE</span></span></code></pre></div>
+<span><span class="co">#&gt;         name     type                                   model at_risk tracked</span></span>
+<span><span class="co">#&gt;       &lt;char&gt;   &lt;char&gt;                                  &lt;char&gt;  &lt;lgcl&gt;   &lt;int&gt;</span></span>
+<span><span class="co">#&gt; 1:   illness one_jump         illness ~ biomarker + treatment    TRUE       1</span></span>
+<span><span class="co">#&gt; 2:     death terminal death ~ biomarker + treatment + illness   FALSE      NA</span></span>
+<span><span class="co">#&gt; 3: censoring terminal                   censoring ~ biomarker   FALSE      NA</span></span></code></pre></div>
 </div>
 <p>By default each hazard is a Cox model, so the death hazard is</p>
 <p><span class="math display">

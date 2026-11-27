@@ -18,6 +18,8 @@ product state space used internally.
   : Fit the initial hazard models
 - [`hazard_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/hazard_model.md)
   : Specify the hazard model of an event process
+- [`state_variable()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/state_variable.md)
+  : Define a state variable
 - [`as_sim_model()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/as_sim_model.md)
   : Build a simulation model from an initial fit
 
