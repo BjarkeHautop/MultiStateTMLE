@@ -18,7 +18,7 @@
 # `times` are the event times in the data, to check the terms at, and
 # `columns` the data columns. Returns list(formulas, depend_time,
 # jump_processes), `formulas` named by process.
-.event_time_covariates <- function(models, times, columns, max_count) {
+.event_time_covariates <- function(models, times, columns) {
   found <- new.env()
   found$depend_time <- list()
   found$jump_processes <- list()
@@ -34,7 +34,6 @@
       process_names = names(models),
       columns = columns,
       check_times = check_times,
-      max_count = max_count,
       process = model$name
     )
     formula
@@ -57,7 +56,6 @@
   process_names,
   columns,
   check_times,
-  max_count,
   process
 ) {
   operators <- c("+", "-", ":", "*", "/", "^", "%in%", "(")
@@ -73,7 +71,6 @@
         process_names,
         columns,
         check_times,
-        max_count,
         process
       )
     }
@@ -90,19 +87,6 @@
     stop(what, " uses several event_time()s; use one per term.", call. = FALSE)
   }
   jump <- .parse_event_time(calls[[1]], process_names, env, what)
-  if (jump$k > max_count) {
-    stop(
-      what,
-      " uses event ",
-      jump$k,
-      " of ",
-      jump$label,
-      ", but only max_count = ",
-      max_count,
-      " events are tracked; increase max_count.",
-      call. = FALSE
-    )
-  }
   indicator_hint <- paste0(
     "; it must take whole numbers 0, 1, 2, ... (categories of the time), ",
     "such as I(event_time(",

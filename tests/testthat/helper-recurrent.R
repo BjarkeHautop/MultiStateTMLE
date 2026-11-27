@@ -22,18 +22,23 @@ simulate.recurrent <- function(n, seed) {
   simevent::simulate_events(model, n = n, seed = seed)
 }
 
-recurrent.models <- list(
-  relapse ~ biomarker,
-  death ~ biomarker + relapse,
-  censoring ~ biomarker
-)
+# The models with an effect of each number of relapses up to `track`, so
+# that `track` relapses are tracked in the state space.
+recurrent.models <- function(track = 3) {
+  list(
+    relapse ~ biomarker,
+    stats::as.formula(
+      bquote(death ~ biomarker + factor(pmin(relapse, .(track))))
+    ),
+    censoring ~ biomarker
+  )
+}
 
-recurrent.fit <- function(n = 80, seed = 1, max_count = 3) {
+recurrent.fit <- function(n = 80, seed = 1, track = 3) {
   fit_initial(
     simulate.recurrent(n, seed),
-    models = recurrent.models,
-    tau = 1,
-    max_count = max_count
+    models = recurrent.models(track),
+    tau = 1
   )
 }
 

@@ -1,12 +1,14 @@
 # Recurrent processes: a process that can jump any number of times, so that
-# risk() is the expected number of events, the state space is capped at
-# max_count, and risk(only_first = TRUE) differs from the default.
+# risk() is the expected number of events, the state space tracks the counts
+# that the models tell apart, and risk(only_first = TRUE) differs from the
+# default.
 
-test_that("fit_initial() caps the state space of a recurrent process at max_count", {
+test_that("fit_initial() tracks the relapses that the models tell apart", {
   skip_if_not_installed("simevent")
 
-  fit <- recurrent.fit(80, max_count = 3)
+  fit <- recurrent.fit(80, track = 3)
   expect_equal(fit$processes$type, c("recurrent", "terminal", "terminal"))
+  expect_equal(fit$processes$tracked, c(3L, NA, NA))
   expect_equal(fit$depend_matrix$relapse, 0:3)
   # The last state jumps to itself.
   expect_equal(fit$depend_matrix$s.relapse, c(2L, 3L, 4L, 4L))
@@ -14,7 +16,7 @@ test_that("fit_initial() caps the state space of a recurrent process at max_coun
   tl <- fit$tmp_long
   expect_equal(tl$state, pmin(tl$relapse, 3) + 1)
 
-  capped <- recurrent.fit(80, max_count = 1)
+  capped <- recurrent.fit(80, track = 1)
   expect_equal(capped$depend_matrix$relapse, 0:1)
   expect_equal(capped$depend_matrix$s.relapse, c(2L, 2L))
   tl <- capped$tmp_long
@@ -69,9 +71,9 @@ test_that("risk() of a recurrent process is the expected number of events", {
   # E[N(tau)] > P(N(tau) >= 1) once some individuals relapse twice.
   expect_gt(count$estimate$estimate, first$estimate$estimate)
 
-  # With max_count = 1 the state space no longer tells relapses apart, but
+  # Tracking 1 relapse, the state space no longer tells relapses apart, but
   # every relapse still counts.
-  capped <- recurrent.fit(80, max_count = 1)
+  capped <- recurrent.fit(80, track = 1)
   expect_gt(
     tmle_estimate(capped, risk(relapse))$estimate$estimate,
     tmle_estimate(capped, risk(relapse, only_first = TRUE))$estimate$estimate
@@ -227,22 +229,29 @@ test_that("a factor that depends on the count applies in each state", {
   expect_equal(by_count$estimate, constant$estimate)
 })
 
-test_that("a factor sees the counts capped at max_count", {
+test_that("a factor or condition must not change beyond the tracked count", {
   skip_if_not_installed("simevent")
-  # With max_count = 1, relapse >= 1 and relapse == 1 are the same state,
-  # also on the observed rows of individuals with more relapses.
-  capped <- recurrent.fit(80, max_count = 1)
+  # Tracking 1 relapse, relapse >= 1 is the same in every state with a
+  # relapse, but relapse == 1 is not.
+  capped <- recurrent.fit(80, track = 1)
   at_least <- tmle_estimate(
     capped,
     risk(relapse),
     scale_intensity(relapse = ~ ifelse(relapse >= 1, 0.5, 1))
   )
-  exactly <- tmle_estimate(
-    capped,
-    risk(relapse),
-    scale_intensity(relapse = ~ ifelse(relapse == 1, 0.5, 1))
+  expect_true(at_least$checks$converged)
+  expect_error(
+    tmle_estimate(
+      capped,
+      risk(relapse),
+      scale_intensity(relapse = ~ ifelse(relapse == 1, 0.5, 1))
+    ),
+    "changes with the number of relapse events beyond 1"
   )
-  expect_equal(exactly$estimate, at_least$estimate)
+  expect_error(
+    tmle_estimate(capped, risk(death, when = ~ relapse <= 2)),
+    "The `when` condition relapse <= 2 changes"
+  )
 })
 
 test_that(".update_alpha_weights() accumulates the likelihood ratio of a time-varying factor", {
@@ -307,45 +316,66 @@ test_that("tmle_estimate() recovers recurrent targets", {
   }
 })
 
-test_that("a recurrent process gets its count indicators wherever it is in a model", {
+test_that("fit_initial() tracks each count up to where its uses stop changing", {
   data <- simulate.recurrent(80, 1)
-  fit <- function(death_model) {
+  fit <- function(death_model, relapse_model = relapse ~ biomarker) {
     fit_initial(
       data,
-      models = list(relapse ~ biomarker, death_model, censoring ~ biomarker),
-      tau = 1,
-      max_count = 2
+      models = list(relapse_model, death_model, censoring ~ biomarker),
+      tau = 1
     )
   }
-  indicators <- c("I(relapse >= 1)TRUE", "I(relapse >= 2)TRUE")
+  tracked <- function(fit) fit$processes$tracked[[1]]
 
-  last <- fit(death ~ biomarker + relapse)
-  first <- fit(death ~ relapse + biomarker)
+  expect_equal(tracked(fit(death ~ biomarker + I(relapse >= 2))), 2L)
+  expect_equal(tracked(fit(death ~ biomarker + pmin(relapse, 3))), 3L)
   expect_equal(
-    coef(first$cox_fits$death)[indicators],
-    coef(last$cox_fits$death)[indicators]
+    tracked(fit(death ~ factor(pmin(relapse, 2)) * biomarker)),
+    2L
   )
   expect_equal(
-    tmle_estimate(first, risk(death), scale_intensity(relapse = 1))$estimate,
-    tmle_estimate(last, risk(death), scale_intensity(relapse = 1))$estimate
+    tracked(fit(
+      death ~ biomarker + I(relapse >= 1),
+      hazard_model(relapse ~ biomarker, at_risk = ~ relapse < 3)
+    )),
+    3L
   )
+  # With a limit, a plain count stops changing at the limit.
+  limited <- fit(
+    death ~ biomarker + relapse,
+    hazard_model(relapse ~ biomarker, limit = 2)
+  )
+  expect_equal(tracked(limited), 2L)
+  expect_equal(limited$depend_matrix$relapse, 0:2)
 
-  interaction <- fit(death ~ relapse * biomarker)
-  expect_named(
-    coef(interaction$cox_fits$death),
-    c(indicators, "biomarker", paste0(indicators, ":biomarker"))
+  # The term is fitted as written.
+  plain <- fit(death ~ biomarker + pmin(relapse, 2))
+  expect_named(coef(plain$cox_fits$death), c("biomarker", "pmin(relapse, 2)"))
+
+  expect_error(
+    fit(death ~ biomarker + relapse),
+    "The term relapse in the model of death keeps changing"
+  )
+  expect_error(
+    fit(death ~ biomarker + log(relapse + 1)),
+    "keeps changing with the number of relapse events"
+  )
+  expect_error(
+    fit(
+      death ~ biomarker,
+      hazard_model(relapse ~ biomarker, at_risk = ~ relapse %% 2 == 0)
+    ),
+    "The at-risk condition of relapse keeps changing"
   )
 })
 
-test_that(".cox_formula() only replaces process terms, not variables in calls", {
+test_that(".cox_formula() makes the jump time variables factors", {
   expect_equal(
     .cox_formula(
-      "Surv(tstart,tstop,delta==1)~I(relapse>0)+relapse",
-      list(),
-      "relapse",
-      2
+      "Surv(tstart,tstop,delta==1)~I(relapse>0)+T.relapse",
+      list(relapse = identity)
     ),
-    "Surv(tstart, tstop, delta == 1) ~ I(relapse > 0) + (I(relapse >= 1) + I(relapse >= 2))"
+    "Surv(tstart, tstop, delta == 1) ~ I(relapse > 0) + as.factor(T.relapse)"
   )
 })
 
@@ -357,11 +387,13 @@ test_that("event_time() of a later event works when its term is 1 before it", {
       data,
       models = list(
         relapse ~ biomarker,
-        stats::as.formula(paste("death ~ biomarker + relapse +", term)),
+        stats::as.formula(paste(
+          "death ~ biomarker + factor(pmin(relapse, 2)) +",
+          term
+        )),
         censoring ~ biomarker
       ),
-      tau = 1.5,
-      max_count = 2
+      tau = 1.5
     )
   }
   early <- fit("I(event_time(relapse, 2) < 0.5)")

@@ -11,7 +11,9 @@ hazard_model(formula, limit = NULL, at_risk = NULL, fit = c("cox", "hal"))
 matching its name in the \code{event} column of the data, and the right-hand
 side gives the covariates of its hazard, as in a \code{\link[survival:coxph]{survival::coxph()}}
 formula. Other processes can be used as covariates by name, giving their
-number of events so far, and their event times with \code{event_time()}
+number of events so far, through a term that stops changing after some
+count, such as \code{I(relapse >= 2)} or \code{pmin(relapse, 3)} (see the Counts
+section of \code{\link[=fit_initial]{fit_initial()}}), and their event times with \code{event_time()}
 (see below).}
 
 \item{limit}{Optional positive integer. Maximum number of events of the
@@ -20,7 +22,8 @@ had fewer than \code{limit} events. \code{limit = 1} is an event that can happen
 at most once, as \code{sim_process(limit = 1)} in simevent.}
 
 \item{at_risk}{Optional one-sided formula, such as \code{~ illness == 0}, of a
-condition on the processes (their number of events so far).
+condition on the processes (their number of events so far) and the
+\code{state_variables} of \code{\link[=fit_initial]{fit_initial()}}.
 Individuals are only at risk of the process while it holds. Combined
 with \code{limit} if both are given.}
 
@@ -44,7 +47,7 @@ process \code{z}, or of any of several with \code{event_time(c(z, w), k)}, and 0
 before it, as in \code{\link[simevent:event_time]{simevent::event_time()}}. Use it through a term taking
 whole numbers 0, 1, 2, ..., such as \code{I(event_time(illness) > 0.5)}, as
 each value is a separate state. Each event can enter through one such
-term, and \code{k} can be at most \code{max_count} of \code{\link[=fit_initial]{fit_initial()}}.
+term, and the first \code{k} events of \code{z} are then tracked.
 }
 
 \examples{

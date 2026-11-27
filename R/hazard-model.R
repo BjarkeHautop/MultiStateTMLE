@@ -10,14 +10,17 @@
 #'   matching its name in the `event` column of the data, and the right-hand
 #'   side gives the covariates of its hazard, as in a [survival::coxph()]
 #'   formula. Other processes can be used as covariates by name, giving their
-#'   number of events so far, and their event times with `event_time()`
+#'   number of events so far, through a term that stops changing after some
+#'   count, such as `I(relapse >= 2)` or `pmin(relapse, 3)` (see the Counts
+#'   section of [fit_initial()]), and their event times with `event_time()`
 #'   (see below).
 #' @param limit Optional positive integer. Maximum number of events of the
 #'   process per individual: individuals are only at risk while they have
 #'   had fewer than `limit` events. `limit = 1` is an event that can happen
 #'   at most once, as `sim_process(limit = 1)` in simevent.
 #' @param at_risk Optional one-sided formula, such as `~ illness == 0`, of a
-#'   condition on the processes (their number of events so far).
+#'   condition on the processes (their number of events so far) and the
+#'   `state_variables` of [fit_initial()].
 #'   Individuals are only at risk of the process while it holds. Combined
 #'   with `limit` if both are given.
 #' @param fit How the hazard is fitted: `"cox"` (default), a Cox model, or
@@ -29,7 +32,7 @@
 #' before it, as in [simevent::event_time()]. Use it through a term taking
 #' whole numbers 0, 1, 2, ..., such as `I(event_time(illness) > 0.5)`, as
 #' each value is a separate state. Each event can enter through one such
-#' term, and `k` can be at most `max_count` of [fit_initial()].
+#' term, and the first `k` events of `z` are then tracked.
 #'
 #' @return An object of class `hazard_model`.
 #'
@@ -156,7 +159,7 @@ print.hazard_model <- function(x, ...) {
 }
 
 # A hazard_model as an entry of the internal `fit_types`,
-# list(delta, model, fit, at_risk), where `at_risk` is a function of the
+# list(delta, model, fit, at_risk, limit), where `at_risk` is a function of the
 # data as .fit_initial_impl() expects. `state_vars` are the processes and
 # that `at_risk` may use.
 .hazard_model_to_fit_type <- function(model, delta, state_vars) {
@@ -164,7 +167,8 @@ print.hazard_model <- function(x, ...) {
   out <- list(
     delta = delta,
     model = stats::as.formula(call("~", model$formula[[3]]), env = env),
-    fit = model$fit
+    fit = model$fit,
+    limit = model$limit
   )
   conditions <- list()
   if (!is.null(model$limit)) {

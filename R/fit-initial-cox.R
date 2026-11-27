@@ -10,16 +10,12 @@
   fit_types,
   at.risks,
   depend_time,
-  recurrent,
-  max_count,
   verbose
 ) {
   fits <- lapply(names(fit_types), function(name) {
     formula <- .cox_formula(
       fit_types[[name]][["model"]],
-      depend_time,
-      recurrent,
-      max_count
+      depend_time
     )
     data <- if (name %in% names(at.risks)) dt[at.risks[[name]](dt)] else dt
     fit <- coxph(
@@ -43,25 +39,11 @@
 }
 
 # The model string of a process with each term that is a jump time variable
-# `T.<name>` made a factor, and each term that is a recurrent process `z`
-# (its number of jumps so far) replaced by the indicators
-# `I(z >= 1) + ... + I(z >= max_count)`, so each count up to max_count has
-# its own effect. Only terms are replaced (also within interactions such as
-# `z:L0`), not variables inside a call such as `I(z > 0)`.
-.cox_formula <- function(model, depend_time, recurrent, max_count) {
+# `T.<name>` made a factor, as each value of the variable is a state.
+.cox_formula <- function(model, depend_time) {
   replacements <- list()
   for (T.var in sprintf("T.%s", names(depend_time))) {
     replacements[[T.var]] <- call("as.factor", as.name(T.var))
-  }
-  for (process in recurrent) {
-    indicators <- lapply(
-      seq_len(max_count),
-      function(k) call("I", call(">=", as.name(process), as.numeric(k)))
-    )
-    replacements[[process]] <- call(
-      "(",
-      Reduce(function(x, y) call("+", x, y), indicators)
-    )
   }
   formula <- str2lang(model)
   formula[[3]] <- .replace_terms(formula[[3]], replacements)
@@ -85,10 +67,27 @@
   expr
 }
 
-# The hazard increments of the Cox fit `fit` on `newdata`: the baseline
-# increments `dhazard` times the relative risk.
-.cox_increment <- function(fit, newdata, dhazard) {
-  as.numeric(dhazard * exp(predict(fit, newdata = newdata, type = "lp")))
+# The hazard increments of the Cox fit `fit` on the data.table `newdata`:
+# the baseline increments `dhazard` times the relative risk, in the rows
+# `at.risk` (recycled; NULL for all), and 0 in the others. The rows not at
+# risk are not predicted, as they can have covariate values the fit never
+# saw, such as a factor level that only occurs where the process is not at
+# risk.
+.cox_increment <- function(fit, newdata, dhazard, at.risk = NULL) {
+  if (is.null(at.risk)) {
+    at.risk <- TRUE
+  }
+  at.risk <- rep_len(as.logical(at.risk), length(dhazard))
+  if (anyNA(at.risk)) {
+    stop("Internal error: missing at-risk indicators.", call. = FALSE)
+  }
+  out <- numeric(length(dhazard))
+  rows <- which(at.risk)
+  if (length(rows) > 0) {
+    lp <- predict(fit, newdata = newdata[rows, ], type = "lp")
+    out[rows] <- dhazard[rows] * exp(lp)
+  }
+  out
 }
 
 # A Cox fit without the environment its formula was built in, which holds

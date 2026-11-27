@@ -23,8 +23,10 @@
 #'   `illness = 0.5`. Each is a non-negative number, or a one-sided formula
 #'   giving a time-varying factor, such as
 #'   `illness = ~ ifelse(time < 0.5, 0.5, 1)`, that may use `time`, baseline
-#'   covariates and the processes (their number of events so far, where
-#'   counts above the `max_count` of [fit_initial()] count as `max_count`).
+#'   covariates, the processes (their number of events so far) and the
+#'   `state_variables` of [fit_initial()]. It must not change with counts
+#'   beyond those tracked in the state space (the `tracked` column of the
+#'   fit's `processes`).
 #' @param exposure The exposure to calibrate, a [risk()] or [years_lost()]
 #'   of the single process whose intensity is scaled.
 #' @param toward The calibration rule: `level()`, `absolute_change()` or

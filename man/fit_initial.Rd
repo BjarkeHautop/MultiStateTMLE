@@ -11,7 +11,6 @@ fit_initial(
   censoring = "censoring",
   treatment_model = NULL,
   arms = NULL,
-  max_count = 1,
   state_variables = list(),
   control = list(),
   hal_control = list(),
@@ -28,8 +27,8 @@ the process that jumped), plus any baseline covariates used in
 formula such as \code{death ~ biomarker + illness}, naming the process on the
 left and its covariates on the right, or a \code{\link[=hazard_model]{hazard_model()}} to also restrict
 when individuals are at risk of it. Other processes can be used as
-covariates by name, giving their number of events so far, and the
-time of an event through an indicator such as
+covariates by name, giving their number of events so far (see Counts),
+and the time of an event through an indicator such as
 \code{I(event_time(illness, 1) > 0.5)} (see \code{\link[=hazard_model]{hazard_model()}}), also in the
 censoring model. The \code{state_variables} can also be used by name. Every
 event in \code{data} needs a model, including the censoring process.}
@@ -49,28 +48,17 @@ then be passed as \code{a} to \code{\link[=tmle_estimate]{tmle_estimate()}} and
 \code{\link[=intervention_curve]{intervention_curve()}}. Defaults to both values, \code{0:1}, when
 \code{treatment_model} is given.}
 
-\item{max_count}{Positive integer. Maximum number of events tracked per
-recurrent process. Counts are capped at \code{max_count} in the state space,
-so hazards are assumed not to change after \code{max_count} events, and a
-recurrent process \code{z} in a model is fitted as the indicators
-\code{I(z >= 1) + ... + I(z >= max_count)}. It also bounds \code{k} in
-\code{event_time(z, k)}. A larger value is more flexible, but the state space,
-and with it the computation time, grows quickly with it.}
-
 \item{state_variables}{A named list of \code{\link[=state_variable]{state_variable()}}s: variables
 tracked over the event history, such as whether treatment is stopped,
 updated by the events of the processes they have rules for. They can be
 used by name in \code{models}, in their \code{at_risk} conditions and in the
 \code{when} condition of a target in \code{\link[=tmle_estimate]{tmle_estimate()}}. Each is a variable
 of the state space, with the values it takes in the data up to \code{tau},
-and the processes it has rules for are in the state space too. Unlike
-the counts of the processes, a state variable is not capped at
-\code{max_count}. Not supported with \code{fit = "hal"}.}
+and the processes it has rules for are in the state space too. Not
+supported with \code{fit = "hal"}.}
 
 \item{control}{A named list of tuning settings:
 \itemize{
-\item \code{prune_states} (\code{FALSE}): if \code{TRUE}, prune states not admissible
-under the at-risk conditions of \code{models}.
 \item \code{use_exponential} (\code{FALSE}): if \code{TRUE}, always transform the hazard
 increments \code{dH} to probabilities \code{1 - exp(-dH)}. Otherwise this is
 only done if some increments exceed 1.
@@ -91,12 +79,13 @@ default filled in).
 process.
 \item \code{processes}: a \code{data.table} with one row per process and columns
 \code{name}, \code{type} (\code{"terminal"}, \code{"recurrent"} or \code{"one_jump"}, inferred
-from the data), \code{model} and \code{at_risk} (whether the process has a
-\code{limit} or \code{at_risk} condition).
+from the data), \code{model}, \code{at_risk} (whether the process has a
+\code{limit} or \code{at_risk} condition) and \code{tracked} (the number of its
+events tracked in the state space, see Counts; \code{NA} if no hazard
+depends on it).
 \item \code{cox_fits}: the fitted \code{\link[survival:coxph]{survival::coxph()}} model of each process,
-named by process. A recurrent process \code{z} in a model is fitted as the
-indicators \code{I(z >= 1) + ... + I(z >= max_count)}. \code{\link[=as_sim_model]{as_sim_model()}}
-builds a simulation model from them.
+named by process. \code{\link[=as_sim_model]{as_sim_model()}} builds a simulation model from
+them.
 }
 
 It also contains the internal elements used by \code{\link[=tmle_estimate]{tmle_estimate()}}, among
@@ -132,6 +121,26 @@ recomputed from \code{event}.
 The hazards in each state are predicted in parallel on the
 \code{\link[mirai:daemons]{mirai::daemons()}} set in the session, if any, such as
 \code{mirai::daemons(4)} for 4 local processes.
+}
+
+\section{Counts}{
+
+A process used in a model or an \code{at_risk} condition is its number of
+events so far, and the term is used as written, as in any R model
+formula. The hazards are computed in a finite state space, so each
+count is tracked up to the smallest count from which on nothing that
+uses it changes: 1 for \code{I(relapse >= 1)}, 3 for \code{pmin(relapse, 3)} or
+\code{factor(pmin(relapse, 3))} (an effect for each count up to 3), and \code{k}
+for \code{event_time(relapse, k)}. A process that can happen at most once, by
+its \code{limit} or in the data, is tracked up to 1. A term that keeps
+changing, such as a plain \code{relapse} of a recurrent process, a difference
+of counts such as \code{I(stop - restart)}, or an \code{at_risk} condition such as
+\code{~ stop == restart}, is an error: use a term that stops changing, or a
+\code{\link[=state_variable]{state_variable()}} for a quantity of several processes. The column
+\code{tracked} of \code{processes} gives the count tracked for each process.
+
+The state space holds the states that can be reached from the start
+under the \code{at_risk} conditions, and those in the data.
 }
 
 \examples{
@@ -173,8 +182,9 @@ fit_treated
 
 \donttest{
 # Data simulated with simevent can be passed as is. Here relapse is
-# recurrent, and the death hazard grows with the number of relapses so far,
-# tracked up to max_count:
+# recurrent, and the death hazard grows with the number of relapses so far.
+# factor(pmin(relapse, 3)) gives an effect of each count up to 3, so 3
+# relapses are tracked:
 if (requireNamespace("simevent", quietly = TRUE)) {
   model <- simevent::sim_model(
     biomarker = simevent::sim_covariate(function(N) rnorm(N)),
@@ -192,11 +202,10 @@ if (requireNamespace("simevent", quietly = TRUE)) {
     relapses,
     models = list(
       relapse ~ biomarker,
-      death ~ biomarker + relapse,
+      death ~ biomarker + factor(pmin(relapse, 3)),
       censoring ~ biomarker
     ),
-    tau = 2,
-    max_count = 3
+    tau = 2
   )
 }
 }

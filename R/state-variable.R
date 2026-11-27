@@ -8,12 +8,11 @@
 #' their `at_risk` conditions, and in the `when` condition of a target in
 #' [tmle_estimate()].
 #'
-#' A state variable is a state of its own, tracked exactly, while the number
-#' of events of a process is capped at `max_count` in the state space of
-#' [fit_initial()]. A function of several counts, such as whether treatment
-#' is stopped (stops minus restarts), is therefore best defined as a state
-#' variable: computed from the counts, it is wrong once they pass
-#' `max_count`.
+#' A state variable is a state of its own, tracked exactly. Use one for a
+#' quantity of several processes, such as whether treatment is stopped
+#' (stops minus restarts): in a model it would keep changing with the
+#' counts, which the state space of [fit_initial()] only tracks up to the
+#' count from which on the models stop changing (see its Counts section).
 #'
 #' @param start Number. The value of the variable before any event.
 #' @param ... The rules of the variable, named by the process whose events
@@ -52,11 +51,9 @@
 #'   )
 #'   treatment <- simevent::simulate_events(model, n = 200, seed = 1)
 #'
-#'   # Some individuals stop several times. Off treatment computed from the
-#'   # counts, I(stop - restart), needs every stop tracked (max_count up to
-#'   # the most stops), and is still wrong after the last tracked stop, as
-#'   # the counts are capped there. The state variable off is exact with any
-#'   # max_count:
+#'   # Some individuals stop several times. Off treatment as I(stop - restart)
+#'   # keeps changing with the counts, which the state space can't track,
+#'   # while the state variable off is exact:
 #'   fit <- fit_initial(
 #'     treatment,
 #'     models = list(
@@ -73,7 +70,7 @@
 #'   print(fit)
 #'
 #'   # A stop leads to a state with off = 1, and a restart to one with
-#'   # off = 0, whatever the capped counts:
+#'   # off = 0:
 #'   print(fit$depend_matrix)
 #'
 #'   tmle_estimate(fit, risk(death))

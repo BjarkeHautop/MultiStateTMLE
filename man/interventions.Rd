@@ -24,8 +24,10 @@ relative_change(rho)
 \code{illness = 0.5}. Each is a non-negative number, or a one-sided formula
 giving a time-varying factor, such as
 \code{illness = ~ ifelse(time < 0.5, 0.5, 1)}, that may use \code{time}, baseline
-covariates and the processes (their number of events so far, where
-counts above the \code{max_count} of \code{\link[=fit_initial]{fit_initial()}} count as \code{max_count}).}
+covariates, the processes (their number of events so far) and the
+\code{state_variables} of \code{\link[=fit_initial]{fit_initial()}}. It must not change with counts
+beyond those tracked in the state space (the \code{tracked} column of the
+fit's \code{processes}).}
 
 \item{exposure}{The exposure to calibrate, a \code{\link[=risk]{risk()}} or \code{\link[=years_lost]{years_lost()}}
 of the single process whose intensity is scaled.}

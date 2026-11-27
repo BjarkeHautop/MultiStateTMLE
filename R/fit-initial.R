@@ -15,8 +15,8 @@
 #'   formula such as `death ~ biomarker + illness`, naming the process on the
 #'   left and its covariates on the right, or a [hazard_model()] to also restrict
 #'   when individuals are at risk of it. Other processes can be used as
-#'   covariates by name, giving their number of events so far, and the
-#'   time of an event through an indicator such as
+#'   covariates by name, giving their number of events so far (see Counts),
+#'   and the time of an event through an indicator such as
 #'   `I(event_time(illness, 1) > 0.5)` (see [hazard_model()]), also in the
 #'   censoring model. The `state_variables` can also be used by name. Every
 #'   event in `data` needs a model, including the censoring process.
@@ -31,25 +31,15 @@
 #'   then be passed as `a` to [tmle_estimate()] and
 #'   [intervention_curve()]. Defaults to both values, `0:1`, when
 #'   `treatment_model` is given.
-#' @param max_count Positive integer. Maximum number of events tracked per
-#'   recurrent process. Counts are capped at `max_count` in the state space,
-#'   so hazards are assumed not to change after `max_count` events, and a
-#'   recurrent process `z` in a model is fitted as the indicators
-#'   `I(z >= 1) + ... + I(z >= max_count)`. It also bounds `k` in
-#'   `event_time(z, k)`. A larger value is more flexible, but the state space,
-#'   and with it the computation time, grows quickly with it.
 #' @param state_variables A named list of [state_variable()]s: variables
 #'   tracked over the event history, such as whether treatment is stopped,
 #'   updated by the events of the processes they have rules for. They can be
 #'   used by name in `models`, in their `at_risk` conditions and in the
 #'   `when` condition of a target in [tmle_estimate()]. Each is a variable
 #'   of the state space, with the values it takes in the data up to `tau`,
-#'   and the processes it has rules for are in the state space too. Unlike
-#'   the counts of the processes, a state variable is not capped at
-#'   `max_count`. Not supported with `fit = "hal"`.
+#'   and the processes it has rules for are in the state space too. Not
+#'   supported with `fit = "hal"`.
 #' @param control A named list of tuning settings:
-#'   * `prune_states` (`FALSE`): if `TRUE`, prune states not admissible
-#'     under the at-risk conditions of `models`.
 #'   * `use_exponential` (`FALSE`): if `TRUE`, always transform the hazard
 #'     increments `dH` to probabilities `1 - exp(-dH)`. Otherwise this is
 #'     only done if some increments exceed 1.
@@ -61,6 +51,24 @@
 #' The hazards in each state are predicted in parallel on the
 #' [mirai::daemons()] set in the session, if any, such as
 #' `mirai::daemons(4)` for 4 local processes.
+#'
+#' @section Counts:
+#' A process used in a model or an `at_risk` condition is its number of
+#' events so far, and the term is used as written, as in any R model
+#' formula. The hazards are computed in a finite state space, so each
+#' count is tracked up to the smallest count from which on nothing that
+#' uses it changes: 1 for `I(relapse >= 1)`, 3 for `pmin(relapse, 3)` or
+#' `factor(pmin(relapse, 3))` (an effect for each count up to 3), and `k`
+#' for `event_time(relapse, k)`. A process that can happen at most once, by
+#' its `limit` or in the data, is tracked up to 1. A term that keeps
+#' changing, such as a plain `relapse` of a recurrent process, a difference
+#' of counts such as `I(stop - restart)`, or an `at_risk` condition such as
+#' `~ stop == restart`, is an error: use a term that stops changing, or a
+#' [state_variable()] for a quantity of several processes. The column
+#' `tracked` of `processes` gives the count tracked for each process.
+#'
+#' The state space holds the states that can be reached from the start
+#' under the `at_risk` conditions, and those in the data.
 #'
 #' @details
 #' HAL fits are experimental and require a `fit.hal()` function to be
@@ -86,12 +94,13 @@
 #'     process.
 #'   * `processes`: a `data.table` with one row per process and columns
 #'     `name`, `type` (`"terminal"`, `"recurrent"` or `"one_jump"`, inferred
-#'     from the data), `model` and `at_risk` (whether the process has a
-#'     `limit` or `at_risk` condition).
+#'     from the data), `model`, `at_risk` (whether the process has a
+#'     `limit` or `at_risk` condition) and `tracked` (the number of its
+#'     events tracked in the state space, see Counts; `NA` if no hazard
+#'     depends on it).
 #'   * `cox_fits`: the fitted [survival::coxph()] model of each process,
-#'     named by process. A recurrent process `z` in a model is fitted as the
-#'     indicators `I(z >= 1) + ... + I(z >= max_count)`. [as_sim_model()]
-#'     builds a simulation model from them.
+#'     named by process. [as_sim_model()] builds a simulation model from
+#'     them.
 #'
 #'   It also contains the internal elements used by [tmle_estimate()], among
 #'   them `tmp_long` (the expanded data with fitted hazards and clever
@@ -136,8 +145,9 @@
 #'
 #' \donttest{
 #' # Data simulated with simevent can be passed as is. Here relapse is
-#' # recurrent, and the death hazard grows with the number of relapses so far,
-#' # tracked up to max_count:
+#' # recurrent, and the death hazard grows with the number of relapses so far.
+#' # factor(pmin(relapse, 3)) gives an effect of each count up to 3, so 3
+#' # relapses are tracked:
 #' if (requireNamespace("simevent", quietly = TRUE)) {
 #'   model <- simevent::sim_model(
 #'     biomarker = simevent::sim_covariate(function(N) rnorm(N)),
@@ -155,11 +165,10 @@
 #'     relapses,
 #'     models = list(
 #'       relapse ~ biomarker,
-#'       death ~ biomarker + relapse,
+#'       death ~ biomarker + factor(pmin(relapse, 3)),
 #'       censoring ~ biomarker
 #'     ),
-#'     tau = 2,
-#'     max_count = 3
+#'     tau = 2
 #'   )
 #' }
 #' }
@@ -171,7 +180,6 @@ fit_initial <- function(
   censoring = "censoring",
   treatment_model = NULL,
   arms = NULL,
-  max_count = 1,
   state_variables = list(),
   control = list(),
   hal_control = list(),
@@ -246,12 +254,10 @@ fit_initial <- function(
 
   # event_time() terms become the jump time variables T.<name> of
   # .fit_initial_impl()'s `depend_time`.
-  checkmate::assert_count(max_count, positive = TRUE)
   event_times <- .event_time_covariates(
     models,
     times = data[["time"]],
-    columns = c(names(data), names(state_variables)),
-    max_count = max_count
+    columns = c(names(data), names(state_variables))
   )
   fit_models <- models
   for (name in names(fit_models)) {
@@ -271,7 +277,6 @@ fit_initial <- function(
     tau = tau,
     treatment_model = treatment_model,
     arms = arms,
-    max_count = max_count,
     depend_time = event_times$depend_time,
     jump_processes = event_times$jump_processes,
     state_variables = state_variables,
@@ -290,21 +295,21 @@ fit_initial <- function(
       character(1),
       USE.NAMES = FALSE
     ),
-    at_risk = fit$processes$at_risk
+    at_risk = fit$processes$at_risk,
+    tracked = fit$processes$tracked
   )
   fit
 }
 
 # fit_initial() with the processes given as `fit_types`, a named list of
-# list(delta, model, fit, at_risk) for data with an integer `delta` column.
-# The `state_variables` are checked by fit_initial().
+# list(delta, model, fit, at_risk, limit) for data with an integer `delta`
+# column. The `state_variables` are checked by fit_initial().
 .fit_initial_impl <- function(
   data,
   fit_types,
   tau,
   treatment_model = NULL,
   arms = NULL,
-  max_count = 1,
   depend_time = list(),
   jump_processes = list(),
   state_variables = list(),
@@ -331,20 +336,14 @@ fit_initial <- function(
     unique = TRUE,
     null.ok = TRUE
   )
-  checkmate::assert_count(max_count, positive = TRUE)
   checkmate::assert_list(depend_time, types = "function", names = "unique")
   checkmate::assert_list(control, names = "unique")
   checkmate::assert_subset(names(control), names(.fit_control_defaults))
   control <- utils::modifyList(.fit_control_defaults, control)
   checkmate::assert_flag(
-    control$prune_states,
-    .var.name = "control$prune_states"
-  )
-  checkmate::assert_flag(
     control$use_exponential,
     .var.name = "control$use_exponential"
   )
-  prune_states <- control$prune_states
   use_exponential <- control$use_exponential
   checkmate::assert_list(hal_control, names = "unique")
   checkmate::assert_subset(names(hal_control), names(.hal_control_defaults))
@@ -456,9 +455,6 @@ fit_initial <- function(
   )
   state.processes <- intersect(process.names, varnames)
   state.deltas <- process.deltas[match(state.processes, process.names)]
-  recurrent <- state.processes[
-    unlist(process.types[state.processes]) == "recurrent"
-  ]
 
   A0.name <- NULL
   if (!is.null(treatment_model)) {
@@ -485,6 +481,26 @@ fit_initial <- function(
   varnames <- c(varnames, T.names)
   state.names <- c(state.processes, state.var.names, T.names)
 
+  #-- the number of events of each process that the state space tracks
+  count.upper <- .count_upper(
+    state.processes,
+    process.types,
+    lapply(fit_types, `[[`, "limit")
+  )
+  needed <- .needed_counts(jump.specs, count.upper)
+  count.caps <- .count_caps(
+    dt,
+    state.processes,
+    .count_uses(
+      lapply(inputs$fit_types, `[[`, "model"),
+      at.risks,
+      state.processes
+    ),
+    count.upper,
+    observed = .max_counts(dt, state.processes, state.deltas),
+    needed = needed
+  )
+
   #-- the initial fits
   dt[, idN := seq_len(.N), by = "id"]
   if (!is.null(treatment_model)) {
@@ -500,8 +516,6 @@ fit_initial <- function(
     fit_types,
     at.risks,
     depend_time,
-    recurrent,
-    max_count,
     verbose
   )
 
@@ -545,7 +559,7 @@ fit_initial <- function(
       A0.name,
       n,
       tau,
-      max_count,
+      max(c(1L, count.caps)),
       .n_workers(),
       verbose
     )
@@ -573,7 +587,8 @@ fit_initial <- function(
         (P) := .cox_increment(
           cox[[name]][["fit"]],
           tmp.long,
-          tmp.long[[paste0("dhazard.", name)]]
+          tmp.long[[paste0("dhazard.", name)]],
+          if (name %in% names(at.risks)) tmp.long[[paste0("at.risk.", name)]]
         )
       ]
     }
@@ -590,8 +605,7 @@ fit_initial <- function(
     depend.matrix <- .state_grid(
       tmp.long,
       state.names,
-      process.names,
-      max_count,
+      count.caps,
       state.values
     )
     if (any.hal) {
@@ -602,11 +616,17 @@ fit_initial <- function(
       }
     } else {
       depend.matrix <- .drop_impossible_jump_times(depend.matrix, jump.specs)
+      depend.matrix <- .reachable_states(
+        depend.matrix,
+        observed = .observed_states(tmp.long, state.names, count.caps),
+        processes = intersect(state.processes, targets),
+        count.caps = count.caps,
+        state_variables = state_variables,
+        at.risks = at.risks,
+        free = T.names
+      )
     }
     depend.matrix[, state := seq_len(.N)]
-  }
-  if (prune_states) {
-    depend.matrix <- .prune_states(depend.matrix, at.risks, state.var.names)
   }
 
   #-- clever weights, and the hazards in each state under each arm
@@ -620,7 +640,13 @@ fit_initial <- function(
   ]
   tmp.long[, C.1 := c(0, C[-.N]), by = "id"]
   tmp.long[, clever.weight := (C.1 == 0) / surv.0.1]
-  tmp.long[, state := 0]
+  if (any.hal) {
+    tmp.long[, state := 0]
+  } else {
+    tmp.long[,
+      state := .match_states(tmp.long, depend.matrix, state.names, count.caps)
+    ]
+  }
 
   for (aa in if (intervene.A0) arms else 1) {
     tmp.long <- .predict_states(
@@ -681,7 +707,7 @@ fit_initial <- function(
     process.depend,
     link.specs,
     state_variables,
-    at.risks
+    if (any.hal) NULL else count.caps
   )
 
   processes <- data.table(
@@ -694,7 +720,8 @@ fit_initial <- function(
       character(1),
       USE.NAMES = FALSE
     ),
-    at_risk = process.names %in% names(at.risks)
+    at_risk = process.names %in% names(at.risks),
+    tracked = unname(count.caps[process.names])
   )
 
   structure(
@@ -711,6 +738,8 @@ fit_initial <- function(
       process_types = process.types,
       cens_process_id = cens.process.id,
       at_risks = at.risks,
+      count_caps = count.caps,
+      count_upper = count.upper,
       cox_fits = lapply(cox, function(x) .detach_cox_env(x$fit))
     ),
     class = "initial_fit"

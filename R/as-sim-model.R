@@ -7,9 +7,8 @@
 #' is known. The process types and limits are taken from the fit.
 #'
 #' Covariates are resampled from `data`, one row per individual. A process
-#' that a hazard depends on enters it as in the fit: a recurrent process as
-#' the indicators of at least 1, ..., `max_count` jumps, and any other as its
-#' number of jumps so far. A process that jumps at most once in the data
+#' that a hazard depends on enters it as in the fit, through the terms of
+#' its number of jumps so far. A process that jumps at most once in the data
 #' (type `"one_jump"`) can jump at most once in the simulation too.
 #'
 #' Fits with an `at_risk` condition in a [hazard_model()], with
@@ -103,5 +102,39 @@ as_sim_model <- function(fit, data) {
     limits <- numeric()
   }
 
-  simevent::sim_model_from_fits(fit$cox_fits, data, types, limits)
+  simevent::sim_model_from_fits(
+    lapply(fit$cox_fits, .factor_terms_as_indicators),
+    data,
+    types,
+    limits
+  )
+}
+
+# A Cox fit with the coefficients of each level of a factor term, such as
+# `factor(pmin(relapse, 3))1`, named as the indicator of that level,
+# `I(pmin(relapse, 3) == 1)`, which simevent can simulate.
+.factor_terms_as_indicators <- function(fit) {
+  term.vars <- rownames(attr(stats::terms(fit), "factors"))
+  factors <- term.vars[grepl("^(as\\.)?factor\\(", term.vars)]
+  if (length(factors) == 0) {
+    return(fit)
+  }
+  rename <- function(part) {
+    for (factor.term in factors) {
+      if (startsWith(part, factor.term) && nchar(part) > nchar(factor.term)) {
+        level <- substring(part, nchar(factor.term) + 1)
+        value <- suppressWarnings(as.numeric(level))
+        level.expr <- if (is.na(value)) deparse(level) else level
+        inner <- .deparse_one_line(str2lang(factor.term)[[2]])
+        return(paste0("I(", inner, " == ", level.expr, ")"))
+      }
+    }
+    part
+  }
+  names(fit$coefficients) <- vapply(
+    strsplit(names(fit$coefficients), ":", fixed = TRUE),
+    function(parts) paste(vapply(parts, rename, character(1)), collapse = ":"),
+    character(1)
+  )
+  fit
 }

@@ -24,9 +24,8 @@ is known. The process types and limits are taken from the fit.
 }
 \details{
 Covariates are resampled from \code{data}, one row per individual. A process
-that a hazard depends on enters it as in the fit: a recurrent process as
-the indicators of at least 1, ..., \code{max_count} jumps, and any other as its
-number of jumps so far. A process that jumps at most once in the data
+that a hazard depends on enters it as in the fit, through the terms of
+its number of jumps so far. A process that jumps at most once in the data
 (type \code{"one_jump"}) can jump at most once in the simulation too.
 
 Fits with an \code{at_risk} condition in a \code{\link[=hazard_model]{hazard_model()}}, with

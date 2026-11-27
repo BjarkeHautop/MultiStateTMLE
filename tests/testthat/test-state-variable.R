@@ -46,7 +46,7 @@ test_that("a state variable gives the same estimate as the process it tracks", {
   expect_output(print(fit), "ill: State variable starting at 0")
 })
 
-test_that("a state variable is tracked beyond max_count", {
+test_that("a state variable can count events with a cap of its own", {
   skip_if_not_installed("simevent")
   data <- simulate.recurrent(80, seed = 1)
   capped <- list(n = state_variable(start = 0, relapse = \(s) pmin(s + 1, 2)))
@@ -58,7 +58,6 @@ test_that("a state variable is tracked beyond max_count", {
       censoring ~ biomarker
     ),
     tau = 1,
-    max_count = 1,
     state_variables = capped
   )
   expect_equal(fit$tmp_long$n, pmin(fit$tmp_long$relapse, 2))
@@ -67,12 +66,13 @@ test_that("a state variable is tracked beyond max_count", {
     sort(unique(fit$tmp_long$n))
   )
   expect_equal(sort(unique(fit$depend_matrix$n)), c(0, 1, 2))
-  # The relapse count is capped at max_count, the state variable is not:
-  # after a relapse, n goes up by one in every state below the cap.
+  # No model uses the relapse count itself, so it is not tracked beyond 0,
+  # and a relapse moves n up by one, to its cap.
+  expect_equal(fit$processes$tracked[[1]], 0L)
   dm <- fit$depend_matrix
+  expect_equal(dm$relapse, c(0L, 0L, 0L))
   after <- dm[match(dm$s.relapse, dm$state)]
-  expect_equal(after$n, pmin(dm$n + 1, max(dm$n)))
-  expect_equal(after$relapse, pmin(dm$relapse + 1, 1))
+  expect_equal(after$n, pmin(dm$n + 1, 2))
 
   uncapped <- list(n = state_variable(start = 0, relapse = \(s) s + 1))
   expect_error(
@@ -149,8 +149,8 @@ test_that("as_sim_model() refuses fits with state variables", {
 })
 
 # Treatment that is stopped (Nz) and restarted (Nl), alternately: whether it
-# is stopped is Nz - Nl, which the capped counts only give up to max_count.
-test_that("a stopped-treatment state variable does not depend on max_count", {
+# is stopped is Nz - Nl, which keeps changing with the counts.
+test_that("a stopped-treatment state variable tracks what the counts can't", {
   skip_if_not_installed("simevent")
   big <- 1e5
   model <- simevent::sim_model(
@@ -178,72 +178,57 @@ test_that("a stopped-treatment state variable does not depend on max_count", {
     "censoring",
     as.character(data$event)
   )
-  max_stops <- max(table(data$id[data$event == "Nz"]))
-  expect_gt(max_stops, 2)
+  expect_gt(max(table(data$id[data$event == "Nz"])), 2)
 
-  # The effects of the first two stops and restarts, whatever max_count.
+  # The effects of the first two stops and restarts.
   counts_z <- ~ L0 + I(Nl >= 1) + I(Nl >= 2) + I(Nz >= 1) + I(Nz >= 2)
   counts_zw <- stats::update(counts_z, ~ . + Nw)
-  fit_off <- function(max_count, prune_states) {
+  fit_with <- function(outcome, at_risk_z, at_risk_l, ...) {
     suppressWarnings(fit_initial(
       data,
       models = list(
-        hazard_model(stats::update(counts_zw, Nz ~ .), at_risk = ~ off == 0),
-        hazard_model(stats::update(counts_zw, Nl ~ .), at_risk = ~ off == 1),
+        hazard_model(stats::update(counts_zw, Nz ~ .), at_risk = at_risk_z),
+        hazard_model(stats::update(counts_zw, Nl ~ .), at_risk = at_risk_l),
         hazard_model(stats::update(counts_z, Nw ~ .), limit = 1),
-        outcome1 ~ L0 + Nw + off,
+        outcome,
         stats::update(counts_zw, cr1 ~ .),
         stats::update(counts_zw, censoring ~ .)
       ),
       tau = 3,
-      max_count = max_count,
-      control = list(prune_states = prune_states),
-      state_variables = list(off = state_variable(start = 0, Nz = 1, Nl = 0))
+      ...
     ))
   }
-  off <- fit_off(2, prune_states = TRUE)
+  off <- fit_with(
+    outcome1 ~ L0 + Nw + off,
+    ~ off == 0,
+    ~ off == 1,
+    state_variables = list(off = state_variable(start = 0, Nz = 1, Nl = 0))
+  )
 
+  expect_equal(off$processes$tracked[1:3], c(2L, 2L, 1L))
   expect_equal(off$tmp_long$off, off$tmp_long$Nz - off$tmp_long$Nl)
   dm <- off$depend_matrix
   expect_equal(sort(unique(dm$off)), c(0, 1))
-  expect_equal(dm[match(dm$s.Nz, dm$state)]$off, rep(1, nrow(dm)))
-  expect_equal(dm[match(dm$s.Nl, dm$state)]$off, rep(0, nrow(dm)))
-
-  estimate <- tmle_estimate(off, risk(outcome1))$estimate
+  # Only the states reachable by alternating stops and restarts are kept,
+  # and a stop sets off to 1, a restart to 0, whatever the counts.
+  expect_true(all(dm[off == 0]$Nz == dm[off == 0]$Nl | dm[off == 0]$Nz == 2))
   expect_equal(
-    tmle_estimate(
-      fit_off(max_stops, prune_states = FALSE),
-      risk(outcome1)
-    )$estimate,
-    estimate
+    dm[match(dm$s.Nz, dm$state)][dm$off == 0]$off,
+    rep(1, sum(dm$off == 0))
   )
-
-  # With I(Nz - Nl) and every stop tracked, the counts are capped at the
-  # largest counts in the data up to tau, so a jump from there leaves Nz - Nl
-  # unchanged; the estimate is close but not equal.
-  every_count <- suppressWarnings(fit_initial(
-    data,
-    models = list(
-      hazard_model(stats::update(counts_zw, Nz ~ .), at_risk = ~ Nz - Nl == 0),
-      hazard_model(stats::update(counts_zw, Nl ~ .), at_risk = ~ Nz - Nl == 1),
-      hazard_model(stats::update(counts_z, Nw ~ .), limit = 1),
-      outcome1 ~ L0 + Nw + I(Nz - Nl),
-      stats::update(counts_zw, cr1 ~ .),
-      stats::update(counts_zw, censoring ~ .)
-    ),
-    tau = 3,
-    max_count = max_stops,
-    control = list(prune_states = TRUE)
-  ))
-  for (name in names(off$cox_fits)) {
-    expect_equal(
-      off$cox_fits[[name]]$loglik,
-      every_count$cox_fits[[name]]$loglik
-    )
-  }
   expect_equal(
-    tmle_estimate(every_count, risk(outcome1))$estimate,
-    estimate,
-    tolerance = 0.01
+    dm[match(dm$s.Nl, dm$state)][dm$off == 1]$off,
+    rep(0, sum(dm$off == 1))
+  )
+  expect_true(tmle_estimate(off, risk(outcome1))$checks$converged)
+
+  # From the counts, off treatment keeps changing with them.
+  expect_error(
+    fit_with(outcome1 ~ L0 + Nw + I(Nz - Nl), ~ off == 0, ~ off == 1),
+    "define a state_variable"
+  )
+  expect_error(
+    fit_with(outcome1 ~ L0 + Nw, ~ Nz == Nl, ~ Nl == Nz - 1),
+    "The at-risk condition of Nz keeps changing"
   )
 })

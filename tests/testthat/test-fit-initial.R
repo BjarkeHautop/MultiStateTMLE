@@ -18,7 +18,8 @@ test_that("fit_initial() fits the illness-death example", {
         "death ~ biomarker + illness",
         "censoring ~ biomarker"
       ),
-      at_risk = c(TRUE, FALSE, FALSE)
+      at_risk = c(TRUE, FALSE, FALSE),
+      tracked = c(1L, NA, NA)
     )
   )
   expect_named(fit$models, c("illness", "death", "censoring"))
@@ -240,10 +241,6 @@ test_that("fit_initial() rejects invalid inputs", {
 
   expect_error(fit_initial("x", models = m, tau = 1), "data")
   expect_error(
-    fit_initial(fixture.data(), models = m, tau = 1, max_count = -1),
-    "max_count"
-  )
-  expect_error(
     fit_initial(fixture.data(), models = m, tau = 1, verbose = "x"),
     "verbose"
   )
@@ -341,16 +338,16 @@ test_that("fit_initial() validates its control settings", {
       illness_death,
       m,
       tau = 1,
-      control = list(prune_states = "yes")
+      control = list(use_exponential = "yes")
     ),
-    "control\\$prune_states"
+    "control\\$use_exponential"
   )
   expect_equal(
     fit_initial(
       fixture.data(30),
       m,
       tau = 1,
-      control = list(prune_states = FALSE, use_exponential = FALSE)
+      control = list(use_exponential = FALSE)
     ),
     fixture.fit(30)
   )
@@ -453,7 +450,10 @@ test_that("fit_initial() requires event_time() terms to be categories", {
     fit("I(exp(-event_time(illness)))"),
     "values other than whole numbers"
   )
-  expect_error(fit("I(event_time(illness, 2) > 0.5)"), "max_count")
+  expect_error(
+    fit("I(event_time(illness, 2) > 0.5)"),
+    "uses event 2 of illness, which has at most 1"
+  )
   expect_error(fit("I(event_time(foo) > 0.5)"), "not a process")
   expect_error(fit("I(event_time(c(illness, foo)) > 0.5)"), "foo, which is not")
   expect_error(fit("I(event_time('illness') > 0.5)"), "give a process")
@@ -495,8 +495,7 @@ test_that("event_time() takes several processes", {
   data <- data.table::as.data.table(simulate.two.jumps(150, seed = 1))
   data[event == "max_cens", event := "censoring"]
   fit <- function(term) {
-    # max_count = 2 to track the second event of a or b.
-    fit_initial(data, models = two.jumps.models(term), tau = 1.5, max_count = 2)
+    fit_initial(data, models = two.jumps.models(term), tau = 1.5)
   }
 
   # The term is 1 from a first event of a or b after time 0.5 on.
@@ -606,4 +605,35 @@ test_that("fit_initial() takes factor and character covariates", {
     )
     expect_equal(fit$tmp_long$P.death, numeric$tmp_long$P.death)
   }
+})
+
+test_that("fit_initial() predicts each hazard only where its process is at risk", {
+  skip_if_not_installed("simevent")
+  # Death is only at risk after a relapse, so its model never sees the
+  # level 0 of factor(pmin(relapse, 2)).
+  fit <- fit_initial(
+    simulate.recurrent(150, seed = 1),
+    models = list(
+      relapse ~ biomarker,
+      hazard_model(
+        death ~ biomarker + factor(pmin(relapse, 2)),
+        at_risk = ~ relapse >= 1
+      ),
+      censoring ~ biomarker
+    ),
+    tau = 1
+  )
+  tl <- fit$tmp_long
+  expect_true(all(tl$P.death[tl$relapse == 0] == 0))
+  expect_true(all(tl$P.death.1 == 0))
+  expect_true(any(tl$P.death[tl$relapse >= 1] > 0))
+  expect_true(all(tl$P.death.2 > 0 | tl$dhazard.death == 0))
+  # A process without an at-risk condition is predicted in every row.
+  expect_equal(
+    tl$P.relapse,
+    as.numeric(
+      tl$dhazard.relapse *
+        exp(predict(fit$cox_fits$relapse, newdata = tl, type = "lp"))
+    )
+  )
 })

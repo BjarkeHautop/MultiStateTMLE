@@ -26,7 +26,7 @@ test_that("as_sim_model() gives a one-jump process without a limit limit 1", {
 
 test_that("as_sim_model() simulates the effects of a recurrent process", {
   skip_if_not_installed("simevent", minimum_version = "0.1.1.9001")
-  fit <- recurrent.fit(n = 80, max_count = 2)
+  fit <- recurrent.fit(n = 80, track = 2)
   model <- as_sim_model(fit, simulate.recurrent(80, 1))
 
   expect_equal(model$processes$relapse$limit, Inf)
@@ -36,7 +36,10 @@ test_that("as_sim_model() simulates the effects of a recurrent process", {
     character(1),
     "from"
   )
-  expect_setequal(froms, c("biomarker", "I(relapse >= 1)", "I(relapse >= 2)"))
+  expect_setequal(
+    froms,
+    c("biomarker", "I(pmin(relapse, 2) == 1)", "I(pmin(relapse, 2) == 2)")
+  )
   expect_s3_class(
     simevent::simulate_events(model, n = 50, seed = 1),
     "data.table"

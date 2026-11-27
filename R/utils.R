@@ -1,6 +1,5 @@
 # Defaults for the `control` argument of fit_initial().
 .fit_control_defaults <- list(
-  prune_states = FALSE,
   use_exponential = FALSE
 )
 
@@ -76,7 +75,7 @@
 )
 
 # Bring one entry of .fit_initial_impl()'s `fit_types`,
-# list(delta, model, fit, at_risk), to the internal form
+# list(delta, model, fit, at_risk, limit), to the internal form
 # list(delta, model, fit, at.risk), where `model` is the string
 # "Surv(tstart,tstop,delta==<delta>)~<covariates>" without whitespace, as
 # the string manipulations on it in fit_initial() expect.
@@ -85,7 +84,7 @@
   checkmate::assert_list(spec, names = "unique", .var.name = var_name)
   checkmate::assert_subset(
     names(spec),
-    c("delta", "model", "fit", "at_risk"),
+    c("delta", "model", "fit", "at_risk", "limit"),
     .var.name = paste0("names(", var_name, ")")
   )
   checkmate::assert_int(
@@ -94,6 +93,12 @@
     .var.name = paste0(var_name, "$delta")
   )
   checkmate::assert_formula(spec$model, .var.name = paste0(var_name, "$model"))
+  checkmate::assert_count(
+    spec$limit,
+    positive = TRUE,
+    null.ok = TRUE,
+    .var.name = paste0(var_name, "$limit")
+  )
   if (length(spec$model) != 2) {
     stop(
       var_name,

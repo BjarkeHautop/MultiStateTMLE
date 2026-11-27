@@ -227,6 +227,16 @@ tmle_estimate <- function(
   process.types <- initial_fit$process_types
 
   at.risks <- initial_fit$at_risks
+  # The number of events of each process that the state space tracks.
+  count.caps <- initial_fit$count_caps
+  if (is.null(count.caps)) {
+    count.names <- intersect(process.names, names(depend.matrix))
+    count.caps <- vapply(
+      stats::setNames(nm = count.names),
+      function(name) max(depend.matrix[[name]]),
+      numeric(1)
+    )
+  }
 
   target.name <- process
   z.present <- length(alpha) > 0
@@ -270,6 +280,13 @@ tmle_estimate <- function(
       environment(target$when),
       "`when`"
     )
+    .check_beyond_caps(
+      when,
+      states,
+      count.caps,
+      initial_fit$count_upper,
+      paste0("The `when` condition ", .deparse_one_line(target$when[[2]]))
+    )
     states[, target.only.in.state := when(states)]
   }
 
@@ -296,16 +313,31 @@ tmle_estimate <- function(
 
   # The factor at the observed counts, for the weights and scores, with the
   # counts capped as in the state space so that it matches the factor of
-  # the observed state below.
-  count.names <- intersect(process.names, names(depend.matrix))
+  # the observed state below. A factor that changes beyond the caps would
+  # differ between the two.
   data.observed <- as.list(tmp.long)
-  for (count.name in count.names) {
+  for (count.name in intersect(names(count.caps), names(data.observed))) {
     data.observed[[count.name]] <- pmin(
       data.observed[[count.name]],
-      max(depend.matrix[[count.name]])
+      count.caps[[count.name]]
     )
   }
   for (name.kk in names(alpha)) {
+    if (inherits(alpha[[name.kk]], "formula")) {
+      .check_beyond_caps(
+        function(data) .alpha_values(alpha[[name.kk]], data, name.kk),
+        data.observed,
+        count.caps,
+        initial_fit$count_upper,
+        paste0(
+          "The factor of ",
+          name.kk,
+          " in the intervention, ",
+          .deparse_one_line(alpha[[name.kk]][[2]]),
+          ","
+        )
+      )
+    }
     tmp.long[,
       (paste0("alpha.", name.kk)) := .alpha_values(
         alpha[[name.kk]],
@@ -374,19 +406,23 @@ tmle_estimate <- function(
   #--------------------------------
   #-- counterfactual hazards of the intervened processes:
 
-  # The hazard of state s is scaled by the factor evaluated at the counts of
-  # state s, not at the observed ones, since the Q recursion moves through
-  # all states.
+  # The hazard of state s is scaled by the factor evaluated at the state
+  # variables of state s, not at the observed ones, since the Q recursion
+  # moves through all states.
+  state.cols <- setdiff(
+    names(depend.matrix),
+    c("state", grep("^(s|time)\\.", names(depend.matrix), value = TRUE))
+  )
   for (name.kk in names(alpha)) {
     for (state.kk in depend.matrix[, unique(state)]) {
       varname <- paste0(P.prefix, name.kk, ".", state.kk)
       if (!varname %in% names(tmp.long)) {
         next
       }
-      counts <- depend.matrix[state == state.kk][1]
+      values <- depend.matrix[state == state.kk][1]
       data.kk <- as.list(tmp.long)
-      for (count.name in count.names) {
-        data.kk[[count.name]] <- rep(counts[[count.name]], nrow(tmp.long))
+      for (col in state.cols) {
+        data.kk[[col]] <- rep(values[[col]], nrow(tmp.long))
       }
       tmp.long[,
         (varname) := .alpha_values(
