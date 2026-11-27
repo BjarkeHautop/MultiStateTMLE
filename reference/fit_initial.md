@@ -22,7 +22,6 @@ fit_initial(
   max_count = 1,
   control = list(),
   hal_control = list(),
-  cores = 1,
   verbose = FALSE
 )
 ```
@@ -102,12 +101,6 @@ fit_initial(
   A named list of settings for processes fitted with `fit = "hal"`, see
   Details.
 
-- cores:
-
-  Positive integer. Number of cores used by
-  [`parallel::mclapply()`](https://rdrr.io/r/parallel/mclapply.html)
-  when predicting hazards across states.
-
 - verbose:
 
   Logical. If `TRUE`, print model fits and progress.
@@ -159,6 +152,13 @@ parentheses.
 Columns of `data` named after a process, such as the event counts that
 [`simevent::simulate_events()`](https://rdrr.io/pkg/simevent/man/simulate_events.html)
 adds, are ignored: the counts are recomputed from `event`.
+
+## Parallel computation
+
+The hazards in each state are predicted in parallel on the
+[`mirai::daemons()`](https://mirai.r-lib.org/reference/daemons.html) set
+in the session, if any, such as `mirai::daemons(4)` for 4 local
+processes.
 
 ## Examples
 

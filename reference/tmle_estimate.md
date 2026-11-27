@@ -16,7 +16,6 @@ tmle_estimate(
   intervention = NULL,
   a = NULL,
   control = list(),
-  cores = 1,
   verbose = FALSE
 )
 ```
@@ -79,12 +78,6 @@ tmle_estimate(
 
   - `truncate_weights` (`Inf`): positive number at which the clever
     weights of the intervention are truncated. `Inf` is no truncation.
-
-- cores:
-
-  Positive integer. Number of cores used by
-  [`parallel::mclapply()`](https://rdrr.io/r/parallel/mclapply.html) for
-  the per-individual computations.
 
 - verbose:
 
@@ -156,6 +149,13 @@ or a calibrated one,
 whose scaling is chosen to bring an exposure to a given value. Under a
 calibrated intervention the target is a composite parameter, and its
 standard error accounts for the scaling being estimated.
+
+## Parallel computation
+
+The per-individual computations run in parallel on the
+[`mirai::daemons()`](https://mirai.r-lib.org/reference/daemons.html) set
+in the session, if any, such as `mirai::daemons(4)` for 4 local
+processes.
 
 ## Examples
 

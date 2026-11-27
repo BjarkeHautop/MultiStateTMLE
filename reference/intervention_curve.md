@@ -20,7 +20,6 @@ intervention_curve(
   alpha = seq(0, 5, length.out = 10),
   a = NULL,
   control = list(),
-  cores = 1,
   verbose = FALSE
 )
 ```
@@ -87,12 +86,6 @@ intervention_curve(
 
   - `truncate_weights` (`Inf`): positive number at which the clever
     weights of the intervention are truncated. `Inf` is no truncation.
-
-- cores:
-
-  Positive integer. Number of cores used by
-  [`parallel::mclapply()`](https://rdrr.io/r/parallel/mclapply.html) for
-  the per-individual computations.
 
 - verbose:
 

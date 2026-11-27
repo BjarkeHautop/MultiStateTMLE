@@ -64,7 +64,6 @@ processes' hazards depend on. The result is the input to
 <span>  max_count <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
 <span>  hal_control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="op">)</span>,</span>
-<span>  cores <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">FALSE</span></span>
 <span><span class="op">)</span></span></code></pre></div>
     </div>
@@ -139,11 +138,6 @@ only done if some increments exceed 1.</p></li>
 <code>fit = "hal"</code>, see Details.</p></dd>
 
 
-<dt id="arg-cores">cores<a class="anchor" aria-label="anchor" href="#arg-cores"></a></dt>
-<dd><p>Positive integer. Number of cores used by
-<code><a href="https://rdrr.io/r/parallel/mclapply.html" class="external-link">parallel::mclapply()</a></code> when predicting hazards across states.</p></dd>
-
-
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
 <dd><p>Logical. If <code>TRUE</code>, print model fits and progress.</p></dd>
 
@@ -182,6 +176,14 @@ parentheses.</p>
 <p>Columns of <code>data</code> named after a process, such as the event counts that
 <code><a href="https://rdrr.io/pkg/simevent/man/simulate_events.html" class="external-link">simevent::simulate_events()</a></code> adds, are ignored: the counts are
 recomputed from <code>event</code>.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="parallel-computation">Parallel computation<a class="anchor" aria-label="anchor" href="#parallel-computation"></a></h2>
+
+
+<p>The hazards in each state are predicted in parallel on the
+<code><a href="https://mirai.r-lib.org/reference/daemons.html" class="external-link">mirai::daemons()</a></code> set in the session, if any, such as
+<code>mirai::daemons(4)</code> for 4 local processes.</p>
     </div>
 
     <div class="section level2">
