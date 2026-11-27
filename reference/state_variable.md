@@ -35,16 +35,6 @@ state_variable(start, ...)
 
 An object of class `state_variable`.
 
-## Details
-
-A state variable is a state of its own, tracked exactly. Use one for a
-quantity of several processes, such as whether treatment is stopped
-(stops minus restarts): in a model it would keep changing with the
-counts, which the state space of
-[`fit_initial()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/fit_initial.md)
-only tracks up to the count from which on the models stop changing (see
-its Counts section).
-
 ## Examples
 
 ``` r
@@ -80,9 +70,7 @@ if (requireNamespace("simevent", quietly = TRUE)) {
   )
   treatment <- simevent::simulate_events(model, n = 200, seed = 1)
 
-  # Some individuals stop several times. Off treatment as I(stop - restart)
-  # keeps changing with the counts, which the state space can't track,
-  # while the state variable off is exact:
+  # Whether an individual is off treatment is the state variable off:
   fit <- fit_initial(
     treatment,
     models = list(

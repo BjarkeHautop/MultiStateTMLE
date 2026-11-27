@@ -115,14 +115,11 @@ then be passed as <code>a</code> to <code><a href="tmle_estimate.html">tmle_esti
 
 
 <dt id="arg-state-variables">state_variables<a class="anchor" aria-label="anchor" href="#arg-state-variables"></a></dt>
-<dd><p>A named list of <code><a href="state_variable.html">state_variable()</a></code>s: variables
-tracked over the event history, such as whether treatment is stopped,
-updated by the events of the processes they have rules for. They can be
-used by name in <code>models</code>, in their <code>at_risk</code> conditions and in the
-<code>when</code> condition of a target in <code><a href="tmle_estimate.html">tmle_estimate()</a></code>. Each is a variable
-of the state space, with the values it takes in the data up to <code>tau</code>,
-and the processes it has rules for are in the state space too. Not
-supported with <code>fit = "hal"</code>.</p></dd>
+<dd><p>A named list of <code><a href="state_variable.html">state_variable()</a></code>s, variables
+tracked over the event history such as whether treatment is stopped.
+They can be used by name in <code>models</code>, in their <code>at_risk</code> conditions and
+in the <code>when</code> condition of a target in <code><a href="tmle_estimate.html">tmle_estimate()</a></code>. Not supported
+with <code>fit = "hal"</code>.</p></dd>
 
 
 <dt id="arg-control">control<a class="anchor" aria-label="anchor" href="#arg-control"></a></dt>
@@ -189,19 +186,18 @@ recomputed from <code>event</code>.</p>
     <h2 id="counts">Counts<a class="anchor" aria-label="anchor" href="#counts"></a></h2>
 
 
-<p>A process used in a model or an <code>at_risk</code> condition is its number of
-events so far, and the term is used as written, as in any R model
-formula. The hazards are computed in a finite state space, so each
-count is tracked up to the smallest count from which on nothing that
-uses it changes: 1 for <code>I(relapse &gt;= 1)</code>, 3 for <code>pmin(relapse, 3)</code> or
-<code>factor(pmin(relapse, 3))</code> (an effect for each count up to 3), and <code>k</code>
-for <code>event_time(relapse, k)</code>. A process that can happen at most once, by
-its <code>limit</code> or in the data, is tracked up to 1. A term that keeps
-changing, such as a plain <code>relapse</code> of a recurrent process, a difference
-of counts such as <code>I(stop - restart)</code>, or an <code>at_risk</code> condition such as
-<code>~ stop == restart</code>, is an error: use a term that stops changing, or a
-<code><a href="state_variable.html">state_variable()</a></code> for a quantity of several processes. The column
-<code>tracked</code> of <code>processes</code> gives the count tracked for each process.</p>
+<p>A process used in a model or an <code>at_risk</code> condition enters as its number
+of events so far. The hazards are computed in a finite state space, so
+each count is tracked only up to the value beyond which no term using it
+changes: 1 for <code>I(relapse &gt;= 1)</code>, 3 for <code>pmin(relapse, 3)</code> or
+<code>factor(pmin(relapse, 3))</code>, and <code>k</code> for <code>event_time(relapse, k)</code>. A
+process that can happen at most once, by its <code>limit</code> or in the data, is
+tracked up to 1. Terms that never stop changing, such as a plain
+<code>relapse</code> of a recurrent process, a difference of counts such as
+<code>I(stop - restart)</code>, or an <code>at_risk</code> condition such as
+<code>~ stop == restart</code>, give an error. Use a capped term instead, or a
+<code><a href="state_variable.html">state_variable()</a></code> for a quantity that depends on several processes. The
+<code>tracked</code> column of <code>processes</code> gives the count tracked for each process.</p>
 <p>The state space holds the states that can be reached from the start
 under the <code>at_risk</code> conditions, and those in the data.</p>
     </div>

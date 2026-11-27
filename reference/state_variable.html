@@ -80,14 +80,6 @@ processes leave the variable unchanged.</p></dd>
     <h2 id="value">Value<a class="anchor" aria-label="anchor" href="#value"></a></h2>
     <p>An object of class <code>state_variable</code>.</p>
     </div>
-    <div class="section level2">
-    <h2 id="details">Details<a class="anchor" aria-label="anchor" href="#details"></a></h2>
-    <p>A state variable is a state of its own, tracked exactly. Use one for a
-quantity of several processes, such as whether treatment is stopped
-(stops minus restarts): in a model it would keep changing with the
-counts, which the state space of <code><a href="fit_initial.html">fit_initial()</a></code> only tracks up to the
-count from which on the models stop changing (see its Counts section).</p>
-    </div>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
@@ -123,9 +115,7 @@ count from which on the models stop changing (see its Counts section).</p>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="va">treatment</span> <span class="op">&lt;-</span> <span class="fu">simevent</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/simevent/man/simulate_events.html" class="external-link">simulate_events</a></span><span class="op">(</span><span class="va">model</span>, n <span class="op">=</span> <span class="fl">200</span>, seed <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span>  <span class="co"># Some individuals stop several times. Off treatment as I(stop - restart)</span></span></span>
-<span class="r-in"><span>  <span class="co"># keeps changing with the counts, which the state space can't track,</span></span></span>
-<span class="r-in"><span>  <span class="co"># while the state variable off is exact:</span></span></span>
+<span class="r-in"><span>  <span class="co"># Whether an individual is off treatment is the state variable off:</span></span></span>
 <span class="r-in"><span>  <span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="fit_initial.html">fit_initial</a></span><span class="op">(</span></span></span>
 <span class="r-in"><span>    <span class="va">treatment</span>,</span></span>
 <span class="r-in"><span>    models <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span></span></span>

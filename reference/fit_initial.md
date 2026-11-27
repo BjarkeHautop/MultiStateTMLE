@@ -79,15 +79,12 @@ fit_initial(
 - state_variables:
 
   A named list of
-  [`state_variable()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/state_variable.md)s:
-  variables tracked over the event history, such as whether treatment is
-  stopped, updated by the events of the processes they have rules for.
-  They can be used by name in `models`, in their `at_risk` conditions
-  and in the `when` condition of a target in
+  [`state_variable()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/state_variable.md)s,
+  variables tracked over the event history such as whether treatment is
+  stopped. They can be used by name in `models`, in their `at_risk`
+  conditions and in the `when` condition of a target in
   [`tmle_estimate()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/tmle_estimate.md).
-  Each is a variable of the state space, with the values it takes in the
-  data up to `tau`, and the processes it has rules for are in the state
-  space too. Not supported with `fit = "hal"`.
+  Not supported with `fit = "hal"`.
 
 - control:
 
@@ -163,20 +160,19 @@ processes.
 
 ## Counts
 
-A process used in a model or an `at_risk` condition is its number of
-events so far, and the term is used as written, as in any R model
-formula. The hazards are computed in a finite state space, so each count
-is tracked up to the smallest count from which on nothing that uses it
+A process used in a model or an `at_risk` condition enters as its number
+of events so far. The hazards are computed in a finite state space, so
+each count is tracked only up to the value beyond which no term using it
 changes: 1 for `I(relapse >= 1)`, 3 for `pmin(relapse, 3)` or
-`factor(pmin(relapse, 3))` (an effect for each count up to 3), and `k`
-for `event_time(relapse, k)`. A process that can happen at most once, by
-its `limit` or in the data, is tracked up to 1. A term that keeps
-changing, such as a plain `relapse` of a recurrent process, a difference
-of counts such as `I(stop - restart)`, or an `at_risk` condition such as
-`~ stop == restart`, is an error: use a term that stops changing, or a
+`factor(pmin(relapse, 3))`, and `k` for `event_time(relapse, k)`. A
+process that can happen at most once, by its `limit` or in the data, is
+tracked up to 1. Terms that never stop changing, such as a plain
+`relapse` of a recurrent process, a difference of counts such as
+`I(stop - restart)`, or an `at_risk` condition such as
+`~ stop == restart`, give an error. Use a capped term instead, or a
 [`state_variable()`](https://github.com/BjarkeHautop/MultiStateTMLE/reference/state_variable.md)
-for a quantity of several processes. The column `tracked` of `processes`
-gives the count tracked for each process.
+for a quantity that depends on several processes. The `tracked` column
+of `processes` gives the count tracked for each process.
 
 The state space holds the states that can be reached from the start
 under the `at_risk` conditions, and those in the data.
